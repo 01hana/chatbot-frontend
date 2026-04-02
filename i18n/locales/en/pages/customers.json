@@ -1,0 +1,8 @@
+{
+    "name": "Name",
+    "gender": "Gender",
+    "mobile": "Mobile",
+    "address": "Address",
+    "birthday": "Birthday",
+    "history": "History orders"
+}

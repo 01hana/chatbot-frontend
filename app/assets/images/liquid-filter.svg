@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+  <filter id="liquid-distort">
+    <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="4" seed="3" result="noise"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="8" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>

@@ -1,0 +1,78 @@
+{
+    "sitename": "Ecommerce Shop",
+    "copyright": "© { year } Ecommerce Shop Enterprise Co., Ltd. All rights reserved.",
+    "language": "語言",
+    "lang": "繁體中文",
+    "chooseLanguage": "選擇語言",
+    "notFound": "沒有資料",
+    "menu": {
+        "index": "Home",
+        "products": "Products",
+        "orders": "訂單紀錄",
+        "products-top": "Top",
+        "products-bottom": "Bottom",
+        "accounts-profile": "會員資料"
+    },
+    "auth": {
+        "login": "登入",
+        "logout": "登出",
+        "forget": "忘記密碼?",
+        "reset": "重設密碼",
+        "hasAccount": "已經有帳號?",
+        "resetPassword": "輸入您的新密碼以重置密碼",
+        "firstLogin": "初次登入請設定密碼",
+        "receiveEmail": "請輸入您的電子郵件帳號，我們會寄送新密碼至您的信箱。",
+        "logoutSuccess": "您已經登出"
+    },
+    "actions": {
+        "actions": "操作",
+        "create": "新增",
+        "edit": "編輯",
+        "view": "瀏覽",
+        "save": "儲存",
+        "enter": "確認 | 完成 | 送出",
+        "enable": "啟用",
+        "disable": "停用",
+        "remove": "刪除",
+        "close": "關閉 | 取消",
+        "batch": "批次選取 | 結束選取 | 已選取",
+        "batchApply": "批次套用",
+        "apply": "套用",
+        "clear": "清除",
+        "advance": "進階 {0}",
+        "advanceSearch": "進階搜尋",
+        "search": "搜尋",
+        "selectAll": "全選",
+        "selectDate": "選擇日期"
+    },
+    "form": {
+        "keyword": "搜尋關鍵字...",
+        "pwdShouldBe": "密碼格式必須",
+        "pwdString": "至少一位英文字母",
+        "pwdNumber": "至少一位數字",
+        "pwdSymbol": "至少一位特殊符號",
+        "pwdLength": "長度至少 8 位字元",
+        "createdAt": "建立時間",
+        "updatedAt": "最後更新時間",
+        "gender": {
+            "male": "男",
+            "female": "女",
+            "unknown": "不透露"
+        },
+        "status": "狀態",
+        "account": "帳號",
+        "password": "密碼",
+        "confirmPassword": "密碼確認"
+    },
+    "confirm": {
+        "removeTitle": "確認刪除?",
+        "remove": "您確定要刪除 {name} ?",
+        "removeBatch": "刪除選取的 {count} 筆資料?",
+        "createAccountAlert": "新帳戶建立通知信已發送",
+        "createAccountAlertText1": "請前往{0}接收通知信。",
+        "createAccountAlertText2": "使用電子郵件中的連結設定帳戶密碼進行登入。"
+    },
+    "error": {
+        "unexpectOccured": "發生不可預期的錯誤"
+    }
+}

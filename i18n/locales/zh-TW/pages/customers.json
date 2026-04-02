@@ -1,0 +1,8 @@
+{
+    "name": "姓名",
+    "gender": "性別",
+    "mobile": "手機號碼",
+    "address": "地址",
+    "birthday": "生日",
+    "history": "歷史訂單"
+}

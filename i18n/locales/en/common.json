@@ -1,0 +1,77 @@
+{
+    "sitename": "nuxt template",
+    "copyright": "© { year } EShop Enterprise Co., Ltd. All rights reserved.",
+    "language": "Language",
+    "lang": "English",
+    "chooseLanguage": "Choose language",
+    "notFound": "No Data",
+    "menu": {
+        "index": "Home",
+        "products": "Products",
+        "orders": "Orders",
+        "products-top": "Top",
+        "products-bottom": "Bottom",
+        "accounts-profile": "Member"
+    },
+    "auth": {
+        "login": "Login",
+        "logout": "Logout",
+        "forget": "Forgot password",
+        "hasAccount": "Already has an account?",
+        "resetPassword": "Enter your new password to reset password",
+        "firstLogin": "The new account is activated successfully, please set your password to sign in",
+        "receiveEmail": "Enter your email and we'll send you instructions to reset your password.",
+        "logoutSuccess": "Logout successfully"
+    },
+    "actions": {
+        "actions": "Actions",
+        "create": "Create",
+        "edit": "Edit",
+        "view": "View",
+        "save": "Save",
+        "enter": "Confirm | Complete | Send",
+        "enable": "Enable",
+        "disable": "Disable",
+        "remove": "Remove",
+        "close": "Close | Cancel",
+        "batch": "Batch selection | End selection | Selected",
+        "batchApply": "Batch apply",
+        "apply": "Apply",
+        "clear": "Clear",
+        "advance": "Advance {0}",
+        "advanceSearch": "Advanced search",
+        "search": "Search",
+        "selectAll": "Select all",
+        "selectDate": "Select Date"
+    },
+    "form": {
+        "keyword": "Search keyword...",
+        "pwdShouldBe": "Password should include",
+        "pwdString": "At least one English letter",
+        "pwdNumber": "At least one digit",
+        "pwdSymbol": "At least one special symbol",
+        "pwdLength": "At least 8 characters long",
+        "createdAt": "Create at",
+        "updatedAt": "Last update at",
+        "gender": {
+            "male": "Male",
+            "female": "Female",
+            "unknown": "Don't wanna tell"
+        },
+        "status": "Status",
+        "account": "Account",
+        "password": "Password",
+        "confirmPassword": "Confirm password"
+    },
+    "confirm": {
+        "removeTitle": "Removal confirmation",
+        "remove": "Are you sure you want to delete {name} ?",
+        "removeBatch": "Delete {count} selected items?",
+        "createAccountAlert": "新帳戶建立通知信已發送",
+        "createAccountAlertText1": "請前往{0}接收通知信。",
+        "createAccountAlertText2": "使用電子郵件中的連結設定帳戶密碼進行登入。"
+    },
+    "error": {
+        "unexpectOccured": "An unexpected error occurred"
+    }
+}

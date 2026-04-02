@@ -1,0 +1,14 @@
+{
+    "dp__apply": "Apply",
+    "dp__cancel": "Cancel",
+    "vDatePicker": {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "lastWeek": "Last 7 Days",
+        "lastThirtyDays": "Last 30 Days",
+        "halfYear": "Last 6 Months",
+        "lastMonth": "Last Month",
+        "thisMonth": "This Month",
+        "lastYear": "Last Year"
+    }
+}

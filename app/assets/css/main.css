@@ -1,0 +1,77 @@
+@import 'tailwindcss';
+@import '@nuxt/ui';
+
+.liquid-glass-1 {
+  background: rgba(255, 255, 255, 0.2); /* 半透明白 */
+  backdrop-filter: blur(15px); /* 模糊核心 */
+  -webkit-backdrop-filter: blur(15px);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    /* 外部軟陰影 */
+    0 20px 40px rgba(0, 0, 0, 0.1),
+    /* 內部邊緣高光 (白色) - 這是液體感的靈魂 */ inset 0 10px 15px rgba(255, 255, 255, 0.5),
+    /* 內部底部暗影 (增加厚度感) */ inset 0 -10px 20px rgba(255, 255, 255, 0.2),
+    /* 極細的亮邊 */ inset 0 1px 1px rgba(255, 255, 255, 0.8);
+}
+
+.liquid-glass {
+  --light-angle: -51deg;
+  --light-alpha: 0.15;
+  --refraction-blur: 8.15px;
+  --depth-offset: 4px;
+  --dispersion-offset: 2.8px;
+  --frost-blur: 8px;
+  z-index: -1;
+  background:
+    linear-gradient(
+      var(--light-angle),
+      rgba(255, 255, 255, var(--light-alpha)) 0%,
+      rgba(255, 255, 255, 0.02) 30%,
+      rgba(255, 255, 255, 0.02) 60%,
+      rgba(255, 255, 255, 0.01) 100%
+    ),
+    #ffffff03;
+  -webkit-backdrop-filter: blur(var(--refraction-blur)) saturate(1.12) contrast(1.03);
+  backdrop-filter: blur(var(--refraction-blur)) saturate(1.12) contrast(1.03);
+  box-shadow:
+    0 calc(var(--depth-offset)) calc(var(--depth-offset) * 5) #0000001f,
+    0 calc(var(--depth-offset) * 0.5) calc(var(--depth-offset) * 1.5) #0000000f;
+}
+
+.liquid-glass::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+  background: linear-gradient(120deg, #ffffff2e, #ffffff0a 20%, #fff0 50%);
+  transform: translateY(-10%);
+  filter: blur(6px);
+  mix-blend-mode: screen;
+  opacity: 0.9;
+}
+
+.glass-card:after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+  opacity: 0.42;
+  background:
+    radial-gradient(circle at calc(50% - var(--dispersion-offset)) 40%, #ff5a5a1f, #ff5a5a00 24%),
+    radial-gradient(circle at calc(50% + var(--dispersion-offset)) 60%, #50c8ff1a, #50c8ff00 24%);
+  filter: blur(calc(var(--frost-blur) * 0.35));
+  mix-blend-mode: screen;
+  transform: translateZ(0);
+}
+
+.card-gradient {
+  background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
+}
