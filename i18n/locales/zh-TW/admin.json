@@ -1,0 +1,103 @@
+{
+  "nav": {
+    "dashboard": "儀表板",
+    "conversations": "對話紀錄",
+    "leads": "留資名單",
+    "tickets": "待處理工單",
+    "knowledge": "知識庫管理",
+    "intents": "意圖管理",
+    "quickReplies": "快捷提問",
+    "widgetConfig": "Widget 設定",
+    "audit": "稽核事件",
+    "feedback": "回饋紀錄",
+    "reports": "報表",
+    "backToFront": "返回前台"
+  },
+  "dashboard": {
+    "title": "儀表板",
+    "todayConversations": "今日對話數",
+    "monthConversations": "本月對話數",
+    "selfServiceRate": "AI 自助解答率",
+    "pendingTickets": "待處理工單",
+    "newLeads": "本月新增 Lead",
+    "trendChart": "對話量趨勢",
+    "intentChart": "意圖分布",
+    "recentAudit": "最新稽核事件",
+    "last7days": "近 7 天",
+    "last30days": "近 30 天"
+  },
+  "conversations": {
+    "title": "對話紀錄",
+    "sessionId": "對話 ID",
+    "startTime": "開始時間",
+    "duration": "對話時長",
+    "messageCount": "訊息數",
+    "status": "狀態",
+    "export": "匯出 CSV"
+  },
+  "leads": {
+    "title": "留資名單",
+    "name": "姓名",
+    "company": "公司",
+    "contact": "聯絡方式",
+    "inquiry": "詢問品項",
+    "submittedAt": "送出時間",
+    "export": "匯出 CSV"
+  },
+  "tickets": {
+    "title": "待處理工單",
+    "id": "工單 ID",
+    "sessionId": "對話 ID",
+    "status": "狀態",
+    "createdAt": "建立時間",
+    "resolve": "標記已處理"
+  },
+  "knowledge": {
+    "title": "知識庫管理",
+    "entry": "知識條目",
+    "question": "問題",
+    "answer": "回覆",
+    "category": "分類",
+    "status": "狀態",
+    "import": "批次匯入",
+    "versionHistory": "版本歷史",
+    "create": "新增條目",
+    "edit": "編輯條目"
+  },
+  "widgetConfig": {
+    "title": "Widget 設定",
+    "preview": "即時預覽",
+    "save": "儲存設定",
+    "ctaText": "CTA 文案",
+    "welcomeMessage": "歡迎訊息",
+    "disclaimer": "免責聲明",
+    "serviceHours": "服務時間說明",
+    "status": "Widget 狀態"
+  },
+  "reports": {
+    "title": "報表",
+    "conversationTrend": "對話量趨勢",
+    "intentDistribution": "意圖分布",
+    "feedbackSummary": "回饋統計",
+    "selfServiceRate": "自助解答率趨勢",
+    "responseTime": "平均回覆時間",
+    "exportCSV": "匯出 CSV"
+  },
+  "actions": {
+    "view": "查看",
+    "edit": "編輯",
+    "delete": "刪除",
+    "save": "儲存",
+    "cancel": "取消",
+    "confirm": "確認",
+    "search": "搜尋",
+    "filter": "篩選",
+    "reset": "重置"
+  },
+  "status": {
+    "active": "啟用",
+    "inactive": "停用",
+    "pending": "待處理",
+    "resolved": "已處理"
+  }
+}

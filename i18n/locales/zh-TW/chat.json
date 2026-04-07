@@ -1,0 +1,87 @@
+{
+  "widget": {
+    "cta": "有問題嗎？立即詢問",
+    "welcome": "您好！我是震南的 AI 客服助理，請問有什麼可以幫您？",
+    "inputPlaceholder": "請輸入訊息…",
+    "send": "送出",
+    "cancel": "取消",
+    "restart": "重新開始對話",
+    "charLimit": "已達字數上限（500 字）",
+    "status": {
+      "online": "線上",
+      "busy": "繁忙",
+      "offline": "離線"
+    },
+    "fallback": {
+      "title": "目前 AI 客服暫時無法使用",
+      "description": "請透過以下方式聯絡我們",
+      "contactUs": "聯絡我們"
+    },
+    "disclaimer": "本服務由 AI 提供，回覆僅供參考，重要事項請洽官方客服。",
+    "infoBar": "AI 客服服務說明"
+  },
+  "session": {
+    "restored": "已恢復上次對話紀錄",
+    "expired": "對話已過期，正在為您建立新的對話…",
+    "new": "您好，開始新對話"
+  },
+  "streaming": {
+    "error": "回覆時發生錯誤，請重試",
+    "timeout": "等待回覆逾時，請重試",
+    "interrupted": "回覆被中斷，請重試",
+    "retry": "重試"
+  },
+  "quickReplies": {
+    "label": "您可能想問"
+  },
+  "lead": {
+    "title": "留下您的聯絡方式",
+    "name": "姓名",
+    "namePlaceholder": "請輸入姓名",
+    "company": "公司",
+    "companyPlaceholder": "請輸入公司名稱",
+    "contact": "電話 / Email",
+    "contactPlaceholder": "請輸入電話或 Email",
+    "inquiry": "詢問品項",
+    "inquiryPlaceholder": "選填，請輸入詢問品項",
+    "note": "備註",
+    "notePlaceholder": "選填，其他備註事項",
+    "submit": "送出",
+    "submitting": "送出中…",
+    "success": "感謝您，我們已收到您的資料，將盡快與您聯繫！",
+    "alreadySubmitted": "您本次對話已登記過聯絡資訊",
+    "validation": {
+      "nameRequired": "請輸入姓名",
+      "companyRequired": "請輸入公司名稱",
+      "contactRequired": "請輸入電話或 Email"
+    }
+  },
+  "handoff": {
+    "request": "轉接人工客服",
+    "requested": "轉接申請已送出",
+    "waiting": "等待客服回應中",
+    "connected": "已連線至客服",
+    "unavailable": "目前非服務時間",
+    "serviceHours": "服務時間：週一至週五 09:00–18:00",
+    "leaveContact": "留下聯絡方式"
+  },
+  "feedback": {
+    "helpful": "這個回覆有幫助",
+    "notHelpful": "這個回覆沒有幫助",
+    "reasonLabel": "請選擇原因（選填）",
+    "reasons": {
+      "inaccurate": "資訊不正確",
+      "incomplete": "回覆不完整",
+      "notRelevant": "與問題無關",
+      "other": "其他"
+    }
+  },
+  "system": {
+    "intercepted": {
+      "secret": "此訊息包含敏感資訊，已被系統攔截",
+      "injection": "此訊息包含不安全的指令，已被系統攔截"
+    },
+    "lowConfidence": "AI 對此問題的信心度較低，建議您進一步確認",
+    "fallback": "AI 暫時無法處理此問題"
+  }
+}

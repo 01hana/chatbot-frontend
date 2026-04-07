@@ -1,0 +1,103 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "conversations": "Conversations",
+    "leads": "Leads",
+    "tickets": "Tickets",
+    "knowledge": "Knowledge Base",
+    "intents": "Intent Management",
+    "quickReplies": "Quick Replies",
+    "widgetConfig": "Widget Config",
+    "audit": "Audit Events",
+    "feedback": "Feedback",
+    "reports": "Reports",
+    "backToFront": "Back to Site"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "todayConversations": "Today's Conversations",
+    "monthConversations": "Monthly Conversations",
+    "selfServiceRate": "AI Self-Service Rate",
+    "pendingTickets": "Pending Tickets",
+    "newLeads": "New Leads (Month)",
+    "trendChart": "Conversation Trend",
+    "intentChart": "Intent Distribution",
+    "recentAudit": "Recent Audit Events",
+    "last7days": "Last 7 Days",
+    "last30days": "Last 30 Days"
+  },
+  "conversations": {
+    "title": "Conversations",
+    "sessionId": "Session ID",
+    "startTime": "Start Time",
+    "duration": "Duration",
+    "messageCount": "Messages",
+    "status": "Status",
+    "export": "Export CSV"
+  },
+  "leads": {
+    "title": "Leads",
+    "name": "Name",
+    "company": "Company",
+    "contact": "Contact",
+    "inquiry": "Inquiry",
+    "submittedAt": "Submitted At",
+    "export": "Export CSV"
+  },
+  "tickets": {
+    "title": "Tickets",
+    "id": "Ticket ID",
+    "sessionId": "Session ID",
+    "status": "Status",
+    "createdAt": "Created At",
+    "resolve": "Mark as Resolved"
+  },
+  "knowledge": {
+    "title": "Knowledge Base",
+    "entry": "Entry",
+    "question": "Question",
+    "answer": "Answer",
+    "category": "Category",
+    "status": "Status",
+    "import": "Batch Import",
+    "versionHistory": "Version History",
+    "create": "Add Entry",
+    "edit": "Edit Entry"
+  },
+  "widgetConfig": {
+    "title": "Widget Config",
+    "preview": "Live Preview",
+    "save": "Save Config",
+    "ctaText": "CTA Text",
+    "welcomeMessage": "Welcome Message",
+    "disclaimer": "Disclaimer",
+    "serviceHours": "Service Hours",
+    "status": "Widget Status"
+  },
+  "reports": {
+    "title": "Reports",
+    "conversationTrend": "Conversation Trend",
+    "intentDistribution": "Intent Distribution",
+    "feedbackSummary": "Feedback Summary",
+    "selfServiceRate": "Self-Service Rate Trend",
+    "responseTime": "Avg Response Time",
+    "exportCSV": "Export CSV"
+  },
+  "actions": {
+    "view": "View",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "search": "Search",
+    "filter": "Filter",
+    "reset": "Reset"
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "pending": "Pending",
+    "resolved": "Resolved"
+  }
+}

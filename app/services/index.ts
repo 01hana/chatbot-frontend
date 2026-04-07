@@ -15,14 +15,11 @@ class HttpRequest {
 
   private handleError(error: any) {
     const toast = useAppToast();
-    const { clearAuth } = useAuth();
 
     const status = error?.response?.status;
     const message = error?.response?._data?.message || error.message;
 
     toast.error(`${status || ''} ${message || '未知錯誤'}`);
-
-    if (status === 401) clearAuth();
   }
 
   public async request<T = any>(

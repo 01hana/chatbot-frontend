@@ -1,0 +1,87 @@
+{
+  "widget": {
+    "cta": "Need help? Chat now",
+    "welcome": "Hello! I'm the AI assistant for Zhen-Nan. How can I help you today?",
+    "inputPlaceholder": "Type a message…",
+    "send": "Send",
+    "cancel": "Cancel",
+    "restart": "Restart conversation",
+    "charLimit": "Character limit reached (500)",
+    "status": {
+      "online": "Online",
+      "busy": "Busy",
+      "offline": "Offline"
+    },
+    "fallback": {
+      "title": "AI assistant is temporarily unavailable",
+      "description": "Please contact us through the following channels",
+      "contactUs": "Contact Us"
+    },
+    "disclaimer": "This service is powered by AI. Responses are for reference only. Please contact official support for important matters.",
+    "infoBar": "AI Customer Service"
+  },
+  "session": {
+    "restored": "Previous conversation restored",
+    "expired": "Session expired, starting a new conversation…",
+    "new": "Hello, starting a new conversation"
+  },
+  "streaming": {
+    "error": "An error occurred, please retry",
+    "timeout": "Response timed out, please retry",
+    "interrupted": "Response was interrupted, please retry",
+    "retry": "Retry"
+  },
+  "quickReplies": {
+    "label": "You may want to ask"
+  },
+  "lead": {
+    "title": "Leave your contact details",
+    "name": "Name",
+    "namePlaceholder": "Enter your name",
+    "company": "Company",
+    "companyPlaceholder": "Enter your company name",
+    "contact": "Phone / Email",
+    "contactPlaceholder": "Enter phone or email",
+    "inquiry": "Inquiry",
+    "inquiryPlaceholder": "Optional – what products are you inquiring about?",
+    "note": "Notes",
+    "notePlaceholder": "Optional – any additional notes",
+    "submit": "Submit",
+    "submitting": "Submitting…",
+    "success": "Thank you! We have received your information and will contact you soon.",
+    "alreadySubmitted": "You have already submitted your contact information in this session",
+    "validation": {
+      "nameRequired": "Please enter your name",
+      "companyRequired": "Please enter your company name",
+      "contactRequired": "Please enter your phone number or email"
+    }
+  },
+  "handoff": {
+    "request": "Transfer to human agent",
+    "requested": "Transfer request submitted",
+    "waiting": "Waiting for an agent",
+    "connected": "Connected to an agent",
+    "unavailable": "Outside service hours",
+    "serviceHours": "Service hours: Mon–Fri 09:00–18:00",
+    "leaveContact": "Leave contact details"
+  },
+  "feedback": {
+    "helpful": "This response was helpful",
+    "notHelpful": "This response was not helpful",
+    "reasonLabel": "Select a reason (optional)",
+    "reasons": {
+      "inaccurate": "Inaccurate information",
+      "incomplete": "Incomplete response",
+      "notRelevant": "Not relevant to my question",
+      "other": "Other"
+    }
+  },
+  "system": {
+    "intercepted": {
+      "secret": "This message contains sensitive information and has been blocked",
+      "injection": "This message contains unsafe instructions and has been blocked"
+    },
+    "lowConfidence": "The AI has low confidence in this response. Please verify with official support.",
+    "fallback": "The AI is unable to handle this request"
+  }
+}

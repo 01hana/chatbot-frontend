@@ -6,6 +6,11 @@ export default defineAppConfig({
     colors: {
       primary: 'sky',
       neutral: 'zinc',
+      // Semantic colours (T-003)
+      success: 'emerald',
+      warning: 'amber',
+      error: 'red',
+      info: 'blue',
     },
     button: {
       slots: {

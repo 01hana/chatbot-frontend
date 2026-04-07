@@ -33,7 +33,7 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
     public: {
-      API_URL: process.env.NUXT_API_URL,
+      apiBase: process.env.NUXT_PUBLIC_API_BASE ?? '',
     },
   },
   // auth: {
@@ -54,15 +54,15 @@ export default defineNuxtConfig({
   i18n: {
     defaultLocale: 'zh-TW',
     strategy: 'no_prefix',
-    langDir: 'locales',
+    langDir: '../i18n/locales',
     locales: [
       {
         code: 'zh-TW',
-        files: ['zh-TW/common.json', 'zh-TW/plugin.json'],
+        files: ['zh-TW/common.json', 'zh-TW/plugin.json', 'zh-TW/chat.json', 'zh-TW/admin.json'],
       },
       {
         code: 'en',
-        files: ['en/common.json', 'en/plugin.json'],
+        files: ['en/common.json', 'en/plugin.json', 'en/chat.json', 'en/admin.json'],
       },
     ],
   },

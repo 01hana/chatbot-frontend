@@ -1,50 +1,187 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# 前端專案憲章（Constitution）
 
-## Core Principles
+> 專案：震南官網 AI 客服聊天機器人（前端）
+> 適用範圍：前端專案內所有 spec / design / plan / task / implement
+> 狀態：Active
+> 版本：1.0.0
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+## 1. 目的
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+本憲章定義「震南官網 AI 客服聊天機器人」前端專案的最高準則。
+所有後續的 `spec.md`、`design.md`、`plan.md`、`task.md` 與實作內容，都必須遵守本憲章。
+若個別文件與本憲章衝突，以本憲章為優先；若 SRS、已核准 Figma 與本憲章衝突，須先在規格文件中明確記錄假設與修正方向，再進入實作。
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+---
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+## 2. 專案定位
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+本前端專案的核心目標不是「做一個聊天視窗」而已，而是建立一個可嵌入官網、可多語互動、可安全收斂需求、可引導留資、可在風險情境下正確拒答與降級的 AI 客服體驗。
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+前端必須服務以下四個結果：
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+1. 讓外部訪客能快速開始提問與獲得公開資訊
+2. 讓高意向訪客能被順暢引導至留資與人工接手
+3. 讓敏感 / 機密 / 低信心情境被安全處理
+4. 讓整個對話流程在桌機、手機、慢網路與服務異常時仍可用
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+---
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+## 3. 不可妥協原則
 
-## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
+### 原則一：SRS 與已核准 Figma 為唯一產品真相
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+- 功能邊界以已核准 SRS 為準
+- 視覺與互動表現以已核准 Figma 為準
+- 未在 SRS 或 Figma 中明示的內容，不得自行擴張為正式需求
+- 若實作需要補充假設，必須寫入 `spec.md` 或 `design.md` 的「Assumptions / TBD」
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+### 原則二：安全與機密保護優先於華麗互動
+
+- 前端不得為了「更像 AI」而包裝或淡化風險狀態
+- 當後端回傳機密觸發、Prompt Injection、低信心、需追問、需轉人工時，前端必須忠實呈現對應狀態
+- 前端不得在任何 client bundle、環境變數暴露區、前端日誌或追蹤事件中洩漏機密資訊
+- 前端不得硬編碼任何內部規則、黑名單、系統提示或敏感判斷邏輯內容
+
+### 原則三：不得偽造可用性與答案狀態
+
+- 不得把失敗說成成功
+- 不得把「尚未回應」偽裝成「AI 正在理解」過久
+- 不得在沒有後端結果時自行生成看似正式的產品建議
+- 當回應失敗、超時或被安全策略攔截時，必須提供明確且可操作的替代流程
+
+### 原則四：留資引導要自然，但不可騷擾
+
+- 留資是核心業務目標，但不能破壞基本問答體驗
+- 前端應在高意向、推薦完成、摘要完成、敏感轉介等正確節點顯示 CTA
+- 不得在使用者一進站就強制填表
+- 不得在每輪對話後都重複轟炸留資提示
+
+### 原則五：多語一致，不可只翻字面
+
+- 所有使用者可見文案必須支援繁中與英文
+- 同一狀態、同一 CTA、同一錯誤訊息在不同語系中必須語意一致
+- 專有名詞、產品名、規格欄位、單位與風險提示不得隨意翻譯
+- 缺字串、缺翻譯、fallback 文案都視為缺陷
+
+### 原則六：前端必須可測、可維護、可替換
+
+- 元件、狀態、資料契約必須可測試
+- 視覺層、流程層、資料層需分離
+- 不可把大量流程判斷寫死在單一頁面或單一巨型元件
+- 所有關鍵使用者流程至少要能被 E2E 驗證
+
+### 原則七：無障礙與響應式不是加分項，是基本要求
+
+- 桌機與手機都必須可用
+- 鍵盤操作、focus 流程、可讀 label、狀態提示必須完整
+- 表單錯誤、送出中、成功、失敗必須對使用者明確可感知
+- 不得只靠顏色表達狀態
+
+### 原則八：實作必須貼近最終上線條件
+
+- 開發時就應考慮嵌入模式、CSP、跨站情境、延遲、追蹤、降級
+- 不得做出只能在 localhost 漂亮運作、上線就失真的前端方案
+- 若未來支援 Script / Tag / SDK 嵌入，前端架構需預留封裝能力
+
+---
+
+## 4. 必備交付標準
+
+每一份前端規格與實作，至少需明確回答以下問題：
+
+1. 這個功能服務哪一段使用者流程？
+2. 成功、失敗、空狀態、載入中、降級狀態各長什麼樣？
+3. 哪些是前端責任，哪些是後端責任？
+4. 若後端回傳低信心 / 機密 / 注入 / 轉人工，前端如何呈現？
+5. 此功能的中英文文案與 i18n key 是否已定義？
+6. 此功能是否可在手機與桌機正常使用？
+7. 此功能是否有 analytics / audit 所需事件？
+8. 此功能是否已有對應測試案例？
+
+---
+
+## 5. 技術與架構守則
+
+### 5.1 技術基線
+
+- 前端預設使用 Nuxt 4 + TypeScript
+- UI 元件應優先使用專案既有設計系統 / Nuxt UI 封裝
+- 所有 API 契約需以 typed interface / schema 管理
+- 所有共用流程應抽離為 composables / services，而非散落在 view 中
+
+### 5.2 狀態管理
+
+- 對話訊息、session、輸入中、留資流程、降級狀態、語系、CTA 顯示條件必須明確建模
+- 不得以隱性 DOM 狀態或過度依賴 local component state 管理整體流程
+- 任何跨元件共享的核心狀態需集中管理
+
+### 5.3 文案與 i18n
+
+- 所有文案需透過 i18n 管理
+- 不得在 template 中散落硬編碼中文 / 英文正式文案
+- 錯誤碼與 UI 訊息需有穩定對應表
+
+### 5.4 表單
+
+- 留資表單必須有明確驗證規則、錯誤提示、送出中狀態與成功回饋
+- 表單欄位、必填條件、 consent 顯示邏輯需與 spec 對齊
+- 不得以純前端假送出充當完成流程
+
+### 5.5 測試
+
+- 關鍵流程需具備 E2E 測試
+- 關鍵邏輯需具備 unit / integration tests
+- 若一項功能無法描述其驗收方式，代表規格仍不完整
+
+---
+
+## 6. 變更治理
+
+以下任一變更發生時，必須先更新 `spec.md`，必要時連動更新 `design.md / plan.md / task.md`，再實作：
+
+- 對話流程變更
+- 留資欄位變更
+- CTA 觸發時機變更
+- 語系策略變更
+- 嵌入方式變更
+- 風險提示或隱私告知變更
+- 安全策略呈現方式變更
+- 影響驗收標準的互動或效能變更
+
+---
+
+## 7. Definition of Done
+
+任一前端功能只有在同時滿足以下條件時，才算完成：
+
+1. 與已核准 spec / design 一致
+2. 桌機與手機可用
+3. 中英文文案完整
+4. 成功 / 失敗 / 空狀態 / loading / 降級皆已處理
+5. 已接上真實或可驗證 mock API 契約
+6. 已加入必要追蹤事件
+7. 已完成對應測試
+8. 未違反本憲章任何原則
+
+---
+
+## 8. 本憲章的使用方式
+
+- `spec.md`：定義需求與使用者流程
+- `design.md`：定義前端架構、資料流、元件拆分、API 契約、狀態模型
+- `plan.md`：定義分期與實作順序
+- `task.md`：拆成可執行任務
+- `implement`：只能落地已被上述文件覆蓋的內容，不得跳過規格直接發明需求
+
+---
+
+## 9. 憲章修訂原則
+
+本憲章可修訂，但修訂不能只是為了配合一時的實作方便。
+任何修訂都必須提升以下至少一項：
+
+- 安全性
+- 可維護性
+- 可驗證性
+- 使用者體驗一致性
+- 與 SRS / Figma 的對齊程度
