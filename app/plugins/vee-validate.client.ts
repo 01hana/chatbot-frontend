@@ -2,38 +2,36 @@ import { defineRule, configure } from 'vee-validate';
 import { all } from '@vee-validate/rules';
 import { localize, setLocale } from '@vee-validate/i18n';
 
+// ── Custom rules ─────────────────────────────────────────────
+
+/**
+ * phoneOrEmail — validates that at least one of this field (phone) or a
+ * sibling email field has a valid value.
+ *
+ * Usage on the phone <FormField>:
+ *   rules="phoneOrEmail:@email"
+ *
+ * The rule receives the sibling email field value via cross-field syntax.
+ * It passes when:
+ *  - this field looks like a phone number, OR
+ *  - this field looks like an email address, OR
+ *  - the sibling email field already has a non-empty value.
+ */
+const PHONE_RE = /^[0-9+\-()\s]{7,20}$/
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+defineRule('phoneOrEmail', (value: string, [siblingValue]: [string]) => {
+  const thisOk = PHONE_RE.test(value ?? '') || EMAIL_RE.test(value ?? '')
+  const siblingOk = Boolean(siblingValue?.trim())
+  if (thisOk || siblingOk) return true
+  return '請輸入電話或 Email（至少填寫一項）'
+})
+
 export default defineNuxtPlugin(async () => {
+  // Register all standard @vee-validate/rules
   Object.entries(all).forEach(([name, rule]) => {
     defineRule(name, rule);
   });
-
-  //   defineRule('time', (value: string) => {
-  //     const regExp = value.match(/^(\d{2}):(\d{2}):(\d{2})$/);
-
-  //     if (!regExp) return false;
-
-  //     const [, hhStr, mmStr, ssStr] = regExp;
-
-  //     const hh = parseInt(hhStr, 10);
-  //     const mm = parseInt(mmStr, 10);
-  //     const ss = parseInt(ssStr, 10);
-
-  //     if (hh > 23 || mm > 59 || ss > 59) return false;
-
-  //     return true;
-  //   });
-
-  //   defineRule('end_time_after_start', (value: string, [startValue]: [string]) => {
-  //     if (!value || !startValue || value === '00:00:00') return true;
-
-  //     const toSeconds = (timeStr: string) => {
-  //       const [h, m, s] = timeStr.split(':').map(Number);
-
-  //       return h * 3600 + m * 60 + s;
-  //     };
-
-  //     return toSeconds(value) >= toSeconds(startValue);
-  //   });
 
   async function loadValidationLocale(locale: string) {
     let messages;

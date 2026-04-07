@@ -13,6 +13,7 @@ export default defineNuxtConfig({
     '@vee-validate/nuxt',
     '@nuxtjs/i18n',
     '@nuxt/test-utils/module',
+    'nuxt-charts', // T-015
   ],
   security: {
     headers: {
@@ -70,7 +71,17 @@ export default defineNuxtConfig({
     autoImports: true,
   },
   imports: {
-    dirs: ['stores', 'composables', 'utils', 'libs/vxe-table'],
+    dirs: [
+      'stores',
+      'composables',
+      'utils',
+      'libs/vxe-table',
+      // Feature-based stores & composables (T-006)
+      'features/chat/stores',
+      'features/chat/composables',
+      'features/admin/stores',
+      'features/admin/composables',
+    ],
   },
   vite: {
     optimizeDeps: {

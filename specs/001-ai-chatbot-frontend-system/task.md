@@ -54,19 +54,20 @@
 
 ---
 
-- [ ] **T-003** 設定 `app.config.ts` Nuxt UI 主題 token 與品牌色
+- [x] **T-003** 設定 `app.config.ts` Nuxt UI 主題 token 與品牌色
   - **所屬 Phase**：Phase 0
   - **所屬 Workstream**：WS-A
   - **依賴**：T-002
   - **實作內容**：
     - 在 `app/app.config.ts` 設定 Nuxt UI 主題 primary 色、success / warning / error 語意色（待設計稿色票確認前先填入合理預設值）
-    - 在 `tailwind.config.ts`（或 Tailwind v4 CSS 設定檔）新增延伸色：`chat-user-bubble`、`chat-ai-bubble`、`intercept-warning`、`intercept-injection`
+    - 建立集中管理的聊天與攔截顏色策略，包含：`chat-user-bubble`、`chat-ai-bubble`、`intercept-warning`、`intercept-injection`
+    - 確認前台聊天相關元件可透過共用方式使用上述顏色，而不是在各元件內重複寫死色碼
     - 確認 `UButton`、`UInput`、`UCard` 在頁面上可正常渲染並套用主題色
   - **完成條件**：`UButton` / `UInput` 渲染時套用品牌主色；自訂 Tailwind 色類在樣式中可使用；TypeScript 編譯無錯誤
 
 ---
 
-- [ ] **T-004** 建立 API Client（`services/api/client.ts`）
+- [x] **T-004** 建立 API Client（`services/api/client.ts`）
   - **所屬 Phase**：Phase 0
   - **所屬 Workstream**：WS-A
   - **依賴**：T-002
@@ -81,7 +82,7 @@
 
 ---
 
-- [ ] **T-005** 定義 Shared TypeScript VM Types（`types/chat.ts`、`types/admin.ts`、`types/api.ts`）
+- [x] **T-005** 定義 Shared TypeScript VM Types（`types/chat.ts`、`types/admin.ts`、`types/api.ts`）
   - **所屬 Phase**：Phase 0
   - **所屬 Workstream**：WS-A
   - **依賴**：T-001
@@ -94,7 +95,7 @@
 
 ---
 
-- [ ] **T-006** 初始化 Pinia Stores 骨架（三個 store）
+- [x] **T-006** 初始化 Pinia Stores 骨架（三個 store）
   - **所屬 Phase**：Phase 0
   - **所屬 Workstream**：WS-A
   - **依賴**：T-005
@@ -103,23 +104,28 @@
     - 建立 `app/features/chat/stores/useChatSessionStore.ts`：state 含 `sessionToken`、`sessionStatus`、`messages: ChatMessageVM[]`、`streamingState: StreamingState`、`handoffState: HandoffState`、`leadFormState`、`quickRepliesVisible: boolean`
     - 建立 `app/features/chat/stores/useWidgetConfigStore.ts`：state 含 `config: WidgetConfigVM | null`、`isLoaded: boolean`、`isOnline: boolean`
     - 確認 Pinia plugin 已掛載（`@pinia/nuxt`）
-  - **完成條件**：三個 store 可在元件中 import 使用；store state 初始值正確；TypeScript 型別推導無錯誤
+  - **完成條件**：三個 store 可在元件中 import 使用；store state 初始值正確；TypeScript 型別推導無錯誤; composition 寫法
 
 ---
 
-- [ ] **T-007** 設定 vee-validate plugin（`plugins/vee-validate.client.ts`）
+- [x] **T-007** 設定 vee-validate plugin（`plugins/vee-validate.client.ts`）
   - **所屬 Phase**：Phase 0
   - **所屬 Workstream**：WS-A
   - **依賴**：T-002
   - **實作內容**：
-    - 確認 `app/plugins/vee-validate.client.ts` 已建立並在 plugin 中全域註冊必要規則（`required`、`email`、`min`、`max`）
-    - 新增自訂規則：`phoneOrEmail`（電話格式或 Email 格式，至少一個）
-    - 確認 `<Form>`、`<Field>`、`<ErrorMessage>` 元件可在前台使用
-  - **完成條件**：在測試元件中使用 `<Form>` + `<Field required>` 可顯示驗證錯誤訊息；自訂 `phoneOrEmail` 規則邏輯正確
+  - 確認 `app/plugins/vee-validate.client.ts` 已建立，並完成 vee-validate 驗證規則的全域註冊或共用驗證能力初始化
+  - 新增自訂規則：`phoneOrEmail`（電話格式或 Email 格式，至少一個）
+  - 以前端既有封裝的 Nuxt UI 表單元件為主，不直接依賴 vee-validate 的 `<Form>`、`<Field>`、`<ErrorMessage>` 作為主要畫面組件
+  - 確認 `@nuxt/ui` 的 `UForm` 可與既有 `app/components/FormField` 封裝元件整合使用
+  - 確認表單元件可接收驗證錯誤訊息、顯示欄位錯誤狀態，並支援後續 Lead Form 等表單場景重用
+  - **完成條件**：
+    - 在測試元件中，使用 `UForm` 搭配既有封裝的 `FormField` 元件可正確顯示驗證錯誤訊息
+    - 自訂 `phoneOrEmail` 規則邏輯正確
+    - 不需要直接使用 vee-validate 的 `<Form>`、`<Field>`、`<ErrorMessage>` 也能完成表單驗證整合
 
 ---
 
-- [ ] **T-008** 建立 i18n 基礎文案檔案結構
+- [x] **T-008** 建立 i18n 基礎文案檔案結構
   - **所屬 Phase**：Phase 0
   - **所屬 Workstream**：WS-A
   - **依賴**：T-002
@@ -134,7 +140,7 @@
 
 ---
 
-- [ ] **T-009** 建立 `layouts/default.vue`（前台極簡 layout）
+- [x] **T-009** 建立 `layouts/default.vue`（前台極簡 layout）
   - **所屬 Phase**：Phase 0
   - **所屬 Workstream**：WS-A
   - **依賴**：T-003
@@ -146,7 +152,7 @@
 
 ---
 
-- [ ] **T-010** 建立 `layouts/admin.vue`（後台 layout 骨架）
+- [x] **T-010** 建立 `layouts/admin.vue`（後台 layout 骨架）
   - **所屬 Phase**：Phase 0
   - **所屬 Workstream**：WS-A
   - **依賴**：T-003
@@ -158,7 +164,7 @@
 
 ---
 
-- [ ] **T-011** 建立 `error.vue`（全域錯誤頁）
+- [x] **T-011** 建立 `error.vue`（全域錯誤頁）
   - **所屬 Phase**：Phase 0
   - **所屬 Workstream**：WS-A
   - **依賴**：T-003
@@ -171,7 +177,7 @@
 
 ---
 
-- [ ] **T-012** 建立共用工具函式（`utils/format.ts`、`utils/markdown.ts`、`utils/errorReporter.ts`）
+- [x] **T-012** 建立共用工具函式（`utils/format.ts`、`utils/markdown.ts`、`utils/errorReporter.ts`）
   - **所屬 Phase**：Phase 0
   - **所屬 Workstream**：WS-A
   - **依賴**：T-001
@@ -184,7 +190,7 @@
 
 ---
 
-- [ ] **T-013** 建立前台首頁 `app/pages/index/index.vue` 與「進入後台」入口按鈕
+- [x] **T-013** 建立前台首頁 `app/pages/index/index.vue` 與「進入後台」入口按鈕
   - **所屬 Phase**：Phase 0
   - **所屬 Workstream**：WS-A
   - **依賴**：T-009
@@ -196,7 +202,7 @@
 
 ---
 
-- [ ] **T-014** 建立測試基礎設施（Vitest + Playwright 設定確認）
+- [x] **T-014** 建立測試基礎設施（Vitest + Playwright 設定確認）
   - **所屬 Phase**：Phase 0
   - **所屬 Workstream**：WS-A
   - **依賴**：T-001
@@ -210,14 +216,14 @@
 
 ---
 
-- [ ] **T-015** 安裝並驗證 Nuxt Charts
+- [x] **T-015** 安裝並驗證 Nuxt Charts
   - **所屬 Phase**：Phase 0
   - **所屬 Workstream**：WS-A
   - **依賴**：T-002
   - **實作內容**：
     - 安裝 `nuxt-charts`（`npm install nuxt-charts`）
     - 依官方方式將 `nuxt-charts` 加入 `nuxt.config.ts` 的 `modules` 陣列
-    - 建立最小驗證頁 `app/pages/admin/_charts-demo.vue`（或 `tests/fixtures/charts-fixture.vue`），放入以下兩種圖表：
+    - 建立最小驗證頁 `app/pages/admin/ChartsDemo.vue`（或 `tests/fixtures/charts-fixture.vue`），放入以下兩種圖表：
       - 折線圖（Line Chart）：帶入靜態 mock 時序資料（陣列格式）
       - 圓餅圖 / Donut 圖（Pie / Donut Chart）：帶入靜態分類 mock 資料
     - 確認兩種圖表在 `npm run dev` 下可正常渲染，無 console 錯誤
@@ -564,8 +570,9 @@
     - 管理 state：`formData: LeadFormData`、`status: 'idle' | 'submitting' | 'submitted' | 'error'`
     - `submitLead()` 流程：呼叫 API → 成功 → `status = 'submitted'`，存入 `useChatSessionStore.leadFormState.submitted = true` → 阻止同 session 重複提交
     - 提交失敗：`status = 'error'`，inline 錯誤提示
-    - 驗證規則：`name`（必填）、`company`（必填）、`phone or email`（至少一個，使用 vee-validate `phoneOrEmail` 規則）、`inquiry` / `note`（選填）
-  - **完成條件**：提交成功後 `status = 'submitted'`；同 session 再次觸發顯示已提交狀態；驗證規則完整
+    - 驗證規則以 vee-validate 實作（規則層）：`name`（必填）、`company`（必填）、`phone or email`（至少一個，使用自訂 `phoneOrEmail` 規則）、`inquiry` / `note`（選填）
+    - 對外暴露欄位驗證狀態（`errors`、`validate()`），供上層的 `UForm` 與既有封裝的 `FormField` 元件消費；composable 本身不直接渲染任何表單 UI
+  - **完成條件**：提交成功後 `status = 'submitted'`；同 session 再次觸發顯示已提交狀態；驗證規則完整；`errors` 物件可供上層元件讀取
 
 ---
 
@@ -575,11 +582,12 @@
   - **依賴**：T-036、T-028
   - **實作內容**：
     - 建立 `app/features/chat/components/LeadFormCard.vue`：inline 卡片，嵌入訊息流（作為一種 `message.type = 'lead-form'` 渲染）
-    - 使用 vee-validate `<Form>` + `<Field>` 綁定欄位（姓名、公司、電話 / Email、詢問品項、備註）
-    - 錯誤訊息以 `<ErrorMessage>` 顯示於欄位下方
-    - 提交中：按鈕顯示 loading；已提交：卡片轉為確認訊息（「感謝您，我們已收到您的資料！」）
-    - 使用 `useLeadForm` composable
-  - **完成條件**：表單驗證錯誤正確顯示；提交成功後卡片轉為確認訊息；已提交時再次觸發顯示「已登記」不重渲表單
+    - 使用 `UForm` 作為表單容器，欄位以既有封裝元件 `app/components/FormField` 渲染（姓名、公司、電話 / Email、詢問品項、備註）
+    - 欄位錯誤狀態與錯誤訊息由 `FormField` 封裝元件承接，不直接使用 vee-validate 的畫面元件（`<Form>`、`<Field>`、`<ErrorMessage>`）
+    - 表單資料、驗證狀態、提交流程均由 `useLeadForm` composable 提供
+    - 提交中：送出按鈕顯示 loading 並 disabled；已提交：卡片整體替換為確認訊息（「感謝您，我們已收到您的資料！」）
+    - 若 `useLeadForm.status === 'submitted'` 再次觸發，顯示「已登記」提示，不重渲染表單
+  - **完成條件**：透過 `UForm + FormField` 可正確顯示各欄位驗證錯誤；提交成功後卡片轉為確認訊息；已提交時再次觸發顯示「已登記」不重渲表單
 
 ---
 
@@ -704,12 +712,12 @@
   - **實作內容**：
     - 測試檔：`tests/unit/features/chat/LeadFormCard.test.ts`
     - 測試案例：
-      - 渲染表單欄位（姓名、公司、聯絡方式）
-      - 空白提交顯示驗證錯誤
-      - 提交中狀態按鈕 disabled + loading
-      - 提交成功後顯示確認訊息（而非表單）
-      - `props.submitted = true` 時顯示「已登記」提示
-  - **完成條件**：五個測試案例通過
+      - `UForm + FormField` 正確渲染所有欄位（姓名、公司、聯絡方式）
+      - 空白提交後，各必填欄位透過 `FormField` 顯示對應驗證錯誤訊息
+      - 提交中（`status = 'submitting'`）時，送出按鈕為 disabled + loading 狀態
+      - 提交成功（`status = 'submitted'`）後，卡片顯示確認訊息而非表單
+      - `useLeadForm.status === 'submitted'` 再次觸發時顯示「已登記」提示而非重渲表單
+  - **完成條件**：五個測試案例通過；測試中不出現對 vee-validate 畫面元件（`<Form>`、`<Field>`、`<ErrorMessage>`）的直接斷言
 
 ---
 
@@ -1364,27 +1372,27 @@
 
 ## 里程碑檢查點
 
-| 里程碑 | 對應任務完成 | 可驗證產出 |
-|--------|------------|----------|
+| 里程碑              | 對應任務完成   | 可驗證產出                                                                                                                       |
+| ------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | **M0** Phase 0 完成 | T-001 ～ T-015 | `npm run dev` 可啟動；主題設定完成；API client + types + stores 就緒；「進入後台」按鈕可用；Nuxt Charts 折線圖與圓餅圖可正常渲染 |
-| **M1** Phase 1 完成 | T-016 ～ T-034 | 前台 Widget 可互動 MVP；多輪對話 + 串流回覆；session 恢復；降級模式；P0 單元測試 + E2E 通過 |
-| **M2** Phase 2 完成 | T-035 ～ T-048 | 前台全功能（留資、轉人工、回饋、語系切換、埋點）；Phase 2 E2E 通過 |
-| **M3** Phase 3 完成 | T-049 ～ T-057 | 後台基礎頁面可用（Dashboard + 對話紀錄 + Lead + Ticket）；後台 E2E 通過 |
-| **M4** Phase 4 完成 | T-058 ～ T-066 | 後台內容管理完整（知識庫版本歷史 + 批次匯入；意圖側抽屜；快捷提問拖曳；Widget 即時預覽）；Phase 4 E2E 通過 |
-| **M5** Phase 5 完成 | T-067 ～ T-072 | 後台維運工具完整（稽核事件 + 回饋紀錄 + 5 圖表報表 + CSV 匯出）；Phase 5 E2E 通過 |
-| **M6** Phase 6 完成 | T-073 ～ T-085 | 全系統品質達標；所有測試通過；build 成功；plan.md DoD 全勾 |
+| **M1** Phase 1 完成 | T-016 ～ T-034 | 前台 Widget 可互動 MVP；多輪對話 + 串流回覆；session 恢復；降級模式；P0 單元測試 + E2E 通過                                      |
+| **M2** Phase 2 完成 | T-035 ～ T-048 | 前台全功能（留資、轉人工、回饋、語系切換、埋點）；Phase 2 E2E 通過                                                               |
+| **M3** Phase 3 完成 | T-049 ～ T-057 | 後台基礎頁面可用（Dashboard + 對話紀錄 + Lead + Ticket）；後台 E2E 通過                                                          |
+| **M4** Phase 4 完成 | T-058 ～ T-066 | 後台內容管理完整（知識庫版本歷史 + 批次匯入；意圖側抽屜；快捷提問拖曳；Widget 即時預覽）；Phase 4 E2E 通過                       |
+| **M5** Phase 5 完成 | T-067 ～ T-072 | 後台維運工具完整（稽核事件 + 回饋紀錄 + 5 圖表報表 + CSV 匯出）；Phase 5 E2E 通過                                                |
+| **M6** Phase 6 完成 | T-073 ～ T-085 | 全系統品質達標；所有測試通過；build 成功；plan.md DoD 全勾                                                                       |
 
 ---
 
 ## 任務統計
 
-| Phase | 任務數 | 涵蓋 Workstream |
-|-------|--------|----------------|
-| Phase 0 | T-001 ～ T-015（15 個） | WS-A |
-| Phase 1 | T-016 ～ T-034（19 個） | WS-B、WS-C |
-| Phase 2 | T-035 ～ T-048（14 個） | WS-D |
-| Phase 3 | T-049 ～ T-057（9 個） | WS-E |
-| Phase 4 | T-058 ～ T-066（9 個） | WS-F |
-| Phase 5 | T-067 ～ T-072（6 個） | WS-G |
-| Phase 6 | T-073 ～ T-085（13 個） | WS-H |
-| **合計** | **85 個任務** | WS-A ～ WS-H |
+| Phase    | 任務數                  | 涵蓋 Workstream |
+| -------- | ----------------------- | --------------- |
+| Phase 0  | T-001 ～ T-015（15 個） | WS-A            |
+| Phase 1  | T-016 ～ T-034（19 個） | WS-B、WS-C      |
+| Phase 2  | T-035 ～ T-048（14 個） | WS-D            |
+| Phase 3  | T-049 ～ T-057（9 個）  | WS-E            |
+| Phase 4  | T-058 ～ T-066（9 個）  | WS-F            |
+| Phase 5  | T-067 ～ T-072（6 個）  | WS-G            |
+| Phase 6  | T-073 ～ T-085（13 個） | WS-H            |
+| **合計** | **85 個任務**           | WS-A ～ WS-H    |

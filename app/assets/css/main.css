@@ -1,2 +1,17 @@
 @import 'tailwindcss';
 @import '@nuxt/ui';
+
+/* ── Chat custom colour tokens (T-003) ─────────────────────────
+   Tailwind v4 theme extension — consumed as CSS variables and
+   utility classes, e.g. bg-chat-user-bubble / text-intercept-warning-text
+   ──────────────────────────────────────────────────────────── */
+@theme {
+  --color-chat-user-bubble: #dbeafe;
+  --color-chat-user-bubble-text: #1e40af;
+  --color-chat-ai-bubble: #ffffff;
+  --color-chat-ai-bubble-text: #1f2937;
+  --color-intercept-warning: #fef3c7;
+  --color-intercept-warning-text: #92400e;
+  --color-intercept-injection: #fee2e2;
+  --color-intercept-injection-text: #991b1b;
+}

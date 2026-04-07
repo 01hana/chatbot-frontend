@@ -1,16 +1,14 @@
 {
-    "sitename": "Ecommerce Shop",
-    "copyright": "© { year } Ecommerce Shop Enterprise Co., Ltd. All rights reserved.",
+    "sitename": "AI 客服聊天機器人",
+    "copyright": "© { year } AI 客服聊天機器人有限公司. All rights reserved.",
     "language": "語言",
     "lang": "繁體中文",
     "chooseLanguage": "選擇語言",
     "notFound": "沒有資料",
     "menu": {
-        "index": "Home",
-        "products": "Products",
+        "index": "首頁",
+        "products": "產品",
         "orders": "訂單紀錄",
-        "products-top": "Top",
-        "products-bottom": "Bottom",
         "accounts-profile": "會員資料"
     },
     "auth": {
