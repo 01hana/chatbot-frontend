@@ -53,6 +53,16 @@ export interface ChatMessageVM {
   timestamp: string
   /** Only present on AI / system messages. */
   metadata?: AiMessageMeta
+  /**
+   * Quick-reply chips shown beneath an AI message.
+   * Populated from the knowledge base (mock) or backend response.
+   */
+  quickReplies?: string[]
+  /**
+   * User feedback rating for this AI message.
+   * null = not yet rated, 'up' = liked, 'down' = disliked.
+   */
+  rating?: FeedbackValue
 }
 
 // ── Widget Config ────────────────────────────────────────────

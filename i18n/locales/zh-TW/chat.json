@@ -2,6 +2,7 @@
   "widget": {
     "cta": "有問題嗎？立即詢問",
     "welcome": "您好！我是震南的 AI 客服助理，請問有什麼可以幫您？",
+    "description": "線上服務中 · 請問有什麼可以幫您？",
     "inputPlaceholder": "請輸入訊息…",
     "send": "送出",
     "cancel": "取消",
@@ -17,8 +18,8 @@
       "description": "請透過以下方式聯絡我們",
       "contactUs": "聯絡我們"
     },
-    "disclaimer": "本服務由 AI 提供，回覆僅供參考，重要事項請洽官方客服。",
-    "infoBar": "AI 客服服務說明"
+    "disclaimer": "AI 回覆僅供參考，詳情請洽業務專員",
+    "infoBar": "週一至週五 09:00–18:00，國定假日休息"
   },
   "session": {
     "restored": "已恢復上次對話紀錄",

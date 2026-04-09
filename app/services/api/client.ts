@@ -24,9 +24,18 @@ export function createChatClient() {
       try {
         const sessionStore = useChatSessionStore();
 
-        if (sessionStore?.sessionToken) {
+        // Safely obtain token from store; support both plain value and ref.
+        let token: string | undefined;
+        try {
+          // sessionStore.sessionToken may be a ref or a plain string|null
+          token = (sessionStore as any)?.sessionToken?.value ?? (sessionStore as any)?.sessionToken;
+        } catch {
+          token = undefined;
+        }
+
+        if (token) {
           const headers = new Headers(options.headers as HeadersInit | undefined);
-          headers.set('X-Session-Token', sessionStore.sessionToken);
+          headers.set('X-Session-Token', String(token));
           options.headers = headers;
         }
       } catch {

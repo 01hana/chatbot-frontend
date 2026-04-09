@@ -87,7 +87,7 @@
   - **所屬 Workstream**：WS-A
   - **依賴**：T-001
   - **實作內容**：
-    - `types/chat.ts`：定義 `ChatMessageVM`（id、type、content、timestamp、metadata）、`WidgetConfigVM`、`ChatSessionVM`、`LeadFormData`、`FeedbackState`、`HandoffState`、`StreamingState`（含七種狀態 enum）
+    - `types/chat.ts`：定義 `ChatMessageVM`（id、type、content、timestamp、metadata；**另含 `quickReplies?: string[]`（per-message KB chips）與 `rating?: FeedbackValue`（`null | 'up' | 'down'`，Phase 1 本地狀態）**）、`WidgetConfigVM`、`ChatSessionVM`、`LeadFormData`、`FeedbackValue`（`null | 'up' | 'down'`，取代原 `FeedbackState` Map 設計）、`HandoffState`、`StreamingState`（含七種狀態 enum）；**訊息型別 `ChatMessageType` 使用 `'ai'`（非 `'ai-text'`）**
     - `types/admin.ts`：定義 `KnowledgeEntryVM`、`ConversationSummaryVM`、`ConversationDetailVM`、`LeadVM`、`TicketVM`、`IntentVM`、`QuickReplyVM`、`AuditEventVM`、`FeedbackVM`、`DashboardStatsVM`、`ReportDataVM`
     - `types/api.ts`：定義通用 API 回應包裝型別（`ApiResponse<T>`、`PaginatedResponse<T>`）
     - 所有 VM type 均為 TypeScript interface 或 type，有 JSDoc 說明
@@ -95,7 +95,7 @@
 
 ---
 
-- [x] **T-006** 初始化 Pinia Stores 骨架（三個 store）
+- [x] **T-006** 初始化 Pinia Stores 骨架（**四個 store**）
   - **所屬 Phase**：Phase 0
   - **所屬 Workstream**：WS-A
   - **依賴**：T-005
@@ -103,8 +103,9 @@
     - 建立 `app/features/chat/stores/useChatWidgetStore.ts`：state 含 `isOpen: boolean`、`mode: 'normal' | 'fallback'`、`locale: string`
     - 建立 `app/features/chat/stores/useChatSessionStore.ts`：state 含 `sessionToken`、`sessionStatus`、`messages: ChatMessageVM[]`、`streamingState: StreamingState`、`handoffState: HandoffState`、`leadFormState`、`quickRepliesVisible: boolean`
     - 建立 `app/features/chat/stores/useWidgetConfigStore.ts`：state 含 `config: WidgetConfigVM | null`、`isLoaded: boolean`、`isOnline: boolean`
+    - **建立 `app/features/chat/stores/useKnowledgeBaseStore.ts`**：Phase 1 暫時模擬後台知識資料庫；含模組層級常數 `KNOWLEDGE_BASE`（14 筆）與 `DEFAULT_RESPONSE`；匯出 `query(input)` 關鍵字比對函式與 `getWelcomeQuickReplies()`；**串接 API 後整個 store 移除**
     - 確認 Pinia plugin 已掛載（`@pinia/nuxt`）
-  - **完成條件**：三個 store 可在元件中 import 使用；store state 初始值正確；TypeScript 型別推導無錯誤; composition 寫法
+  - **完成條件**：**四個** store 可在元件中 import 使用；store state 初始值正確；TypeScript 型別推導無錯誤; composition 寫法
 
 ---
 
@@ -241,34 +242,29 @@
 
 ---
 
-- [ ] **T-016** 建立 `ChatWidget` 根元件與展開收合狀態管理
+- [x] **T-016** 建立 `ChatWidget` 根元件與展開收合狀態管理
   - **所屬 Phase**：Phase 1
   - **所屬 Workstream**：WS-B
   - **依賴**：T-006、T-009
   - **實作內容**：
     - 建立 `app/features/chat/components/ChatWidget.vue`：以 `position: fixed; bottom: 24px; right: 24px; z-index: 9999` 掛載
-    - 從 `useChatWidgetStore` 讀取 `isOpen` 狀態，控制 `ChatLauncher` / `ChatPanel` 顯示切換
+    - 從 `useChatWidgetStore` 讀取 `isOpen` 狀態，控制 Launcher FAB / `ChatPanel` 顯示切換
     - 手機版展開時對 `<body>` 加 `overflow: hidden`，收合時還原
     - 在 `app/pages/index/index.vue` 中引入 `<ChatWidget />`
+    - > **[重構]** Launcher FAB 邏輯已直接內嵌於 `ChatWidget.vue`，不再是獨立檔案
   - **完成條件**：`ChatWidget` 在前台頁面右下角固定顯示；`useChatWidgetStore.isOpen` 可切換 Launcher / Panel 顯示；手機版展開時 body 無法滾動
 
 ---
 
-- [ ] **T-017** 建立 `ChatLauncher` 元件（桌機膠囊版 + 手機 FAB）
+- [x] **T-017** ~~建立 `ChatLauncher` 元件~~ → **已合併進 `ChatWidget`**
   - **所屬 Phase**：Phase 1
   - **所屬 Workstream**：WS-B
   - **依賴**：T-016
-  - **實作內容**：
-    - 建立 `app/features/chat/components/ChatLauncher.vue`
-    - 桌機（≥ 1024px）：膠囊形按鈕，顯示狀態燈（綠色 = 線上、黃色 = 繁忙、灰色 = 降級）+ CTA 文案（來自 Widget Config，fallback 至 i18n）
-    - 手機（< 768px）：圓形 FAB，顯示機器人 icon
-    - 點擊後呼叫 `useChatWidgetStore.setOpen(true)`
-    - 降級模式（`mode === 'fallback'`）：狀態燈灰色，CTA 文案顯示降級文案
-  - **完成條件**：桌機顯示膠囊版、手機顯示 FAB；三種狀態燈顏色正確；點擊後 Widget 展開
+  - > **[重構]** `ChatLauncher.vue` 已刪除。Launcher FAB（圓形按鈕 + 點擊開啟）的邏輯移入 `ChatWidget.vue` template 直接實作，無需獨立檔案。
 
 ---
 
-- [ ] **T-018** 建立 `ChatPanel` 容器元件與展開 / 收合動畫
+- [x] **T-018** 建立 `ChatPanel` 容器元件與展開 / 收合動畫
   - **所屬 Phase**：Phase 1
   - **所屬 Workstream**：WS-B
   - **依賴**：T-016
@@ -277,24 +273,20 @@
     - 桌機：右側滑入 panel（寬 380px），使用 CSS `transition: transform 0.25s ease`
     - 手機：全螢幕 slide-up，使用 CSS `transition: transform 0.3s ease`
     - 平板（768–1023px）：寬 340px panel
-    - Panel 內部含五個區塊插槽：Header、Info Bar、Message Area（`flex-1 overflow-y-auto`）、Quick Replies Bar、Input Bar + Disclaimer
+    - Panel 直接包含 Header、Info Bar、Message Area、Quick Replies、Input Bar、Disclaimer 各區塊
   - **完成條件**：桌機展開動畫為右側滑入；手機展開動畫為 slide-up；三個斷點布局寬度正確；Panel 高度在手機全螢幕時覆蓋整個視口
 
 ---
 
-- [ ] **T-019** 建立 `ChatHeader`、`ChatInfoBar`、`ChatDisclaimer` 元件
+- [x] **T-019** ~~建立 `ChatHeader`、`ChatInfoBar`、`ChatDisclaimer` 元件~~ → **已合併進 `ChatPanel`**
   - **所屬 Phase**：Phase 1
   - **所屬 Workstream**：WS-B
   - **依賴**：T-018
-  - **實作內容**：
-    - `ChatHeader`：顯示 Logo（若有）+ 標題文案（來自 Widget Config）+ 收合按鈕（點擊後 `useChatWidgetStore.setOpen(false)`）+ 語系切換下拉（Phase 2 補完，先預留位置）
-    - `ChatInfoBar`：服務說明副文案（來自 Widget Config，降級時隱藏），可設定是否顯示
-    - `ChatDisclaimer`：底部免責聲明（來自 Widget Config，降級時隱藏）
-  - **完成條件**：三個元件在 `ChatPanel` 中正確渲染；點擊收合按鈕後 Widget 收合；文案來自 Widget Config（或 fallback i18n）
+  - > **[重構]** `ChatHeader.vue`、`ChatInfoBar.vue`、`ChatDisclaimer.vue` 三個檔案已刪除。對應的 HTML 結構與邏輯（標題、關閉按鈕、Info Bar 條件顯示、Disclaimer 條件顯示）直接內嵌於 `ChatPanel.vue`，功能完整保留。
 
 ---
 
-- [ ] **T-020** 建立 `ChatInputBar` 元件
+- [x] **T-020** 建立 `ChatInputBar` 元件
   - **所屬 Phase**：Phase 1
   - **所屬 Workstream**：WS-B
   - **依賴**：T-018
@@ -309,7 +301,7 @@
 
 ---
 
-- [ ] **T-021** 建立 `ChatQuickReplies` 元件
+- [x] **T-021** 建立 `ChatQuickReplies` 元件
   - **所屬 Phase**：Phase 1
   - **所屬 Workstream**：WS-B
   - **依賴**：T-018
@@ -327,7 +319,7 @@
 
 ---
 
-- [ ] **T-022** 建立 `services/api/chat.ts`（Chat API 封裝）
+- [x] **T-022** 建立 `services/api/chat.ts`（Chat API 封裝）
   - **所屬 Phase**：Phase 1
   - **所屬 Workstream**：WS-C
   - **依賴**：T-004、T-005
@@ -342,7 +334,7 @@
 
 ---
 
-- [ ] **T-023** 建立 `services/streaming.ts`（SSE 串流管理）
+- [x] **T-023** 建立 `services/streaming.ts`（SSE 串流管理）
   - **所屬 Phase**：Phase 1
   - **所屬 Workstream**：WS-C
   - **依賴**：T-022
@@ -357,7 +349,7 @@
 
 ---
 
-- [ ] **T-024** 實作 `useStreaming` composable（串流狀態機）
+- [x] **T-024** 實作 `useStreaming` composable（串流狀態機）
   - **所屬 Phase**：Phase 1
   - **所屬 Workstream**：WS-C
   - **依賴**：T-023、T-006
@@ -373,7 +365,7 @@
 
 ---
 
-- [ ] **T-025** 實作 `useChatSession` composable（Session 生命週期管理）
+- [x] **T-025** 實作 `useChatSession` composable（Session 生命週期管理）
   - **所屬 Phase**：Phase 1
   - **所屬 Workstream**：WS-C
   - **依賴**：T-022、T-006
@@ -391,7 +383,7 @@
 
 ---
 
-- [ ] **T-026** 實作 `useWidgetConfig` composable（Widget Config 載入）
+- [x] **T-026** 實作 `useWidgetConfig` composable（Widget Config 載入）
   - **所屬 Phase**：Phase 1
   - **所屬 Workstream**：WS-C
   - **依賴**：T-004、T-006
@@ -407,55 +399,58 @@
 
 ---
 
-- [ ] **T-027** 實作 `useChat` composable（訊息列表管理 + 送出）
+- [x] **T-027** 實作 `useChat` composable（訊息列表管理 + 送出）
   - **所屬 Phase**：Phase 1
   - **所屬 Workstream**：WS-C
   - **依賴**：T-024、T-025
   - **實作內容**：
     - 建立 `app/features/chat/composables/useChat.ts`
-    - `sendMessage(text)` 流程：
+    - `sendMessage(text)` 流程（**Phase 1 Mock Branch**，串接 API 後替換）：
       1. 建立 `UserMessageItem`，append 至 `messages`
-      2. 建立空 `AiStreamingItem`（含 streamingState = 'sending'），append 至 `messages`
-      3. 呼叫 `useStreaming.startStream()`
-      4. token 逐字 append 至最後一則 `AiStreamingItem.content`
-      5. 串流完成 → 將 `AiStreamingItem` 轉型為 `AiMessageItem`（含 metadata）
-    - 處理各種終態（error / timeout / interrupted / cancelled）：append 對應 `SystemErrorItem` / `SystemTimeoutItem` 等
+      2. 呼叫 `useKnowledgeBaseStore.query(text)` 取得模擬回應
+      3. 等待隨機延遲（600–1300ms）模擬網路延遲
+      4. append `ai` 型訊息（含 `content`、`quickReplies`、`rating: null`）
+    - **原串流管線（startStreaming、AiStreamingItem placeholder）已暫時 comment out**，待 Phase 2 串接 SSE API 後啟用
+    - 新增 `rateMessage(messageId, value: FeedbackValue)`：找到對應 `ai` 訊息，切換 `msg.rating`（再次點擊同值則取消，設為 `null`）
     - `clearMessages()` → 清空 store messages 陣列
-  - **完成條件**：送出訊息後 UI 立即顯示使用者氣泡；串流進行中逐字顯示；串流結束後 Markdown 渲染；timeout 後顯示 SystemTimeoutItem
+    - 回傳：`{ messages, streamingState, sendMessage, cancelStream, clearMessages, retryLastMessage, rateMessage }`
+  - **完成條件**：送出訊息後 UI 立即顯示使用者氣泡；KB mock 回應正確顯示；`rateMessage` 可切換 `rating` 狀態；`clearMessages` 正確清空
 
 ---
 
-- [ ] **T-028** 建立 Message Renderer（`ChatMessageArea`）與各訊息型元件
+- [x] **T-028** 建立 Message Renderer（`ChatMessageArea`）與各訊息型元件
   - **所屬 Phase**：Phase 1
   - **所屬 Workstream**：WS-C
   - **依賴**：T-027、T-012
   - **實作內容**：
-    - 建立 `app/features/chat/components/ChatMessageArea.vue`：`v-for` 遍歷 `messages`，依 `message.type` 動態渲染對應元件（不使用巨大 `v-if`，改用 component registry map）
+    - 建立 `app/features/chat/components/ChatMessageArea.vue`：`v-for` 遍歷 `messages`，依 `message.type` 動態渲染對應元件（component registry map）；轉發 `retry`、`rate`、`quick-reply` 事件
+    - **Empty State**（`messages.length === 0`）：顯示 Bot avatar + `useKnowledgeBaseStore.query('hello')` 歡迎訊息（renderMarkdown 渲染）+ per-message quick-reply chips（`UButton` outline variant）
     - 建立以下訊息元件：
       - `UserMessageItem.vue`：右側藍色氣泡 + 時間戳
-      - `AiMessageItem.vue`：左側白色氣泡 + AI 標記 + `renderMarkdown` 渲染 + 時間戳 + `MessageFeedback` 插槽（Phase 2 補）
+      - `AiMessageItem.vue`：左側白色氣泡 + AI 標記 + `renderMarkdown` 渲染 + 時間戳（`toLocaleTimeString('zh-TW')`）；**feedback 按鈕直接內嵌**（非 `MessageFeedback` slot）；`message.quickReplies` 有值時顯示 per-message chips（emit `'quick-reply'`）；emit `rate: [id, FeedbackValue]`
       - `AiStreamingItem.vue`：左側氣泡 + 打字游標動畫（blinking `|`）+ 逐字 append
       - `SystemErrorItem.vue`：警告 icon + 錯誤文案 + 「重試」按鈕
       - `SystemTimeoutItem.vue`：時鐘 icon + timeout 文案 + 「重試」按鈕
-      - `SystemInterceptedItem.vue`：依 `metadata.interceptType`（`secret` / `injection`）顯示不同 icon（鎖頭 / 盾牌）與文案
-      - `SystemLowConfidenceItem.vue`：info icon + 低信心度提示文案（顯示於 AI 回覆底部）
+      - `SystemInterceptedItem.vue`：依 `metadata.interceptType` 顯示不同 icon 與文案
+      - `SystemLowConfidenceItem.vue`：info icon + 低信心度提示文案
       - `SystemFallbackItem.vue`：降級提示 + 聯絡捷徑連結
     - 新訊息追加後自動 scroll to bottom（`nextTick` + `scrollIntoView`）
-  - **完成條件**：每種 type 訊息均可正確渲染；重試按鈕點擊後重送訊息；自動捲動至最新訊息；`AiStreamingItem` 打字游標動畫正確顯示
+  - **完成條件**：每種 type 訊息均可正確渲染；重試按鈕點擊後重送訊息；自動捲動至最新訊息；Empty State 顯示歡迎訊息與 KB chips；feedback 按鈕點擊後切換 `rating` 狀態
 
 ---
 
-- [ ] **T-029** 完成 Phase 1 Widget 整合：確認完整對話流程可端對端驗證
+- [x] **T-029** 完成 Phase 1 Widget 整合：確認完整對話流程可端對端驗證
   - **所屬 Phase**：Phase 1
   - **所屬 Workstream**：WS-C
   - **依賴**：T-016 ～ T-028
   - **實作內容**：
-    - 建立 `app/pages/admin/index.vue`（或確認 `/admin/dashboard` 路由存在），讓「進入後台」按鈕可正確導向
-    - 整合所有 Phase 1 元件至前台頁面，使用 mock streaming 驗證完整流程
-    - 確認 `npm run dev` 可執行：展開 Widget → 看到歡迎訊息 + 快捷提問 → 點擊快捷提問 / 輸入訊息 → 串流回覆逐字顯示 → 完成後 Markdown 渲染
+    - 整合所有 Phase 1 元件至前台頁面，使用 **KB mock 分支**驗證完整流程（串流管線暫時 comment out）
+    - 確認 `npm run dev` 可執行：展開 Widget → 看到 Empty State 歡迎訊息 + per-message quick-reply chips → 點擊 chips / 輸入訊息 → KB mock 延遲回覆顯示 → Markdown 渲染 → feedback 按鈕可切換
+    - 確認 `ChatWidget` 中 `handleReset()` 呼叫 `restartSession()` 並重新顯示歡迎訊息
+    - 確認 `handleRate(messageId, value)` 正確呼叫 `rateMessage()`，訊息 rating 狀態更新
     - 確認 session localStorage 寫入，重整後恢復歷史訊息
     - 確認降級模式：手動設定 `config.status = 'offline'`，Widget 轉為降級狀態
-  - **完成條件**：完整對話流程可在 `npm run dev` 上手動驗證；session 恢復正確；降級模式可觸發；console 無未處理錯誤
+  - **完成條件**：完整對話流程可在 `npm run dev` 上手動驗證；KB mock 回覆正確；reset / rate / quick-reply 事件鏈正常；console 無未處理錯誤
 
 ---
 
@@ -529,12 +524,13 @@
   - **依賴**：T-029、T-014
   - **實作內容**：
     - 測試檔：`tests/e2e/chat/widget-core.spec.ts`
-    - E2E 旅程 1「開啟 Widget 並完成首次問答」：點擊 Launcher → 展開 Panel → 看到歡迎訊息 → 輸入訊息 → Enter 送出 → AI 串流回覆逐字顯示 → 回覆完成
-    - E2E 旅程 2「快捷提問點擊流程」：展開 Widget → 點擊快捷提問 chip → 訊息送出 → 快捷提問列收起 → AI 回覆顯示
+    - E2E 旅程 1「開啟 Widget 並完成首次問答（KB mock）」：點擊 Launcher → 展開 Panel → 看到 Empty State 歡迎訊息 + per-message quick-reply chips → 輸入訊息 → Enter 送出 → KB mock 延遲回覆顯示 → 回覆含 Markdown 渲染
+    - E2E 旅程 2「Empty State quick-reply chips 點擊流程」：展開 Widget（無訊息狀態）→ 點擊歡迎訊息下方的 quick-reply chip → 訊息送出 → KB mock 回覆顯示
     - E2E 旅程 3「Session 恢復」：完成一次對話 → 重整頁面 → 展開 Widget → 歷史訊息顯示
     - E2E 旅程 4「降級模式」：mock Config API 回傳 `status: 'offline'` → 展開 Widget → fallback 提示顯示 → Input Bar disabled → 聯絡捷徑可點擊
+    - E2E 旅程 5「重置與 feedback」：完成一次問答 → 點擊 Header 重置按鈕 → 對話清空 → Empty State 重新出現；對 AI 回覆點擊讚 → rating icon 狀態更新 → 再次點擊取消
     - 三個 viewport 均執行（1280px、768px、375px）
-  - **完成條件**：四個 E2E 旅程全數通過；三個 viewport 無版面破壞
+  - **完成條件**：五個 E2E 旅程全數通過；三個 viewport 無版面破壞；測試中不假設串流逐字動畫，以 KB mock 延遲回覆為準
 
 ---
 
@@ -543,6 +539,22 @@
 > **目標**：補完留資表單、轉人工、回饋、語系切換、埋點
 
 ### WS-D 前台進階互動
+
+---
+
+- [ ] **T-034B** 將聊天流從 KB mock 切換回真實 API / SSE 串流
+  - **所屬 Phase**：Phase 2
+  - **所屬 Workstream**：WS-D
+  - **依賴**：T-022、T-029
+  - **實作內容**：
+    - 移除 `useChat.ts` 中的 KB mock branch（`kbStore.query` + setTimeout 延遲），改為呼叫真實聊天 API
+    - 啟用被 comment out 的串流管線：建立空 `AiStreamingItem`（`streamingState = 'sending'`）→ 呼叫 `useStreaming.startStream()` → token 逐字 append → 串流完成轉型為 `ai` 訊息
+    - 補充錯誤終態處理（error / timeout / interrupted / cancelled）：append 對應 `SystemErrorItem` / `SystemTimeoutItem` 等
+    - 移除或停用 `useKnowledgeBaseStore`（或改為純 Phase 1 遺留標記，確認已不進入送訊流程）
+    - 將 `ChatMessageArea` Empty State 的歡迎訊息資料來源從 `kbStore.query('hello')` 改為 Widget Config API 提供的歡迎文案（`config.welcomeMessage`）
+    - 將 `useChatSession._appendWelcomeMessage()` 的 `quickReplies` 來源從 `kbStore.getWelcomeQuickReplies()` 改為 `config.quickReplies`（Layer 1 全域 bar）或 API 回傳
+    - `sendMessage` 呼叫 `POST /api/chat/message`，回應採 SSE 串流
+  - **完成條件**：KB mock branch 已從 `useChat` 主流程移除；串流逐字顯示正確運作；`AiStreamingItem` 打字游標動畫正確；各錯誤終態訊息元件正確 append；`useKnowledgeBaseStore` 不再被聊天流呼叫；console 無 mock TODO 警告
 
 ---
 
@@ -622,20 +634,19 @@
 
 ---
 
-- [ ] **T-040** 實作 `useFeedback` composable 與 `MessageFeedback` 元件
+- [ ] **T-040** 補強 `AiMessageItem` 內嵌 feedback 互動，並規劃 Phase 2 API 回報
   - **所屬 Phase**：Phase 2
   - **所屬 Workstream**：WS-D
   - **依賴**：T-035、T-028
   - **實作內容**：
+    - `AiMessageItem` 的讚 / 倒讚按鈕已在 Phase 1 內嵌；本任務補強以下：
+      - 點擊倒讚後展開原因選填（chips 清單，預設 4 個選項，TBD 選項內容）
+      - 將 Phase 1 本地 `rating` 狀態擴充為 Phase 2 API 回報：呼叫 `submitFeedback(sessionToken, messageId, type, reason?)` → fire-and-forget（失敗只 `console.error`，不影響 UI）
     - 建立 `app/features/chat/composables/useFeedback.ts`：
-      - 維護 `Map<messageId, FeedbackState>`（`FeedbackState`：`null | 'up' | 'down'`）
-      - `submitFeedback(messageId, type, reason?)` → fire-and-forget（失敗只 `console.error`，不影響 UI）
-    - 建立 `app/features/chat/components/MessageFeedback.vue`：
-      - 讚 / 倒讚 icon button（`UButton variant="ghost"`），附於每則 `AiMessageItem` 底部
-      - 點擊讚：icon 轉為填充色（藍色）；點擊倒讚：icon 轉為填充色（紅色），展開原因選填（chips 清單，TBD 選項內容，暫填預設 4 個）
-      - 已回饋後可切換（再次點擊可改變回饋）
-    - 在 `AiMessageItem` 中引入 `<MessageFeedback>`
-  - **完成條件**：讚 / 倒讚點擊後 icon 狀態更新；倒讚後原因 chips 展開；chips 選擇後 API 呼叫（fire-and-forget）；已回饋可切換
+      - 封裝 `submitFeedback()` API 呼叫邏輯
+      - 不建立獨立 `MessageFeedback` 元件；feedback UI 繼續保持內嵌於 `AiMessageItem`
+    - `rateMessage()` 在切換 `msg.rating` 後，觸發 `useFeedback.submitFeedback()`
+  - **完成條件**：讚 / 倒讚點擊後 icon 狀態更新（Phase 1 已完成）；倒讚後原因 chips 展開；原因選擇後 API fire-and-forget 呼叫；已回饋可切換（`null` 切換）
 
 ---
 
@@ -644,7 +655,7 @@
   - **所屬 Workstream**：WS-D
   - **依賴**：T-019、T-008
   - **實作內容**：
-    - 在 `ChatHeader` 語系切換預留位置實作 `UDropdownMenu`：選項「繁體中文 / English」
+    - 在 `ChatPanel` 內的 **header 區塊**（已直接內嵌於 `ChatPanel`，非獨立 `ChatHeader` 元件）實作語系切換 `UDropdownMenu`：選項「繁體中文 / English」
     - 切換後呼叫 `$i18n.setLocale(locale)` → 所有靜態文案即時更新
     - 語系偏好儲存至 `localStorage.chat_locale`；初始化時讀取（在 `useChatWidgetStore` 或 `useWidgetConfig` 初始化階段）
     - Widget Config 提供的動態文案依當前語系顯示對應版本（`quickReplies.zh-TW` vs `quickReplies.en`）
@@ -658,7 +669,7 @@
   - **依賴**：T-008、T-041
   - **實作內容**：
     - 填充 `i18n/locales/en/common.json`：所有 Widget 文案的英文版本（歡迎訊息、CTA、降級提示、錯誤訊息、系統提示等）
-    - 填充 `i18n/locales/en/chat.json`：前台聊天文案英文版本（LeadFormCard 欄位 label、HandoffStatusCard 文案、MessageFeedback tooltip 等）
+    - 填充 `i18n/locales/en/chat.json`：前台聊天文案英文版本（LeadFormCard 欄位 label、HandoffStatusCard 文案、AI 訊息回饋相關提示文案（讚 / 倒讚 tooltip、原因 chips 選項）等）
     - 填充 `i18n/locales/en/admin.json`：後台介面文案英文版本（預留，後台本期以繁中為主）
     - 確認 zh-TW / en 的 key 完全一致（無漏 key）
   - **完成條件**：切換至 English 後所有前台文案均顯示英文；無 i18n missing key 警告
@@ -736,18 +747,19 @@
 
 ---
 
-- [ ] **T-047** 撰寫 `MessageFeedback` 元件測試
+- [ ] **T-047** 撰寫 `AiMessageItem` 內嵌 feedback 行為測試
   - **所屬 Phase**：Phase 2
   - **所屬 Workstream**：WS-D
   - **依賴**：T-040
   - **實作內容**：
-    - 測試檔：`tests/unit/features/chat/MessageFeedback.test.ts`
+    - 測試檔：`tests/unit/features/chat/AiMessageItem.feedback.test.ts`
     - 測試案例：
-      - 初始狀態兩個 icon 均未填充
-      - 點擊讚 → 讚 icon 填充
-      - 點擊倒讚 → 倒讚 icon 填充 → 原因 chips 展開
-      - 已點讚後點倒讚 → 狀態切換為倒讚
-  - **完成條件**：四個測試案例通過
+      - 初始狀態（`rating: null`）兩個 icon 均未填充
+      - 點擊讚 → 讚 icon 填充；`message.rating` 更新為 `'up'`
+      - 點擊倒讚 → 倒讚 icon 填充；原因 chips 展開；`message.rating` 更新為 `'down'`
+      - 已點讚後再點讚 → `rating` 切回 `null`（取消）
+      - 已點讚後點倒讚 → 狀態切換為 `'down'`
+  - **完成條件**：五個測試案例通過；驗證 `rating` 欄位與 UI 狀態一致；不引用 `MessageFeedback` 獨立元件
 
 ---
 
@@ -1375,8 +1387,8 @@
 | 里程碑              | 對應任務完成   | 可驗證產出                                                                                                                       |
 | ------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | **M0** Phase 0 完成 | T-001 ～ T-015 | `npm run dev` 可啟動；主題設定完成；API client + types + stores 就緒；「進入後台」按鈕可用；Nuxt Charts 折線圖與圓餅圖可正常渲染 |
-| **M1** Phase 1 完成 | T-016 ～ T-034 | 前台 Widget 可互動 MVP；多輪對話 + 串流回覆；session 恢復；降級模式；P0 單元測試 + E2E 通過                                      |
-| **M2** Phase 2 完成 | T-035 ～ T-048 | 前台全功能（留資、轉人工、回饋、語系切換、埋點）；Phase 2 E2E 通過                                                               |
+| **M1** Phase 1 完成 | T-016 ～ T-034 | 前台 Widget 可互動 MVP；多輪對話（KB mock 回覆）；reset / rating / quick-reply 互動；session 恢復；降級模式；P0 單元測試 + E2E 通過 |
+| **M2** Phase 2 完成 | T-034B ～ T-048 | KB mock 切換為真實 SSE 串流；留資、轉人工、feedback API、語系切換、埋點；Phase 2 E2E 通過 |
 | **M3** Phase 3 完成 | T-049 ～ T-057 | 後台基礎頁面可用（Dashboard + 對話紀錄 + Lead + Ticket）；後台 E2E 通過                                                          |
 | **M4** Phase 4 完成 | T-058 ～ T-066 | 後台內容管理完整（知識庫版本歷史 + 批次匯入；意圖側抽屜；快捷提問拖曳；Widget 即時預覽）；Phase 4 E2E 通過                       |
 | **M5** Phase 5 完成 | T-067 ～ T-072 | 後台維運工具完整（稽核事件 + 回饋紀錄 + 5 圖表報表 + CSV 匯出）；Phase 5 E2E 通過                                                |
@@ -1386,13 +1398,13 @@
 
 ## 任務統計
 
-| Phase    | 任務數                  | 涵蓋 Workstream |
-| -------- | ----------------------- | --------------- |
-| Phase 0  | T-001 ～ T-015（15 個） | WS-A            |
-| Phase 1  | T-016 ～ T-034（19 個） | WS-B、WS-C      |
-| Phase 2  | T-035 ～ T-048（14 個） | WS-D            |
-| Phase 3  | T-049 ～ T-057（9 個）  | WS-E            |
-| Phase 4  | T-058 ～ T-066（9 個）  | WS-F            |
-| Phase 5  | T-067 ～ T-072（6 個）  | WS-G            |
-| Phase 6  | T-073 ～ T-085（13 個） | WS-H            |
-| **合計** | **85 個任務**           | WS-A ～ WS-H    |
+| Phase    | 任務數                           | 涵蓋 Workstream |
+| -------- | -------------------------------- | --------------- |
+| Phase 0  | T-001 ～ T-015（15 個）          | WS-A            |
+| Phase 1  | T-016 ～ T-034（19 個）          | WS-B、WS-C      |
+| Phase 2  | T-034B、T-035 ～ T-048（15 個）  | WS-D            |
+| Phase 3  | T-049 ～ T-057（9 個）           | WS-E            |
+| Phase 4  | T-058 ～ T-066（9 個）           | WS-F            |
+| Phase 5  | T-067 ～ T-072（6 個）           | WS-G            |
+| Phase 6  | T-073 ～ T-085（13 個）          | WS-H            |
+| **合計** | **86 個任務**                    | WS-A ～ WS-H    |

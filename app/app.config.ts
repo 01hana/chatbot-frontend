@@ -18,13 +18,13 @@ export default defineAppConfig({
       },
       defaultVariants: {
         color: 'primary',
-        variant: 'link',
+        variant: 'solid',
         size: 'lg',
       },
     },
     card: {
       slots: {
-        root:'rounded-xl',
+        root: 'rounded-xl',
         header: 'border-none',
         body: 'sm:py-0 w-full',
       },

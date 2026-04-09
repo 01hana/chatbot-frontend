@@ -76,3 +76,26 @@ export const mockWidgetConfigResponse: ApiResponse<WidgetConfigVM> = {
   data: mockWidgetConfig,
   success: true,
 }
+
+// ── Streaming / Cancel ────────────────────────────────────────────────────
+
+/** Mock SSE stream URL returned by getStreamUrl(). */
+export const mockStreamUrl =
+  'http://localhost:3000/api/chat/session/mock-session-token-abc123/stream?message=%E5%A6%82%E4%BD%95%E8%A8%82%E8%B3%BC%EF%BC%9F'
+
+/** Simulated token sequence emitted by the mock streaming service. */
+export const mockTokenSequence = ['您', '好', '！', '以', '下', '是', '訂', '購', '步', '驟', '：']
+
+// ── Mock createSession / cancelStream helpers ─────────────────────────────
+
+export function mockCreateSession() {
+  return Promise.resolve(mockSession)
+}
+
+export function mockGetSessionHistory() {
+  return Promise.resolve(mockHistoryMessages)
+}
+
+export function mockCancelStream() {
+  return Promise.resolve()
+}
