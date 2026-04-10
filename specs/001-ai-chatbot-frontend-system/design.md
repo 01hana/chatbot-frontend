@@ -12,7 +12,7 @@
 | 類別 | 技術 |
 |------|------|
 | 框架 | Nuxt 4 |
-| UI 元件庫 | Nuxt UI（v3，基於 Reka UI + Tailwind CSS） |
+| UI 元件庫 | Nuxt UI（v4，基於 Reka UI + Tailwind CSS） |
 | 樣式系統 | Tailwind CSS v4 |
 | 語言 | TypeScript |
 | 狀態管理 | Pinia |

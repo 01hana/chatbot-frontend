@@ -53,20 +53,12 @@ const emit = defineEmits<{
 const bottomRef = ref<HTMLElement | null>(null);
 
 watch(
-  () => props.messages.length,
-  async () => {
-    await nextTick();
-    bottomRef.value?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  },
-);
-
-// Also scroll on content changes (streaming tokens)
-watch(
-  () => props.messages.at(-1)?.content,
+  [() => props.messages.length, () => props.messages.at(-1)?.content],
   async () => {
     await nextTick();
     bottomRef.value?.scrollIntoView({ behavior: 'smooth' });
   },
+  { immediate: true },
 );
 
 const kbStore = useKnowledgeBaseStore();

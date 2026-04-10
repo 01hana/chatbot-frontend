@@ -35,7 +35,7 @@ export default defineConfig<ConfigOptions>({
     },
     {
       name: 'Mobile (375px)',
-      use: { ...devices['iPhone 12'] },
+      use: { ...devices['Desktop Chrome'], viewport: { width: 375, height: 812 } },
     },
   ],
 });

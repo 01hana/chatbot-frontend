@@ -43,6 +43,8 @@ function send() {
 }
 
 function onKeydown(e: KeyboardEvent) {
+  if ((e as any).isComposing) return;
+
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
     send();
@@ -64,6 +66,7 @@ function onKeydown(e: KeyboardEvent) {
       <div class="flex-1">
         <UTextarea
           v-model="text"
+          data-testid="chat-input"
           :placeholder="t('widget.inputPlaceholder')"
           :disabled="isFallback"
           :maxlength="MAX_CHARS + 1"
@@ -71,7 +74,7 @@ function onKeydown(e: KeyboardEvent) {
           :class="{ 'ring-2 ring-red-400': isOverLimit }"
           class="w-full"
           autoresize
-          @keydown.stop="onKeydown"
+          @keydown="onKeydown"
         />
         <!-- Character counter (shown only when approaching limit) -->
         <span
@@ -96,6 +99,7 @@ function onKeydown(e: KeyboardEvent) {
       <!-- Send button -->
       <UButton
         v-else
+        data-testid="btn-send"
         icon="fluent:send-24-regular"
         :disabled="!canSend"
         :loading="isStreaming"

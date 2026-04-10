@@ -5,8 +5,7 @@
  * 聊天面板容器，包含完整的布局與所有區塊邏輯：
  *   - Header（品牌標題 + 關閉按鈕）
  *   - Info Bar（服務說明，降級時隱藏）
- *   - Message Area（委派給 ChatMessageArea）
- *   - Quick Replies（委派給 ChatQuickReplies）
+ *   - Message Area（委派給 ChatMessageArea，含 Quick Replies）
  *   - Input Bar（委派給 ChatInputBar）
  *   - Disclaimer（底部免責聲明，降級時隱藏）
  *
@@ -18,7 +17,6 @@
 
 import type { ChatMessageVM } from '~/types/chat';
 import ChatMessageArea from './ChatMessageArea.vue';
-import ChatQuickReplies from './ChatQuickReplies.vue';
 import ChatInputBar from './ChatInputBar.vue';
 
 // ── Props / Emits ─────────────────────────────────────────────────────────
@@ -45,11 +43,6 @@ const { t } = useI18n();
 
 const locale = computed(() => widgetStore.locale as 'zh-TW' | 'en');
 const isFallback = computed(() => widgetStore.mode === 'fallback');
-
-// Header title（config 優先，fallback i18n）
-const title = computed(
-  () => configStore.config?.welcomeMessage?.[locale.value] ?? t('widget.welcome'),
-);
 
 // Info Bar text（降級時不顯示）
 const infoText = computed(() => {
@@ -78,6 +71,7 @@ onMounted(() => {
 
 <template>
   <div
+    data-testid="chat-panel"
     class="fixed z-[9999] inset-0 md:inset-auto md:bottom-0 md:right-0 md:w-[340px] md:h-[calc(100dvh-48px)] lg:w-[380px] flex flex-col bg-white shadow-2xl overflow-hidden rounded-t-2xl md:rounded-2xl panel-enter"
     role="dialog"
     aria-label="AI 客服聊天面板"
@@ -119,6 +113,7 @@ onMounted(() => {
 
       <div class="flex items-center gap-1">
         <UButton
+          data-testid="btn-reset"
           color="neutral"
           variant="ghost"
           size="xs"
@@ -172,11 +167,6 @@ onMounted(() => {
         @quick-reply="emit('quick-reply', $event)"
       />
     </main>
-
-    <!-- ── Quick Replies ───────────────────────────────────────────── -->
-    <div class="shrink-0">
-      <ChatQuickReplies @select="emit('quick-reply', $event)" />
-    </div>
 
     <!-- ── Input Bar + Disclaimer ──────────────────────────────────── -->
     <footer class="shrink-0 border-t border-gray-100">

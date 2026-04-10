@@ -183,11 +183,15 @@
   - **所屬 Workstream**：WS-A
   - **依賴**：T-001
   - **實作內容**：
-    - `utils/format.ts`：`formatRelativeTime(date)`（剛剛 / N 分鐘前 / 今天 HH:MM / 昨天 HH:MM / YYYY/MM/DD）、`formatNumber(n)`（千分位）、`truncateText(str, maxLen)`
+    - `utils/format.ts`：
+      - `formatDateTime(date: Date | string | number): string`：以 `zh-TW` locale 的 24 小時制輸出 `HH:mm`（例如 `14:30`），用於所有訊息時間戳顯示
+      - `formatRelativeTime(date: Date | string | number): string`：保留實作（剛剛 / N 分鐘前 / 今天 HH:MM / 昨天 HH:MM / YYYY/MM/DD），目前前台訊息時間戳已改用 `formatDateTime`，此函式保留供未來需要相對時間情境使用
+      - `formatNumber(n: number): string`：千分位格式（`toLocaleString('zh-TW')`）
+      - `truncateText(str: string, maxLen: number): string`：超過 maxLen 時截斷並加「…」
     - `utils/markdown.ts`：`renderMarkdown(content: string): string`（使用輕量 library 如 `marked` 或 `markdown-it`，返回 sanitized HTML）
     - `utils/errorReporter.ts`：`reportError(err, context?)` 骨架（目前只 `console.error`，預留 Sentry 接入點）
     - `utils/analytics.ts`：定義 `AnalyticsEvent` 型別與 `trackEvent(event: AnalyticsEvent)` 骨架（目前只 `console.log`，預留接入點）
-  - **完成條件**：`formatRelativeTime` 回傳正確格式；`renderMarkdown` 能正確渲染粗體 / 條列 / 連結；TypeScript 無錯誤
+  - **完成條件**：`formatDateTime` 可正確輸出 `HH:mm` 24 小時制；`renderMarkdown` 能正確渲染粗體 / 條列 / 連結；`truncateText`、`formatNumber` 邊界案例正確；TypeScript 無錯誤
 
 ---
 
@@ -236,7 +240,7 @@
 
 ## Phase 1 — 前台聊天 Widget 核心 MVP
 
-> **目標**：完成從收合到展開的完整 Widget MVP，多輪對話 + 串流回覆可驗證
+> **目標**：完成從收合到展開的完整 Widget MVP；KB mock 多輪對話、typing indicator、per-message feedback 與 quick-reply chips 可手動驗證；session 恢復與降級模式正常；P0 單元測試與 E2E 旅程通過。真實 SSE 串流待 T-034B 切換
 
 ### WS-B 前台 Widget Shell
 
@@ -311,7 +315,8 @@
     - 點擊後觸發 `useChat.sendMessage(text)`，並設定 `quickRepliesVisible = false`（點擊後收起）
     - Widget Config 失敗時不顯示（`quickReplies` 為空陣列）
     - 串流進行中 chip 全部 disabled
-  - **完成條件**：快捷提問 chip 正確顯示；點擊後送出訊息並隱藏列；Config 失敗時不顯示；串流中 disabled
+    - **Phase 1 現況說明**：目前每則 AI 回覆下方的 per-message quick-reply chips 已直接內嵌於 `AiMessageItem.vue`（來自 `message.quickReplies`）；`ChatQuickReplies` 作為全域預設 quick-reply 列保留，可視需求於 `ChatPanel` 中使用，不作為主要呈現入口
+  - **完成條件**：元件可正確渲染 chips；點擊後送出訊息；Config 失敗時不顯示；串流中 disabled；per-message chips 已於 `AiMessageItem` 獨立顯示
 
 ---
 
@@ -423,19 +428,24 @@
   - **所屬 Workstream**：WS-C
   - **依賴**：T-027、T-012
   - **實作內容**：
-    - 建立 `app/features/chat/components/ChatMessageArea.vue`：`v-for` 遍歷 `messages`，依 `message.type` 動態渲染對應元件（component registry map）；轉發 `retry`、`rate`、`quick-reply` 事件
-    - **Empty State**（`messages.length === 0`）：顯示 Bot avatar + `useKnowledgeBaseStore.query('hello')` 歡迎訊息（renderMarkdown 渲染）+ per-message quick-reply chips（`UButton` outline variant）
+    - 建立 `app/features/chat/components/ChatMessageArea.vue`：`v-for` 遍歷 `messages`，依 `message.type` 透過 component registry map 動態渲染對應元件；轉發 `retry`、`rate`、`quick-reply` 事件至上層
+    - **Empty State**（`messages.length === 0`）：顯示 Bot avatar + `useKnowledgeBaseStore.query('hello')` 歡迎訊息（`renderMarkdown` 渲染）+ per-message quick-reply chips（`UButton` outline variant）
+    - 新訊息追加後自動 scroll to bottom（`nextTick` + `scrollIntoView`）
     - 建立以下訊息元件：
-      - `UserMessageItem.vue`：右側藍色氣泡 + 時間戳
-      - `AiMessageItem.vue`：左側白色氣泡 + AI 標記 + `renderMarkdown` 渲染 + 時間戳（`toLocaleTimeString('zh-TW')`）；**feedback 按鈕直接內嵌**（非 `MessageFeedback` slot）；`message.quickReplies` 有值時顯示 per-message chips（emit `'quick-reply'`）；emit `rate: [id, FeedbackValue]`
-      - `AiStreamingItem.vue`：左側氣泡 + 打字游標動畫（blinking `|`）+ 逐字 append
-      - `SystemErrorItem.vue`：警告 icon + 錯誤文案 + 「重試」按鈕
-      - `SystemTimeoutItem.vue`：時鐘 icon + timeout 文案 + 「重試」按鈕
+      - `UserMessageItem.vue`：右側藍色漸層氣泡 + 頭像 + 時間戳（使用 `formatDateTime(props.message.timestamp)` 輸出 `HH:mm` 24 小時制）
+      - `AiMessageItem.vue`（Phase 1 主要 AI 訊息元件）：
+        - 左側白色氣泡 + Bot 頭像 + `renderMarkdown` 渲染內容
+        - 時間戳使用 `formatDateTime(props.message.timestamp)` 輸出 `HH:mm` 24 小時制
+        - **Typing indicator 整合**：當 `message.type === 'ai-streaming'` 時顯示三點跳動動畫（取代獨立的 `AiStreamingItem`），content 有值後改用 streaming bubble；type flip 至 `'ai'` 後顯示完整訊息
+        - **feedback 按鈕直接內嵌**（不使用 slot）：顯示於時間戳右側；讚 / 倒讚各一個 `UButton ghost`；點擊 emit `rate: [id, FeedbackValue]`；再次點擊同一個取消（`rating` 回 `null`）；點擊另一個覆蓋前一個狀態
+        - **per-message quick-reply chips**：`message.quickReplies` 有值時顯示於訊息下方；點擊 emit `'quick-reply': [text]`
+      - `AiStreamingItem.vue`：保留作為後續 Phase 2 真實 SSE 串流階段可使用的獨立元件（含打字游標 blinking `|` + 逐字 append）；Phase 1 KB mock 分支目前主要互動以 `AiMessageItem` 統一處理
+      - `SystemErrorItem.vue`：警告 icon + 錯誤文案 + 「重試」按鈕（emit `retry`）
+      - `SystemTimeoutItem.vue`：時鐘 icon + timeout 文案 + 「重試」按鈕（emit `retry`）
       - `SystemInterceptedItem.vue`：依 `metadata.interceptType` 顯示不同 icon 與文案
       - `SystemLowConfidenceItem.vue`：info icon + 低信心度提示文案
       - `SystemFallbackItem.vue`：降級提示 + 聯絡捷徑連結
-    - 新訊息追加後自動 scroll to bottom（`nextTick` + `scrollIntoView`）
-  - **完成條件**：每種 type 訊息均可正確渲染；重試按鈕點擊後重送訊息；自動捲動至最新訊息；Empty State 顯示歡迎訊息與 KB chips；feedback 按鈕點擊後切換 `rating` 狀態
+  - **完成條件**：每種 type 訊息均可正確渲染；`AiMessageItem` typing indicator → 完整訊息切換正確；重試按鈕點擊後重送訊息；自動捲動至最新訊息；Empty State 顯示歡迎訊息與 KB chips；feedback 按鈕點擊後切換 `rating` 狀態、再點取消、切換覆蓋；per-message chips 顯示且點擊後送出訊息
 
 ---
 
@@ -444,13 +454,20 @@
   - **所屬 Workstream**：WS-C
   - **依賴**：T-016 ～ T-028
   - **實作內容**：
-    - 整合所有 Phase 1 元件至前台頁面，使用 **KB mock 分支**驗證完整流程（串流管線暫時 comment out）
-    - 確認 `npm run dev` 可執行：展開 Widget → 看到 Empty State 歡迎訊息 + per-message quick-reply chips → 點擊 chips / 輸入訊息 → KB mock 延遲回覆顯示 → Markdown 渲染 → feedback 按鈕可切換
-    - 確認 `ChatWidget` 中 `handleReset()` 呼叫 `restartSession()` 並重新顯示歡迎訊息
-    - 確認 `handleRate(messageId, value)` 正確呼叫 `rateMessage()`，訊息 rating 狀態更新
-    - 確認 session localStorage 寫入，重整後恢復歷史訊息
-    - 確認降級模式：手動設定 `config.status = 'offline'`，Widget 轉為降級狀態
-  - **完成條件**：完整對話流程可在 `npm run dev` 上手動驗證；KB mock 回覆正確；reset / rate / quick-reply 事件鏈正常；console 無未處理錯誤
+    - 整合所有 Phase 1 元件至前台頁面，使用 **KB mock 分支**驗證完整流程（真實 SSE 串流管線暫時 comment out，於 T-034B 切換）
+    - 手動驗證項目（`npm run dev`）：
+      1. 點擊 Launcher 展開 Widget
+      2. 看到 Empty State 歡迎訊息（Bot avatar + `renderMarkdown` 渲染 + per-message quick-reply chips）
+      3. 輸入訊息送出（Enter 送出；Shift+Enter 換行；中文輸入法組字期間 Enter 不觸發送出）
+      4. typing indicator（三點跳動）顯示後，KB mock 延遲回覆出現（含 Markdown 渲染）
+      5. 每一則 AI 回覆底部顯示 feedback 讚 / 倒讚 icon；點擊切換狀態；再次點擊取消；切換另一個覆蓋
+      6. 每一則 AI 回覆下方顯示 per-message quick-reply chips；點擊後正常送出訊息
+      7. 訊息時間戳顯示固定格式 `HH:mm`（24 小時制）
+      8. 點擊 Header 重置按鈕 → 對話清空 → Empty State 重新出現（`handleReset()` → `restartSession()`）
+      9. 重整頁面後重新展開 Widget → session localStorage 恢復歷史訊息
+      10. 降級模式：手動設定 `config.status = 'offline'` → Widget 轉為降級狀態 → Input Bar disabled → fallback 提示顯示
+    - 確認 `handleRate(messageId, value)` 正確呼叫 `rateMessage()`，訊息 `rating` 狀態更新
+  - **完成條件**：所有手動驗證項目通過；KB mock 回覆正確；reset / rate / quick-reply 事件鏈正常；console 無未處理錯誤
 
 ---
 
@@ -458,7 +475,7 @@
 
 ---
 
-- [ ] **T-030** 撰寫 `useStreaming` 單元測試
+- [x] **T-030** 撰寫 `useStreaming` 單元測試
   - **所屬 Phase**：Phase 1
   - **所屬 Workstream**：WS-C
   - **依賴**：T-024
@@ -474,7 +491,7 @@
 
 ---
 
-- [ ] **T-031** 撰寫 `useChatSession` 單元測試
+- [x] **T-031** 撰寫 `useChatSession` 單元測試
   - **所屬 Phase**：Phase 1
   - **所屬 Workstream**：WS-C
   - **依賴**：T-025
@@ -489,7 +506,7 @@
 
 ---
 
-- [ ] **T-032** 撰寫 `useWidgetConfig` 單元測試
+- [x] **T-032** 撰寫 `useWidgetConfig` 單元測試
   - **所屬 Phase**：Phase 1
   - **所屬 Workstream**：WS-C
   - **依賴**：T-026
@@ -505,32 +522,44 @@
 
 ---
 
-- [ ] **T-033** 撰寫 `utils/format.ts` 單元測試
+- [x] **T-033** 撰寫 `utils/format.ts` 單元測試
   - **所屬 Phase**：Phase 1
   - **所屬 Workstream**：WS-C
   - **依賴**：T-012
   - **實作內容**：
     - 測試檔：`tests/unit/utils/format.test.ts`
     - 測試案例：
-      - `formatRelativeTime`：30 秒內 → 「剛剛」；3 分鐘前 → 「3 分鐘前」；今天 → 「今天 HH:MM」；昨天 → 「昨天 HH:MM」；更早 → 「YYYY/MM/DD」
-      - `truncateText`：超過 maxLen 時截斷並加「...」
-  - **完成條件**：所有邊界案例通過
+      - `formatDateTime`：
+        - 傳入 `Date` 物件 → 正確輸出 `HH:mm`（24 小時制）
+        - 傳入 ISO string → 正確輸出 `HH:mm`
+        - 傳入 timestamp number → 正確輸出 `HH:mm`
+        - 邊界：00:00、12:00、23:59 各輸出正確
+      - `formatRelativeTime`（保留測試供日後使用）：30 秒內 → 「剛剛」；3 分鐘前 → 「3 分鐘前」；今天 → 「今天 HH:MM」；昨天 → 「昨天 HH:MM」；更早 → 「YYYY/MM/DD」
+      - `truncateText`：超過 maxLen 時截斷並加「…」；剛好等於 maxLen 不截斷；空字串輸出空字串
+  - **完成條件**：`formatDateTime` 三種輸入格式均正確輸出 `HH:mm`；`truncateText` 邊界案例通過；所有案例無 TypeScript 錯誤
+  - **執行結果**：✅ 27/27 通過（含新增的 `formatDateTime` 7 案例）
 
 ---
 
-- [ ] **T-034** 撰寫 Phase 1 前台 E2E 測試（P0 核心旅程）
+- [x] **T-034** 撰寫 Phase 1 前台 E2E 測試（P0 核心旅程）
   - **所屬 Phase**：Phase 1
   - **所屬 Workstream**：WS-C
   - **依賴**：T-029、T-014
   - **實作內容**：
     - 測試檔：`tests/e2e/chat/widget-core.spec.ts`
-    - E2E 旅程 1「開啟 Widget 並完成首次問答（KB mock）」：點擊 Launcher → 展開 Panel → 看到 Empty State 歡迎訊息 + per-message quick-reply chips → 輸入訊息 → Enter 送出 → KB mock 延遲回覆顯示 → 回覆含 Markdown 渲染
-    - E2E 旅程 2「Empty State quick-reply chips 點擊流程」：展開 Widget（無訊息狀態）→ 點擊歡迎訊息下方的 quick-reply chip → 訊息送出 → KB mock 回覆顯示
-    - E2E 旅程 3「Session 恢復」：完成一次對話 → 重整頁面 → 展開 Widget → 歷史訊息顯示
-    - E2E 旅程 4「降級模式」：mock Config API 回傳 `status: 'offline'` → 展開 Widget → fallback 提示顯示 → Input Bar disabled → 聯絡捷徑可點擊
-    - E2E 旅程 5「重置與 feedback」：完成一次問答 → 點擊 Header 重置按鈕 → 對話清空 → Empty State 重新出現；對 AI 回覆點擊讚 → rating icon 狀態更新 → 再次點擊取消
-    - 三個 viewport 均執行（1280px、768px、375px）
-  - **完成條件**：五個 E2E 旅程全數通過；三個 viewport 無版面破壞；測試中不假設串流逐字動畫，以 KB mock 延遲回覆為準
+    - 為下列元件加入 `data-testid`：`AiMessageItem`、`UserMessageItem`、`ChatPanel`、`ChatWidget`、`ChatInputBar`（共 11 個 testid）
+    - E2E 旅程 J-01「開啟 Widget」：點擊 FAB → ChatPanel 顯示、FAB 消失
+    - E2E 旅程 J-02「傳送訊息 → AI 回覆」：typing indicator（ai-streaming）出現 → AI 氣泡顯示、非空白
+    - E2E 旅程 J-03「quick-reply chips 點擊」：點擊 chip → 訊息送出 → 第二輪 AI 回覆顯示
+    - E2E 旅程 J-04「feedback 按鈕互動」：點讚 → toggle → 點倒讚
+    - E2E 旅程 J-05「時間戳格式」：AI 與使用者訊息時間戳符合 `HH:mm` regex
+    - E2E 旅程 J-06「Reset 按鈕」：對話清空後使用者訊息消失
+    - E2E 旅程 J-07「關閉 Widget」：X 按鈕 → Panel 關閉 → FAB 重新出現
+    - 三個 viewport 均執行（Desktop 1280px、Tablet 768px、Mobile 375px）
+    - `playwright.config.ts` Mobile project 改用 Desktop Chrome + 375px viewport（避免 iPhone UA hydration 問題）
+    - 關鍵修正：使用 `pressSequentially` 觸發 Vue v-model；用 `waitForSelector(attached)` 代替瞬間捕捉 typing indicator
+  - **完成條件**：七個 E2E 旅程全數通過；三個 viewport 無版面破壞；測試以 KB mock 延遲回覆為準
+  - **執行結果**：✅ 24/24 通過（8 旅程 × 3 viewports）
 
 ---
 

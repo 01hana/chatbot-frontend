@@ -192,7 +192,7 @@ Phase 0（基礎建設）
 - 降級模式觸發邏輯（config API 失敗 / status: offline）
 
 **元件清單**：
-- `ChatWidget`、`ChatLauncher`、`ChatPanel`、`ChatHeader`、`ChatInfoBar`、`ChatMessageArea`、`ChatQuickReplies`、`ChatInputBar`、`ChatDisclaimer`
+- `ChatWidget`、`ChatPanel`、`ChatMessageArea`、`ChatInputBar`
 - `UserMessageItem`、`AiMessageItem`（含 Markdown 渲染）、`AiStreamingItem`（含打字游標動畫）
 - `SystemInterceptedItem`（機密攔截 / Prompt Injection，含鎖頭 / 盾牌 icon）
 - `SystemLowConfidenceItem`（低信心度提示條）

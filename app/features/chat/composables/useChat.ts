@@ -79,19 +79,28 @@ export function useChat() {
 
     // ── Mock: 知識庫模擬回覆（串接 API 後移除此區塊）──────────────────
     const kbResponse = kbStore.query(text.trim())
+
+    // 2. Append ai-streaming placeholder first (shows TypingIndicator)
+    const placeholderId = _makeId()
+    const placeholder: ChatMessageVM = {
+      id: placeholderId,
+      type: 'ai-streaming',
+      content: '',
+      timestamp: _now(),
+    }
+    sessionStore.appendMessage(placeholder)
+
+    // 3. Wait to simulate network latency, then flip to final ai message
     const delay = 600 + Math.random() * 700
     await new Promise(resolve => setTimeout(resolve, delay))
 
-    // Show typing placeholder briefly then inject the answer
-    const aiMsg: ChatMessageVM = {
-      id: _makeId(),
-      type: 'ai',
-      content: kbResponse.content,
-      timestamp: _now(),
-      quickReplies: kbResponse.quickReplies,
-      rating: null,
+    const target = sessionStore.messages.find(m => m.id === placeholderId)
+    if (target) {
+      target.type = 'ai'
+      target.content = kbResponse.content
+      target.quickReplies = kbResponse.quickReplies
+      target.rating = null
     }
-    sessionStore.appendMessage(aiMsg)
     // ── End Mock ──────────────────────────────────────────────────────
 
     // TODO: uncomment the block below after API integration

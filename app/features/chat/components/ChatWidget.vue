@@ -23,8 +23,8 @@ useWidgetConfig();
 // 第一次展開時初始化 session；同時處理 mobile body scroll lock
 let _sessionInitialised = false;
 watch(
-  () => isOpen,
-  async open => {
+  isOpen,
+  async (open) => {
     if (typeof document !== 'undefined') {
       document.body.style.overflow = open ? 'hidden' : '';
     }
@@ -73,6 +73,7 @@ function handleRate(messageId: string, value: import('~/types/chat').FeedbackVal
       </div>
       <!-- Launch button -->
       <UButton
+        data-testid="chat-launcher"
         class="w-14 h-14 rounded-full shadow-2xl hover:scale-105 transition-transform flex items-center justify-center bg-gradient-to-r from-primary-600 to-primary-400 text-white"
         @click="setOpen(true)"
       >

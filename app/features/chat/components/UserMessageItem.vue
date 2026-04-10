@@ -1,16 +1,18 @@
 <script setup lang="ts">
 /**
  * UserMessageItem (T-028)
- * Right-aligned user bubble with avatar and timestamp.
+ * Right-aligned user bubble with avatar and live-updating relative timestamp.
  */
 import type { ChatMessageVM } from '~/types/chat';
-import { formatRelativeTime } from '~/utils/format';
+import { formatDateTime } from '~/utils/format';
 
 const props = defineProps<{ message: ChatMessageVM }>();
+
+const timeStr = computed(() => formatDateTime(props.message.timestamp));
 </script>
 
 <template>
-  <div class="flex items-end justify-end gap-2 px-4 py-1 group">
+  <div data-testid="user-message" class="flex items-end justify-end gap-2 px-4 py-1 group">
     <!-- Bubble + timestamp -->
     <div class="flex flex-col items-end gap-1 max-w-[75%]">
       <div
@@ -18,8 +20,8 @@ const props = defineProps<{ message: ChatMessageVM }>();
       >
         {{ props.message.content }}
       </div>
-      <time class="text-[10px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
-        {{ formatRelativeTime(props.message.timestamp) }}
+      <time data-testid="message-time" class="text-[10px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+        {{ timeStr }}
       </time>
     </div>
 
