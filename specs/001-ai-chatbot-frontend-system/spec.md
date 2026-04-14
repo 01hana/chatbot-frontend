@@ -5,6 +5,25 @@
 **Status**: Draft  
 **Input**: 震南企業官網 AI 客服聊天機器人前端系統（前台 Widget + 後台 Admin Dashboard）
 
+> **【拍板決策摘要】**
+>
+> 1. **SSE 為官方串流方案**：前台聊天主流程採 **`fetch + ReadableStream`** 接收 `text/event-stream`，不考慮 WebSocket，亦不使用 `EventSource`；`services/streaming.ts` 與 `useStreaming` 均以此實作
+> 2. **sessionToken 以 path parameter 傳遞**：前端以 `sessionToken` 識別匿名訪客，儲存於 `localStorage`（key: `chat_session_token`）；所有 session-scoped API 以 `:sessionToken` path parameter 呼叫；後端內部映射至 `sessionId`，前端不直接操作
+> 3. **Widget Config API 為強依賴**：`GET /api/v1/widget/config` 為正式依賴，Widget 初始化必須呼叫；回傳 `status`（`online | offline | degraded`）及所有文案欄位（`welcomeMessage`、`quickReplies`、`disclaimer`、`fallbackMessage`），均為多語系物件 `{ "zh-TW": "...", "en": "..." }`；`offline` 與 `degraded` 均進入降級模式；API 失敗也進入降級模式；Widget 在任何狀態下均保持可見，不因 `offline` 或 `degraded` 而隱藏
+> 4. **Dashboard 本期納入**：後台 Dashboard 頁面、統計卡片、圖表、`GET /api/v1/admin/dashboard` API 均為本期正式範圍
+> 5. **Feedback API 本期納入**：`POST /api/v1/chat/sessions/:sessionToken/messages/:messageId/feedback` 為本期正式串接；payload `{ value: "up"|"down", reason?: string }`；至少支援 👍/👎 + 選填原因；可關聯 AI 訊息
+> 6. **Ticket 本期納入**：`TicketVM`、Ticket 列表 / 詳情 / 狀態更新（`PATCH .../status`）/ 備註（`POST .../notes`）流程均為本期正式範圍；Ticket 狀態四態：`open | in_progress | resolved | closed`
+> 7. **無 handoff status API**：`requestHandoff()` 呼叫 `POST /api/v1/chat/sessions/:sessionToken/handoff` → 後端建立 Lead → 前端顯示靜態「已轉交專人協助」；handoff status polling 移至未來規劃
+> 8. **無後台登入驗證**：本期後台無 auth / RBAC，所有 `/admin/*` 路由直接存取
+> 9. **無 Email 通知**：Email 通知功能移至未來規劃
+> 10. **所有 API 路徑統一為 `/api/v1/...`**：`/api/v1/chat/...`、`/api/v1/widget/config`、`/api/v1/admin/...`
+>
+> ---
+>
+> **【本期 API Contract 原則】**
+>
+> 本期前端正式 API contract 採資源式 `/api/v1/...` 路由。前端以 `sessionToken` 作為匿名訪客會話識別，並透過 **path parameter** 呼叫 session-scoped API。聊天回覆正式採 `fetch + ReadableStream` 接收 SSE 串流，事件格式統一為 `token / done / error / timeout / interrupted`。Widget Config `status` 正式值為 `online | offline | degraded`（不使用 `busy`）；`offline` 與 `degraded` 均進入降級模式，Widget 可見性不受影響。Lead API payload 包含 `name`、`email`、`company?`、`phone?`、`message?`、`language?`。Handoff、Feedback、Ticket、Dashboard API 皆以本文件定義之 schema 為準。本期不做 Auth / Login / RBAC、Email 通知、handoff status API、end session API、營運報表。後台預設入口為 `/admin/dashboard`。
+
 ---
 
 ## 1. 專案目的
@@ -13,7 +32,7 @@
 
 本前端系統肩負兩大任務：
 
-1. **前台 AI 客服 Widget**：嵌入震南官網右下角，提供訪客即時、全天候的 AI 問答入口，並在 AI 無法回應時提供降級模式與轉人工流程。
+1. **前台 AI 客服 Widget**：嵌入震南官網右下角，提供即時、全天候的 AI 問答入口，並在 AI 無法回應時提供降級模式與轉人工流程。
 2. **後台 Admin Dashboard**：提供管理者、內容編輯與審核者管理 AI 客服系統的完整後台介面，涵蓋知識庫維護、對話稽核、Lead/Ticket 追蹤、回饋分析等。
 
 ---
@@ -69,16 +88,19 @@
 - RWD（桌機 / 平板 / 手機）
 
 **後台**
-- 後台登入
+- ~~後台登入~~ （本期不設置登入驗證）
 - Dashboard 概覽
 - 知識庫管理（CRUD、匯入、版本管理）
 - 對話紀錄查詢（列表 / 詳情 / 匯出）
-- Lead / Ticket 管理
+- Lead 管理（本期含 handoff 觸發後建立 Lead）
+- Ticket 管理
 - 意圖 / 模板管理
 - 快捷提問管理
 - Widget 文案與設定管理
 - 稽核事件檢視
-- 回饋紀錄與基本營運報表
+- 回饋紀錄（後台唯讀列表）；Feedback API 本期正式串接
+
+**本期正式不做（Deferred）**：後台登入驗證 / Auth / RBAC、handoff status polling API、Email 通知、end session API、營運報表
 
 ### Out of Scope
 
@@ -95,9 +117,10 @@
 
 - 官網右下角固定浮動，z-index 置頂
 - 呈現膠囊型 CTA 按鈕，顯示文案（預設：「AI 客服在線，立即諮詢」）
-- 含 AI 狀態指示燈：綠色＝線上，黃色＝繁忙，灰色＝離線 / 降級
+- 含 AI 狀態指示燈：綠色＝線上（`online`），紅色＝降級（`degraded`），灰色＝離線（`offline`）
 - 手機版收合狀態縮小為圓型 FAB（floating action button），含品牌 icon
-- 若 AI 服務不可用，狀態文案改為「客服諮詢（留言）」，入口仍可開啟（降級模式）
+- Widget 在 `online`、`offline`、`degraded` 三種狀態下均保持可見，入口均可開啟
+- 若 `status` 為 `offline` 或 `degraded`，狀態文案改為「客服諮詢（留言）」，進入降級模式
 
 ### 6.2 Widget 展開狀態
 
@@ -130,7 +153,7 @@
 
 - 顯示品牌名稱（震南企業）與品牌 logo
 - 顯示「AI 客服」標記（badge）
-- 顯示線上狀態文字（線上 / 繁忙 / 離線）
+- 顯示線上狀態文字（線上 / 降級 / 離線）
 - 右側操作按鈕：語系切換、關閉（收合 Widget）
 
 ### 6.5 聯絡捷徑列
@@ -142,7 +165,7 @@
 ### 6.6 對話訊息區
 
 - 區分訪客訊息（右側氣泡）與 AI 回覆（左側氣泡 + AI avatar）
-- 每則訊息顯示相對時間（例如：剛剛、3 分鐘前）
+- 每則訊息顯示絕對時間（HH:mm）
 - 支援 Markdown 基礎渲染（粗體、條列、連結）
 - AI 串流回覆：逐字顯示效果（streaming tokens），附加載中指示器
 - 訊息讀取狀態：已送出 / 處理中 / 已回覆
@@ -179,13 +202,22 @@
 ### 6.10 多輪對話
 
 - 同一 session 內支援多輪連續問答
-- 前端儲存 session token（localStorage / sessionStorage，TBD）
+- 前端儲存 `sessionToken`（localStorage，key: `chat_session_token`），用於跨頁面重整恢復對話
+- **`sessionToken` 作為 path parameter 傳遞**：所有 session-scoped API（訊息、留資、轉人工、回饋）皆以 `:sessionToken` 嵌入 URL 路徑，例如 `/api/v1/chat/sessions/:sessionToken/messages`
+- 後端以 `sessionToken` 識別匿名訪客，內部映射至 `sessionId`（前端不直接操作 `sessionId`）
 - 重新整理頁面後可恢復上次對話（session 有效期內）
-- 使用者可主動「重新開始對話」（清除 session）
+- 使用者可主動「重新開始對話」（純前端行為：清除 localStorage `chat_session_token`，重新呼叫 `POST /api/v1/chat/sessions` 建立新 session；本期不提供後端 end session API）
 
 ### 6.11 串流回覆
 
-- 使用 Server-Sent Events（SSE）或 WebSocket 接收串流回覆（由後端決定協議，前端需支援）
+- 使用 **`fetch + ReadableStream`** 接收 `text/event-stream` 串流回覆（本期確認使用此方案，不使用 `EventSource`，非 WebSocket）
+- SSE 事件格式（後端統一輸出）：
+  - `event: token` → `data: {"token":"..."}` — 逐字輸出 token
+  - `event: done` → `data: {"messageId":"uuid","action":"answer|handoff|fallback|intercepted","sourceReferences":[],"usage":{...}}` — 串流完成
+  - `event: error` → `data: {"code":"string","message":"string"}` — 後端錯誤
+  - `event: timeout` → `data: {"message":"string"}` — 逾時
+  - `event: interrupted` → `data: {"message":"string"}` — 中斷
+- 取消串流：呼叫 `AbortController.abort()`，不使用 HTTP DELETE endpoint
 - 回覆過程中逐字呈現，動畫流暢
 - 串流中斷時顯示部分內容 + 重試提示
 - 串流超時（預設 30 秒無回應）自動觸發 timeout 提示
@@ -199,19 +231,23 @@
 
 ### 6.13 留資表單（Lead Form）
 
-- 觸發時機：訪客詢問報價、要求聯絡、或 AI 主動引導
+- 觸發時機：訪客詢問報價、要求聯絡、或 AI 主動引導，或轉人工時引導留資
 - 在對話區內以 inline 卡片形式展開
-- 必填欄位：姓名、公司名稱、電話或 Email（至少一個）
-- 選填欄位：詢問品項、備註
+- **必填欄位：姓名（name）、Email（email）**
+- **選填欄位：公司名稱（company）、電話（phone）、訊息（message）、語言偏好（language）**
+- `language` 欄位由前端自動帶入當前語系（`zh-TW` / `en`），不需訪客手動填寫
+- API payload：`{ name, email, company?, phone?, message?, language? }`，路由 `POST /api/v1/chat/sessions/:sessionToken/lead`
+- Lead payload 需與後端 SRS 最小資料契約對齊，至少包含：客戶資訊（name/email）、訊息（message）、語言（language）、觸發原因（triggerReason）
 - 提交後顯示確認訊息，並在後台建立 Lead 紀錄
 - 表單關閉後不可重複提交（同一 session 內）
 
 ### 6.14 轉人工客服流程
 
-- 觸發時機：訪客主動要求、AI 連續回覆失敗 N 次（TBD：N=3）、AI 信心度過低
-- 顯示「正在為您轉接人工客服，請稍候」提示
-- 若當前無真人客服（非服務時間或無人線上），顯示服務時間 + 引導留資
-- 轉接成功後聊天面板進入「等待接線」狀態，後續由外部系統接手（前端需支援 status webhook 更新 UI 狀態）
+- 觸發時機：訪客主動要求、AI 連續回覆失敗 N 次（TBD：N=3）、AI 信心度過低，或後端回應標記 `handoff: true`
+- **本期流程**：前端呼叫 `POST /api/v1/chat/sessions/:sessionToken/handoff`，後端建立 Lead 紀錄並回傳 `{ accepted, action, leadId?, ticketId?, message }` → 前端顯示「已轉交專人協助，我們將盡快與您聯繫。」靜態確認訊息
+- 若訪客希望留下聯絡方式，引導填寫 Lead Form（name + email 必填）
+- **本期不做**：轉人工後的 handoff status polling → 移至未來規劃
+- **本期不做**：HandoffStatusCard 多狀態流轉（requested / waiting / connected / unavailable）→ 移至未來規劃
 
 ### 6.15 機密問題攔截與 Prompt Injection 防護
 
@@ -228,7 +264,7 @@
 |------|---------|
 | 網路錯誤 / API 失敗 | 顯示「訊息傳送失敗，請重試」+ 重試按鈕 |
 | 串流 Timeout（30 秒） | 顯示「回覆超時，請再試一次」+ 重試按鈕 |
-| AI 服務完全不可用 | 進入降級模式：Widget 仍可開啟，提示「AI 客服暫時無法使用，請留言或電話聯繫」，並顯示留資入口 |
+| AI 服務完全不可用（`status: offline` 或 `status: degraded`）或 Widget Config API 呼叫失敗 | 進入降級模式：Widget 仍可見、仍可開啟，提示「AI 客服暫時無法使用，請留言或電話聯繫」，並顯示留資入口；Widget 可見性不受 `offline` / `degraded` 影響 |
 | 低信心度回覆 | 後端標記時，AI 回覆末端附加「建議您直接聯繫客服確認」提示文字 |
 - 降級模式下，快捷提問維持顯示，聯絡捷徑列保持可用
 
@@ -237,7 +273,8 @@
 - 每則 AI 回覆下方顯示讚（👍）/ 倒讚（👎）小按鈕
 - 點擊後按鈕變色確認，同一則訊息只能回饋一次（可切換）
 - 選擇倒讚後可選填原因（TBD：開放文字 or 選項清單）
-- 回饋資料傳送至後端，供後台報表使用
+- **本期正式串接 Feedback API**：點擊讚 / 倒讚後呼叫 `POST /api/v1/chat/sessions/:sessionToken/messages/:messageId/feedback`，payload 為 `{ "value": "up"|"down", "reason": "string（選填）" }`
+- 本期至少支援 👍/👎 + 選填原因，可關聯至 AI 訊息 ID
 
 ### 6.18 多語系
 
@@ -261,11 +298,7 @@
 
 ### 7.1 後台登入
 
-- 獨立登入頁，輸入帳號 / 密碼
-- 登入成功後依角色導向對應起始頁
-- 支援「記住我」（7 天 token 保留，TBD）
-- 登入失敗顯示對應錯誤訊息（帳密錯誤 / 帳號停用）
-- 登入後 Session timeout 自動登出（TBD：60 分鐘無操作）
+> **⚠️ 本期不設置登入驗證（Auth / RBAC 移至未來規劃）**。本期後台所有 `/admin/*` 路由直接存取，無需帳密，無 middleware 守衛。前台提供低調的「管理後台」入口按鈕直接導向 `/admin/dashboard`。
 
 ### 7.2 Dashboard 概覽
 
@@ -302,7 +335,7 @@
 - 指派業務人員（TBD：是否需要在本後台完成，或由 CRM 接手）
 
 **Ticket 管理**
-- 列表：Ticket ID、主旨、建立時間、狀態（開啟 / 進行中 / 已關閉）、優先級
+- 列表：Ticket ID、主旨、建立時間、狀態（開啟 / 進行中 / 已解決 / 已關閉）、優先級
 - 詳情：問題描述 + 關聯對話 + 處理紀錄
 - 狀態變更與備註
 - 篩選：狀態、優先級、時間範圍
@@ -340,20 +373,11 @@
 - 篩選：事件類型、時間範圍、嚴重程度
 - 匯出：CSV
 
-### 7.10 回饋紀錄與基本營運報表
+### 7.10 回饋紀錄
 
 **回饋紀錄**
 - 列表：Session ID、訊息摘要、回饋類型（讚 / 倒讚）、倒讚原因、時間
 - 篩選：回饋類型、時間範圍
-
-**營運報表**
-- AI 自助解答率（趨勢圖，日 / 週 / 月）
-- 意圖分布圓餅圖
-- 滿意度比率（讚 vs 倒讚趨勢）
-- Lead 與 Ticket 建立數趨勢
-- 機密攔截 / Prompt Injection 次數趨勢
-- 報表時間範圍篩選（近 7 天 / 30 天 / 自訂）
-- 資料匯出（CSV）
 
 ---
 
@@ -363,36 +387,41 @@
 
 ### 8.1 前台 API 能力需求
 
-| 能力 | 說明 |
-|------|------|
-| 建立聊天 Session | 取得 session token，供後續訊息使用 |
-| 發送訊息 / 接收串流回覆 | 傳送使用者訊息，接收 AI 串流回覆（SSE 或 WebSocket） |
-| 取得對話歷史 | 依 session token 取回歷史對話訊息（session 恢復用） |
-| 送出留資表單 | 傳送 Lead 資料，取得確認 |
-| 轉人工客服 | 發出轉接請求，接收狀態變更（進行中 / 等待 / 已接線） |
-| 送出滿意度回饋 | 傳送讚 / 倒讚 + 原因 |
-| 取得 Widget 設定 | 取得文案、捷徑、歡迎訊息、快捷提問、語系設定 |
+所有前台 API 路徑統一使用 `/api/v1/...` 前綴。
+
+| 能力 | API 路徑 | 說明 |
+|------|---------|------|
+| 取得 Widget 設定 | `GET /api/v1/widget/config` | **正式依賴**；回傳 `{ status, welcomeMessage, quickReplies, disclaimer, fallbackMessage }`（`status` 值為 `online \| offline \| degraded`；`offline` 與 `degraded` 均觸發降級模式；所有文案欄位為多語系物件 `{"zh-TW":"...","en":"..."}`）；Widget 初始化時必須呼叫，失敗時亦觸發降級模式並 fallback 至靜態 i18n 文案；Widget 可見性不受 `status` 值影響 |
+| 建立聊天 Session | `POST /api/v1/chat/sessions` | 取得 sessionToken，供後續 session-scoped API 使用 |
+| 發送訊息 / 接收 SSE 串流回覆 | `POST /api/v1/chat/sessions/:sessionToken/messages` | 傳送使用者訊息，以 `fetch + ReadableStream` 接收 AI SSE 串流回覆 |
+| 取得對話歷史 | `GET /api/v1/chat/sessions/:sessionToken/history` | 依 sessionToken 取回歷史對話訊息（session 恢復用） |
+| 送出留資表單 | `POST /api/v1/chat/sessions/:sessionToken/lead` | payload: `{ name, email, company?, phone?, message?, language? }`；`language` 由前端自動帶入當前語系 |
+| 轉人工客服 | `POST /api/v1/chat/sessions/:sessionToken/handoff` | 發出轉接請求；後端建立 Lead；回傳 `{ accepted, action, leadId?, ticketId?, message }`；前端顯示已轉交確認訊息 |
+| 送出滿意度回饋 | `POST /api/v1/chat/sessions/:sessionToken/messages/:messageId/feedback` | **本期正式串接**；payload: `{ "value": "up"\|"down", "reason": "string（選填）" }` |
+| ~~Handoff Status 查詢~~ | ~~`GET /api/v1/chat/handoff/status`~~ | **本期不串接**，移至未來規劃 |
 
 ### 8.2 後台 API 能力需求
 
+所有後台 API 路徑統一使用 `/api/v1/admin/...` 前綴。
+
 | 能力 | 說明 |
 |------|------|
-| 後台登入 / 登出 | 取得登入 token |
-| Dashboard 統計資料 | 各統計卡片與圖表所需彙總數據 |
+| ~~後台登入 / 登出~~ | **本期不設置登入驗證** |
+| Dashboard 統計資料 | `GET /api/v1/admin/dashboard`；統計卡片、對話趨勢圖、意圖分布 |
 | 知識庫 CRUD | 條目列表、詳情、新增、編輯、刪除 |
 | 知識庫批次匯入 | 上傳 CSV / JSON，取得匯入結果 |
 | 知識庫版本歷史 | 條目版本列表、差異比對、還原 |
 | 對話紀錄列表 / 詳情 | 含分頁、篩選、搜尋 |
 | 對話紀錄匯出 | 依篩選條件取得 CSV 下載連結 |
-| Lead 列表 / 詳情 / 狀態更新 | CRUD（狀態操作為主） |
-| Ticket 列表 / 詳情 / 狀態更新 | CRUD（狀態操作為主） |
+| Lead 列表 / 詳情 / 狀態更新 | CRUD（狀態操作為主，含 handoff 觸發建立的 Lead） |
+| Ticket 列表 / 詳情 / 狀態更新 | 狀態四態：`open | in_progress | resolved | closed`；`PATCH /api/v1/admin/tickets/:id/status` 更新狀態；`POST /api/v1/admin/tickets/:id/notes` 新增備註 |
 | 意圖 / 模板 CRUD | 列表、新增、編輯、刪除、啟停用 |
 | 快捷提問 CRUD | 含排序更新 |
 | Widget 設定讀寫 | 取得 / 更新文案與設定 |
 | 稽核事件列表 / 詳情 | 含篩選與匯出 |
-| 回饋紀錄列表 | 含篩選 |
-| 營運報表資料 | 依時間範圍取得各圖表資料 |
-| 報表匯出 | CSV 下載 |
+| 回饋紀錄列表 | 含篩選；本期前台 Feedback API 正式串接，後台提供查詢介面 |
+| ~~營運報表資料~~ | **本期不做** |
+| ~~報表匯出~~ | **本期不做** |
 
 ---
 
@@ -401,22 +430,27 @@
 ### 9.1 安全性
 
 - **前端禁止暴露 OpenAI API Key 或任何後端機密設定**，所有 AI 呼叫均透過後端 API
-- 後台所有 API 呼叫需攜帶認證 token（Bearer JWT 或等效機制）
-- 前端 token 儲存於 HttpOnly Cookie（後端設置）或記憶體，避免 XSS 竊取
+- 本期後台不設置登入驗證（Auth / RBAC 移至未來規劃）；後台 `/api/v1/admin/...` 請求直接發送，不附加 Authorization header
+- 前台 sessionToken 儲存於 localStorage（key: `chat_session_token`），用於匿名訪客 session 識別
 - 表單輸入需做基本前端驗證（防止空送、長度限制）
-- 後台路由需驗證登入狀態，未登入強制導向登入頁
 - 敏感操作（刪除、還原版本）需二次確認提示
 
 ### 9.2 錯誤處理
 
-- 全域 API 錯誤攔截：401（導向登入）、500（顯示通用錯誤）
+- 全域 API 錯誤攔截：401（本期後台無登入，暫不處理）、500（顯示通用錯誤）
 - 前台：所有 API 失敗顯示使用者友善訊息，提供重試入口
 - 後台：表單提交失敗顯示欄位級別錯誤訊息
 - 未預期錯誤上報前端錯誤追蹤服務（TBD：Sentry 或等效工具）
 
 ### 9.3 降級模式
 
-- AI 服務不可用時，前台 Widget 仍可開啟，顯示降級提示並保留聯絡捷徑與留資入口
+- Widget 在以下三種情況下均進入降級模式：
+  1. Widget Config API 回傳 `status: offline`
+  2. Widget Config API 回傳 `status: degraded`
+  3. Widget Config API 呼叫本身失敗（網路錯誤 / 非 2xx）
+- **Widget 可見性不受影響**：無論 `offline`、`degraded` 或 API 失敗，Widget 均保持可見、可開啟
+- 降級模式下禁用 AI 對話輸入，顯示 `fallbackMessage`（多語系）
+- 降級模式下顯示留資入口，引導訪客填寫 Lead Form 或使用聯絡捷徑
 - 後台在 API 服務不可用時，顯示維護中提示，不允許資料操作
 
 ### 9.4 可用性與效能
@@ -451,10 +485,12 @@
 
 ### 9.8 Session 恢復策略
 
-- 前台 session token 儲存於 localStorage，有效期由後端定義（TBD：預設 24 小時）
-- 頁面重載後自動帶入 session token，呼叫歷史對話 API 恢復對話
+- 前台 session 識別以 `sessionToken`（localStorage `chat_session_token`）為準，有效期由後端定義（TBD：預設 24 小時）；`sessionToken` 並作為 path parameter 傳入所有 session-scoped API（`/api/v1/chat/sessions/:sessionToken/...`）。後端以 `sessionToken` 識別匿名訪客，內部映射至 `sessionId`；前端不直接操作 `sessionId`。
+- 後端以 `sessionToken` 識別匿名訪客，內部映射至 `sessionId`；前端不直接操作 `sessionId`
+- 頁面重載後自動帶入 `sessionToken`，呼叫歷史對話 API 恢復對話
 - session 過期後，下次開啟 Widget 自動建立新 session，並顯示新歡迎訊息
 - 跨 Tab 共用同一 session（localStorage 機制）
+- **本期不提供 end session API**：訪客「重新開始對話」為純前端行為（清除 localStorage 中的 `chat_session_token`，並重新呼叫 `POST /api/v1/chat/sessions` 建立新 session）；後端不需提供 DELETE/end session 端點
 
 ---
 
@@ -472,13 +508,13 @@
 - [ ] 機密攔截與 Prompt Injection 攔截顯示正確提示訊息
 - [ ] API 失敗 / timeout 顯示錯誤提示並提供重試
 - [ ] AI 服務不可用時進入降級模式，Widget 仍可開啟
-- [ ] 滿意度回饋可送出，同一訊息僅能回饋一次
+- [ ] 滿意度回饋可送出（`POST /api/v1/chat/sessions/:sessionToken/messages/:messageId/feedback`），同一訊息僅能回饋一次（可切換）
 - [ ] 繁中 / 英文語系切換正確套用所有前台文案
 - [ ] 桌機、平板、手機版 RWD 布局均符合設計規範
 
 ### 10.2 後台驗收
 
-- [ ] 管理者登入後可存取後台所有功能頁面
+- [ ] 管理者可直接存取後台所有功能頁面（本期無需登入驗證），預設入口導向 `/admin/dashboard`
 - [ ] Dashboard 統計卡片與圖表正確顯示，資料與後端一致
 - [ ] 知識庫條目可新增、編輯、刪除，版本歷史可查詢差異並還原
 - [ ] 批次匯入 CSV / JSON 顯示正確成功 / 錯誤結果
@@ -487,12 +523,12 @@
 - [ ] 意圖 / 模板與快捷提問可正確 CRUD 及排序
 - [ ] Widget 設定修改後即時預覽面板正確反映
 - [ ] 稽核事件列表依類型篩選正確
-- [ ] 回饋紀錄與報表圖表資料正確，可依時間範圍篩選
+- [ ] 回饋紀錄列表可依類型與時間範圍篩選
 
 ### 10.3 安全與穩定性驗收
 
 - [ ] 前端原始碼（含 bundle）中不含任何 OpenAI API Key 或後端機密資訊
-- [ ] 未登入存取後台路由一律導向登入頁
+- [ ] 本期後台無需登入驗證，所有 `/admin/*` 路由可直接存取（auth 移至未來規劃）
 - [ ] 前台 Prompt Injection 測試：輸入注入指令，後端攔截後前端正確顯示提示
 - [ ] Widget 在 AI 服務模擬故障時，降級模式正確啟動
 - [ ] 串流 Timeout 測試：30 秒無回應後顯示 timeout 提示
@@ -513,7 +549,7 @@
 | Q6 | Lead 指派業務功能是否需整合至本後台？或由 CRM 系統接手後僅需本後台顯示狀態？ | Lead 管理範疇 |
 | Q7 | 前台事件追蹤是否需要整合第三方分析工具（GA4、GTM、Mixpanel）？或僅送往自有後端？ | 埋點與資料隱私 |
 | Q8 | Widget 是否需支援「自訂主題色」供未來其他品牌嵌入使用？或固定震南品牌色即可？ | Widget 設計與元件架構 |
-| Q9 | AI 串流回覆協議：後端確認使用 SSE 或 WebSocket？ | 前台串流實作方式 |
+| Q9 | ~~AI 串流回覆協議：後端確認使用 SSE 或 WebSocket？~~ | **已拍板：本期使用 `fetch + ReadableStream` 接收 SSE（Server-Sent Events）**，前台 `useStreaming.ts` 以此實作，不使用 `EventSource`，不使用 WebSocket |
 
 ---
 
@@ -522,10 +558,10 @@
 | Phase | 功能範圍 | 優先度 |
 |-------|---------|--------|
 | **Phase 1（MVP）** | 前台 Widget 收合 / 展開、多輪對話、串流回覆、快捷提問、機密攔截提示、降級模式 | P1 |
-| **Phase 2** | 留資表單、轉人工流程、滿意度回饋、後台登入 + Dashboard + 對話紀錄查詢 | P1 |
-| **Phase 3** | 知識庫管理（含版本）、Lead / Ticket 管理 | P2 |
+| **Phase 2** | 留資表單、轉人工流程（簡化版）、滿意度回饋（Feedback API 串接）、對話紀錄查詢 | P1 |
+| **Phase 3** | Dashboard 概覽、知識庫管理（含版本）、Lead / Ticket 管理 | P2 |
 | **Phase 4** | 意圖 / 模板管理、快捷提問管理、Widget 設定管理（含即時預覽）、稽核事件 | P2 |
-| **Phase 5** | 回饋紀錄、營運報表、多語系（英文）、無障礙優化、事件追蹤埋點 | P3 |
+| **Phase 5** | 回饋紀錄、多語系（英文）、無障礙優化、事件追蹤埋點；**營運報表移至未來規劃** | P3 |
 
 ---
 
@@ -566,7 +602,7 @@
 
 ### User Story 3 — 後台管理者查看對話紀錄與稽核事件 (Priority: P2)
 
-管理者登入後台，篩選特定時間範圍的對話紀錄，查看含機密攔截事件的對話詳情。
+管理者進入後台，篩選特定時間範圍的對話紀錄，查看含機密攔截事件的對話詳情。
 
 **Why this priority**: 可追溯性是系統合規與品質保證的基礎。
 
@@ -585,7 +621,6 @@
 - Widget 展開時，若 API 回傳 AI 服務不可用，顯示降級提示，聯絡捷徑與留資入口仍可用
 - 使用者輸入超過 500 字時，輸入框顯示字數警告並禁止送出
 - 串流回覆進行中使用者關閉 Widget，重新開啟後串流中斷，顯示部分回覆 + 重試按鈕
-- 後台管理者在角色被修改為低權限後，下次 API 呼叫失敗（403），前端清除 token 並導向登入頁
 - 批次匯入知識庫時，部分條目格式錯誤，顯示成功筆數 + 失敗原因列表
 
 ---
@@ -596,26 +631,26 @@
 
 - **FR-001**: 前台 Widget 必須在官網右下角固定顯示，支援收合與展開狀態切換
 - **FR-002**: 前台必須透過後端 API 進行所有 AI 通訊，不得直接呼叫任何 AI 服務
-- **FR-003**: 前台必須支援 Server-Sent Events 或 WebSocket 串流回覆顯示
+- **FR-003**: 前台必須支援 Server-Sent Events（SSE）串流回覆顯示（本期確認使用 `fetch + ReadableStream`，不使用 `EventSource`）
 - **FR-004**: 前台必須在 AI 服務不可用時顯示降級模式，保留聯絡入口
 - **FR-005**: 前台必須支援多輪對話與 session 恢復
-- **FR-006**: 前台留資表單必須驗證必填欄位，成功提交後向後端建立 Lead
+- **FR-006**: 前台留資表單必填欄位為姓名（name）與 Email（email）；公司（company）、電話（phone）、訊息（message）、語言偏好（language）為選填；`language` 由前端自動帶入當前語系（`zh-TW` / `en`），驗證通過後向後端建立 Lead（`POST /api/v1/chat/sessions/:sessionToken/lead`）
 - **FR-007**: 前台機密攔截與 Prompt Injection 攔截必須顯示對應提示訊息
-- **FR-008**: 前台滿意度回饋結果必須傳送至後端
+- **FR-008**: 前台滿意度回饋本期正式串接 Feedback API（`POST /api/v1/chat/sessions/:sessionToken/messages/:messageId/feedback`）；payload `{ "value": "up"|"down", "reason": "string（選填）" }`；並維護本地 UI 狀態同步
 - **FR-009**: 前台 Widget 必須支援繁體中文與英文語系切換
 - **FR-010**: 前台必須在桌機、平板、手機三種斷點正確呈現 RWD 布局
-- **FR-011**: 後台所有路由必須驗證登入狀態，未登入強制導向登入頁
+- **FR-011**: 本期後台不設置登入驗證，所有 `/admin/*` 路由直接存取；Auth / RBAC 移至未來規劃
 - **FR-012**: 後台知識庫必須支援版本歷史、差異比對與還原
 - **FR-013**: 後台知識庫必須支援審核流程（送審 → 核准 / 退回）
 - **FR-014**: 後台對話紀錄必須支援篩選、搜尋與 CSV 匯出
 - **FR-015**: 後台 Widget 設定必須有即時預覽功能
-- **FR-016**: 後台各功能頁面均需登入後方可存取
+- **FR-016**: 本期後台無需登入，管理功能直接存取；未來加入登入保護時再新增 middleware
 
 ### Key Entities
 
 - **ChatSession**：一次完整的訪客對話，含 session ID、語系、狀態、建立時間
 - **Message**：單則訊息，含角色（user / ai）、內容、時間戳、信心度、攔截標記
-- **Lead**：訪客留資記錄，含聯絡資訊、詢問品項、關聯 session、處理狀態
+- **Lead**：訪客留資記錄，含聯絡資訊（name、email、company?、phone?）、訊息（message?）、語言偏好（language?）、關聯 session、觸發原因、處理狀態
 - **Ticket**：技術支援工單，含主旨、描述、優先級、狀態、關聯 session
 - **KnowledgeEntry**：知識庫條目，含標題、內容、分類、版本、發佈狀態
 - **Intent**：意圖定義，含名稱、觸發關鍵字、對應回覆模板
@@ -635,15 +670,42 @@
 - **SC-004**: 後台管理者可在 5 分鐘內完成一個知識庫條目從新增到送審的流程
 - **SC-005**: 機密問題與 Prompt Injection 攔截後，使用者 100% 看到明確提示，無空白或系統錯誤頁
 - **SC-006**: AI 服務不可用期間，前台 Widget 降級模式啟動率 100%，聯絡入口 100% 可用
-- **SC-007**: 後台無權限角色 100% 無法存取超出權限的功能（路由層與 API 層均驗證）
 
 ---
 
 ## Assumptions
 
-- 後端提供 RESTful API 與 SSE / WebSocket 串流介面，前端不需自行實作 AI 邏輯
+- 後端提供 RESTful API 與 SSE 串流介面（`fetch + ReadableStream`），前端不需自行實作 AI 邏輯
 - 前台 Widget 以 iframe 或 Web Component 形式嵌入震南官網（TBD），不影響官網主體樣式
 - 後台使用者帳號由管理者在後台建立，初期無需對接外部 SSO / LDAP
 - 多語系 i18n 資源以前端靜態檔案為主，後台文案設定可覆蓋特定欄位
 - Widget 設計風格以震南品牌色為主，具體色票與字型由設計稿提供
 - 本 spec 不涵蓋後端 RAG、Prompt Guard、OpenAI 整合細節，僅定義前端所需 API 能力
+
+---
+
+## 本次修正摘要（spec.md 一致性修訂）
+
+> **修訂原則**：本次修訂僅針對 spec.md 內部一致性，不修改 design.md / plan.md / task.md。
+
+| # | 修訂位置 | 修訂內容 |
+|---|---------|---------|
+| 1 | API Contract 原則（頁首 callout） | 補全 Widget status enum（`online\|offline\|degraded`，不使用 `busy`）、Lead `language?` 欄位、end session API 不在本期、後台預設入口 `/admin/dashboard` |
+| 2 | §5 In Scope 回饋紀錄 | 移除 `~~報表本期不做~~` strikethrough 語氣混亂，改為 Deferred 列表統一說明；新增 end session API 至 Deferred |
+| 3 | §6.1 Widget 收合狀態 | 明確標示三色對應值（`online`/`degraded`/`offline`）；新增「Widget 在三種狀態下均保持可見」說明；`offline`/`degraded` 改為觸發降級模式 |
+| 4 | §6.4 Header | 狀態文字 `繁忙` → `降級` |
+| 5 | §6.10 多輪對話 | 「重新開始對話」補充說明為純前端行為，本期不提供後端 end session API |
+| 6 | §6.13 留資表單 | 新增選填欄位 `language?`；補充 `language` 由前端自動帶入當前語系；新增 Lead payload 與後端 SRS 最小資料契約對齊說明 |
+| 7 | §6.16 降級模式表格 | 觸發條件從「AI 服務完全不可用」擴展為明確列出 `status: offline`、`status: degraded`、Widget Config API 失敗三種情境；強調 Widget 可見性不受影響 |
+| 8 | §7.10 | 章節名稱「回饋紀錄與基本營運報表」→「回饋紀錄」；移除「**營運報表**」整個子節（趨勢圖、圓餅圖、CSV 匯出等） |
+| 9 | §8.1 Widget Config API 欄 | 明確標示 `status` 值為 `online\|offline\|degraded`；`offline`/`degraded` 及 API 失敗均觸發降級模式；Widget 可見性不受影響 |
+| 10 | §8.1 Lead API 欄 | payload 新增 `language?`；補充自動帶入說明 |
+| 11 | §9.2 錯誤處理 | 401 處理說明改為「本期後台無登入，暫不處理」，避免與無 auth 決定矛盾 |
+| 12 | §9.3 降級模式 | 重寫：列出三種觸發條件（`offline`/`degraded`/API 失敗）；強調 Widget 可見性不受影響；保留後台維護中提示說明 |
+| 13 | §9.8 Session 恢復策略 | 新增：本期不提供 end session API；「重新開始對話」為純前端行為（清除 localStorage + 重新呼叫 POST sessions） |
+| 14 | §10.2 後台驗收 | 修正管理者驗收項目加入「預設入口 `/admin/dashboard`」；回饋記錄項目移除報表圖表相關描述 |
+| 15 | Edge Cases | 移除「後台管理者角色被修改後 403 清除 token」條目（與無 auth 決定矛盾） |
+| 16 | FR-006 | 選填欄位新增 `語言偏好（language）`；補充自動帶入語系說明 |
+| 17 | Key Entities — Lead | 更新描述：明確列出 `language?` 欄位 |
+| 18 | SC-007 | 移除「無權限角色 100% 無法存取」驗收標準（與無 auth 決定矛盾） |
+| 19 | Assumptions | `SSE / WebSocket` → `SSE（fetch + ReadableStream）`，移除 WebSocket 提及 |

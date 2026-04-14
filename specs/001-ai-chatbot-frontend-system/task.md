@@ -2,8 +2,25 @@
 
 **Feature Branch**：`001-ai-chatbot-frontend-system`
 **建立日期**：2026-04-01
-**依據**：`spec.md` v1、`design.md` v1、`plan.md` v1
+**依據**：`spec.md`（最新）、`design.md`（最新）、`plan.md`（最新）
 **開發模式**：單人開發，依序執行
+
+---
+
+> ## 🔒 拍板決策摘要（Finalized Decisions）
+>
+> 以下為已確認之設計決策，所有 Task 描述均以此為準：
+>
+> 1. **SSE 為官方串流方案**：`useStreaming`、`services/streaming.ts` 均採 `fetch + ReadableStream`；無 `EventSource`，無 WebSocket fallback；取消串流以 `AbortController.abort()` 實現，無 DELETE 端點
+> 2. **sessionToken 以 path parameter 傳入**：儲存於 `localStorage` key `chat_session_token`；所有 session-scoped API 透過路徑 `/api/v1/chat/sessions/:sessionToken/...` 傳入；不以 `X-Session-Token` header 作為正式 contract
+> 3. **Widget Config API 為強依賴**：`GET /api/v1/widget/config`；`status`（`online|offline|degraded`）、`welcomeMessage`、`quickReplies`、`disclaimer`、`fallbackMessage` 均為多語系物件（`Record<string, string>`）；`status: 'offline'` 或 `status: 'degraded'` 或 API 失敗均觸發降級模式
+> 4. **Dashboard 本期納入**：`services/api/admin/dashboard.ts` 本期建立；`AdminStatCard` 統計卡片（對話數、Lead 數、Ticket 數、常見意圖、轉人工原因、最新稽核事件）、`AdminLineChart`、`AdminPieChart` 本期實作；路由 `/admin/dashboard`
+> 5. **Feedback API 本期正式串接**：`POST /api/v1/chat/sessions/:sessionToken/messages/:messageId/feedback`，payload `{ value: 'up'|'down', reason? }`；`useFeedback.ts` 呼叫 API，fire-and-forget；`services/api/admin/feedback.ts` 提供後台查詢
+> 6. **Handoff 簡化**：無 polling；`POST /api/v1/chat/sessions/:sessionToken/handoff` → 後端回傳 `{ accepted, action, leadId?, ticketId?, message }` → 前端顯示靜態「已轉交專人協助」；`HandoffStatusCard` 多狀態延後
+> 7. **Ticket 本期納入**：`services/api/admin/tickets.ts` 本期建立；列表 + 詳情 + 狀態流（`open | in_progress | resolved | closed` 四態）+ 狀態更新（`PATCH .../status`）+ 備註新增（`POST .../notes`）
+> 8. **Lead Form 欄位**：`name` 必填、`email` 必填、`company` 選填、`phone` 選填、`message` 選填；`language` 由前端自動帶入當前語系（`zh-TW` / `en`），不需訪客填寫；欄位名稱為 `message`（非 `備註` / `notes` / `inquiry`）
+> 9. **不做 Email 通知**：本期不實作任何 Email 通知功能（Ticket 指派通知、Lead 提醒等均延後）
+> 10. **API 路徑統一 `/api/v1/...`**：`/api/v1/chat/sessions/:sessionToken/...`、`/api/v1/widget/config`、`/api/v1/admin/...`
 
 ---
 
@@ -73,7 +90,7 @@
   - **依賴**：T-002
   - **實作內容**：
     - 封裝 `$fetch` 為 `createApiClient()`，設定 `baseURL` 從 `runtimeConfig.public.apiBase` 讀取
-    - 前台 chat 請求：自動從 `useChatSessionStore` 讀取 sessionToken，附加 `X-Session-Token` header（若存在）
+    - 前台 chat 請求：sessionToken 透過 path parameter 傳入（`/api/v1/chat/sessions/:sessionToken/...`），**不附加 `X-Session-Token` header** 作為正式 contract（header 為內部實作細節）
     - 後台 admin 請求：本期直接發送，不附加 Authorization header
     - 全域 5xx 錯誤 interceptor：呼叫 `useToast()` 顯示錯誤 toast
     - 一般請求 15 秒 timeout（串流請求另行處理）
@@ -88,7 +105,7 @@
   - **依賴**：T-001
   - **實作內容**：
     - `types/chat.ts`：定義 `ChatMessageVM`（id、type、content、timestamp、metadata；**另含 `quickReplies?: string[]`（per-message KB chips）與 `rating?: FeedbackValue`（`null | 'up' | 'down'`，Phase 1 本地狀態）**）、`WidgetConfigVM`、`ChatSessionVM`、`LeadFormData`、`FeedbackValue`（`null | 'up' | 'down'`，取代原 `FeedbackState` Map 設計）、`HandoffState`、`StreamingState`（含七種狀態 enum）；**訊息型別 `ChatMessageType` 使用 `'ai'`（非 `'ai-text'`）**
-    - `types/admin.ts`：定義 `KnowledgeEntryVM`、`ConversationSummaryVM`、`ConversationDetailVM`、`LeadVM`、`TicketVM`、`IntentVM`、`QuickReplyVM`、`AuditEventVM`、`FeedbackVM`、`DashboardStatsVM`、`ReportDataVM`
+    - `types/admin.ts`：定義 `KnowledgeEntryVM`、`ConversationSummaryVM`、`ConversationDetailVM`、`LeadVM`、`TicketVM`、`IntentVM`、`QuickReplyVM`、`AuditEventVM`、`FeedbackVM`、`DashboardStatsVM`（~~`ReportDataVM` 本期不定義，Reports 延後~~）
     - `types/api.ts`：定義通用 API 回應包裝型別（`ApiResponse<T>`、`PaginatedResponse<T>`）
     - 所有 VM type 均為 TypeScript interface 或 type，有 JSDoc 說明
   - **完成條件**：所有 VM type 可在其他檔案 import 使用；TypeScript 編譯無錯誤；`types/` 下無 `any` 型別
@@ -115,13 +132,13 @@
   - **依賴**：T-002
   - **實作內容**：
   - 確認 `app/plugins/vee-validate.client.ts` 已建立，並完成 vee-validate 驗證規則的全域註冊或共用驗證能力初始化
-  - 新增自訂規則：`phoneOrEmail`（電話格式或 Email 格式，至少一個）
+  - ~~新增自訂規則：`phoneOrEmail`（電話格式或 Email 格式，至少一個）~~ **（已移除：Lead Form 改為 name + email 必填，phone 選填，不再需要 `phoneOrEmail` 自訂規則）**
   - 以前端既有封裝的 Nuxt UI 表單元件為主，不直接依賴 vee-validate 的 `<Form>`、`<Field>`、`<ErrorMessage>` 作為主要畫面組件
   - 確認 `@nuxt/ui` 的 `UForm` 可與既有 `app/components/FormField` 封裝元件整合使用
   - 確認表單元件可接收驗證錯誤訊息、顯示欄位錯誤狀態，並支援後續 Lead Form 等表單場景重用
   - **完成條件**：
     - 在測試元件中，使用 `UForm` 搭配既有封裝的 `FormField` 元件可正確顯示驗證錯誤訊息
-    - 自訂 `phoneOrEmail` 規則邏輯正確
+    - `name`（必填）、`email`（必填，格式驗證）規則可在各表單中自行定義；無需 `phoneOrEmail` 自訂規則
     - 不需要直接使用 vee-validate 的 `<Form>`、`<Field>`、`<ErrorMessage>` 也能完成表單驗證整合
 
 ---
@@ -160,7 +177,7 @@
   - **實作內容**：
     - 建立 `app/layouts/admin.vue`：左側導覽列（`AdminSidebar` 占位元件）、頂部 topbar（`AdminTopbar` 占位元件）、右側主內容區 `<slot />`
     - 整體布局使用 Tailwind `flex`：左側固定寬 240px，右側 `flex-1 overflow-auto`
-    - 確認 `/admin/dashboard` 路由使用此 layout
+    - 確認 `/admin/dashboard` 路由使用此 layout（本期後台預設路由為 `/admin/dashboard`，Dashboard 本期納入範圍）
   - **完成條件**：`/admin/dashboard` 渲染時顯示骨架 layout（左側占位導覽、右側內容區）；無 console 錯誤
 
 ---
@@ -330,10 +347,10 @@
   - **依賴**：T-004、T-005
   - **實作內容**：
     - 建立 `app/services/api/chat.ts`，封裝以下 API：
-      - `createSession()` → `POST /api/chat/session`，回傳 `ChatSessionVM`
-      - `getSessionHistory(sessionToken)` → `GET /api/chat/session/:token/history`，回傳 `ChatMessageVM[]`
-      - `sendMessage(sessionToken, message)` → 返回 streaming endpoint URL（供 `services/streaming.ts` 使用）
-      - `cancelStream(sessionToken)` → `DELETE /api/chat/session/:token/stream`
+      - `createSession()` → `POST /api/v1/chat/sessions`，回傳 `ChatSessionVM`
+      - `getSessionHistory(sessionToken)` → `GET /api/v1/chat/sessions/:sessionToken/history`，回傳 `ChatMessageVM[]`
+      - `sendMessage(sessionToken, message)` → 返回 streaming endpoint URL（供 `services/streaming.ts` 使用）；呼叫 `POST /api/v1/chat/sessions/:sessionToken/messages`
+      - **注意：不建立 `cancelStream()` 端點方法**，取消串流以 `AbortController.abort()` 實現（見 T-023）
     - 對應的 mock fixtures 建立於 `tests/fixtures/chatFixtures.ts`
   - **完成條件**：呼叫 mock `createSession()` 回傳含 `sessionToken` 的資料；TypeScript 型別正確推導
 
@@ -345,11 +362,16 @@
   - **依賴**：T-022
   - **實作內容**：
     - 建立 `app/services/streaming.ts`，對外暴露：
-      - `startStream(sessionToken, message, callbacks)` → 建立 SSE（`EventSource` 或 `fetch` + `ReadableStream`）連線，接收 token 並呼叫 `onToken(token)`
-      - `cancelStream()` → 關閉 SSE 連線
-    - 若後端改為 WebSocket，僅修改此檔案內部，對外介面不變
-    - 開發環境 mock：`ReadableStream` 模擬 SSE，每 80ms 推送一個 token
-    - 解析後端 SSE 事件格式（`data: { token }` 或後端定義格式，TBD）
+      - `startStream(sessionToken, message, callbacks)` → 以 `fetch + ReadableStream`（非 `EventSource`）建立 SSE 連線，接收 token 並呼叫 `onToken(token)`；使用 `AbortController` 控制取消
+      - `cancelStream()` → 呼叫 `AbortController.abort()`，關閉串流；**無 DELETE HTTP 端點**
+    - **本期確認採用 `fetch + ReadableStream`，不使用 `EventSource`，無 WebSocket fallback**；協議固定，不考慮切換
+    - 解析後端 SSE 事件格式：
+      - `event: token` → `data: {"token":"..."}` → 呼叫 `onToken(token)`
+      - `event: done` → `data: {"messageId":"uuid","action":"answer|handoff|fallback|intercepted","sourceReferences":[],"usage":{...}}` → 呼叫 `onDone(payload)`
+      - `event: error` → `data: {"code":"string","message":"string"}` → 呼叫 `onError(payload)`
+      - `event: timeout` → `data: {"message":"string"}` → 呼叫 `onTimeout()`
+      - `event: interrupted` → `data: {"message":"string"}` → 呼叫 `onInterrupted()`
+    - 開發環境 mock：`ReadableStream` 模擬 SSE，每 80ms 推送一個 `token` 事件
   - **完成條件**：mock streaming 可逐字 append token；`cancelStream()` 可中止串流；TypeScript 介面完整
 
 ---
@@ -377,13 +399,13 @@
   - **實作內容**：
     - 建立 `app/features/chat/composables/useChatSession.ts`
     - `initSession()` 流程：
-      1. 讀取 `localStorage.chat_session_token`
-      2. 若存在 → 呼叫 `getSessionHistory(token)` → 成功則恢復歷史訊息
-      3. 若 API 回 401/404 → 清除 localStorage → 建立新 session
-      4. 若不存在 → 建立新 session → 存入 localStorage
-    - `clearSession()` → 清除 localStorage + 重置 store
+      1. 讀取 `localStorage` 中 key 為 `chat_session_token` 的值（sessionToken）
+      2. 若存在 → 呼叫 `getSessionHistory(sessionToken)` → `GET /api/v1/chat/sessions/:sessionToken/history` → 成功則恢復歷史訊息
+      3. 若 API 回 401/404 → 清除 `localStorage.chat_session_token` → 建立新 session
+      4. 若不存在 → 呼叫 `createSession()` → `POST /api/v1/chat/sessions` → 存入 `localStorage.chat_session_token`
+    - `clearSession()` → 清除 localStorage（`chat_session_token`）+ 重置 store
     - `restartSession()` → clearSession + initSession
-    - 將 session 資料存入 `useChatSessionStore`
+    - 將 sessionToken 存入 `useChatSessionStore`（使用 `sessionToken` 欄位）；後續 session-scoped API 呼叫均以 path parameter 傳入，**不附加 `X-Session-Token` header**
   - **完成條件**：初始化後 `sessionToken` 存在；頁面重整後歷史訊息恢復；session 過期後自動重建；TypeScript 無錯誤
 
 ---
@@ -394,13 +416,14 @@
   - **依賴**：T-004、T-006
   - **實作內容**：
     - 建立 `app/features/chat/composables/useWidgetConfig.ts`
-    - 於每次 `ChatWidget` 展開時（監聽 `useChatWidgetStore.isOpen` 變為 `true`）呼叫 `GET /api/widget/config`
-    - 成功後存入 `useWidgetConfigStore.config`，設定 `isLoaded = true`、`isOnline = (config.status !== 'offline')`
-    - Config API 失敗：fallback 使用靜態 i18n 文案（`$t('common.*')`），不快取至 localStorage
-    - Config `status === 'offline'` 或 API 失敗 → 觸發降級模式（`useChatWidgetStore.setMode('fallback')`）
+    - 於每次 `ChatWidget` 展開時（監聽 `useChatWidgetStore.isOpen` 變為 `true`）呼叫 `GET /api/v1/widget/config`（**正式確認之強依賴**）
+    - 成功後存入 `useWidgetConfigStore.config`（`status`、`welcomeMessage`、`quickReplies`、`disclaimer`、`fallbackMessage` 均為多語系物件 `Record<string, string>` / `Record<string, string[]>`；`status` 值為 `'online' | 'offline' | 'degraded'`），設定 `isLoaded = true`、`isOnline = (config.status !== 'offline' && config.status !== 'degraded')`
+    - 前台元件依 `locale` 取對應語系值（e.g., `config.welcomeMessage[locale] ?? config.welcomeMessage['zh-TW']`）
+    - Config API 失敗：fallback 使用靜態 i18n 文案（`$t('common.*')`）；**失敗即觸發降級模式**，不快取至 localStorage
+    - Config `status === 'offline'` 或 `status === 'degraded'` 或 API 失敗 → 觸發降級模式（`useChatWidgetStore.setMode('fallback')`）
     - 降級時每 60 秒重新探測（`setInterval`），恢復後退出降級模式
     - 不快取至 localStorage（每次展開重新取得）
-  - **完成條件**：每次展開 Widget 時呼叫 Config API；API 失敗時顯示 fallback 文案；`status: 'offline'` 時觸發降級模式；60 秒輪詢在降級時正確執行
+  - **完成條件**：每次展開 Widget 時呼叫 `GET /api/v1/widget/config`；API 失敗時直接觸發降級模式並使用 fallback 文案；`status: 'offline'` 或 `status: 'degraded'` 時觸發降級模式；60 秒輪詢在降級時正確執行
 
 ---
 
@@ -516,9 +539,10 @@
       - Widget 展開 → Config API 呼叫 → config 存入 store
       - Config API 失敗 → fallback 文案使用 i18n → 降級模式觸發
       - `status: 'offline'` → 降級模式觸發
+      - `status: 'degraded'` → 降級模式觸發
       - 降級模式下 60 秒後重新探測（mock timer）
       - 不快取至 localStorage（每次展開重新取得）
-  - **完成條件**：五個測試案例全數通過
+  - **完成條件**：六個測試案例全數通過
 
 ---
 
@@ -580,10 +604,10 @@
     - 啟用被 comment out 的串流管線：建立空 `AiStreamingItem`（`streamingState = 'sending'`）→ 呼叫 `useStreaming.startStream()` → token 逐字 append → 串流完成轉型為 `ai` 訊息
     - 補充錯誤終態處理（error / timeout / interrupted / cancelled）：append 對應 `SystemErrorItem` / `SystemTimeoutItem` 等
     - 移除或停用 `useKnowledgeBaseStore`（或改為純 Phase 1 遺留標記，確認已不進入送訊流程）
-    - 將 `ChatMessageArea` Empty State 的歡迎訊息資料來源從 `kbStore.query('hello')` 改為 Widget Config API 提供的歡迎文案（`config.welcomeMessage`）
-    - 將 `useChatSession._appendWelcomeMessage()` 的 `quickReplies` 來源從 `kbStore.getWelcomeQuickReplies()` 改為 `config.quickReplies`（Layer 1 全域 bar）或 API 回傳
-    - `sendMessage` 呼叫 `POST /api/chat/message`，回應採 SSE 串流
-  - **完成條件**：KB mock branch 已從 `useChat` 主流程移除；串流逐字顯示正確運作；`AiStreamingItem` 打字游標動畫正確；各錯誤終態訊息元件正確 append；`useKnowledgeBaseStore` 不再被聊天流呼叫；console 無 mock TODO 警告
+    - 將 `ChatMessageArea` Empty State 的歡迎訊息資料來源從 `kbStore.query('hello')` 改為 **Widget Config API** 提供的 `config.welcomeMessage`（`GET /api/v1/widget/config`）
+    - 將 `useChatSession._appendWelcomeMessage()` 的 `quickReplies` 來源從 `kbStore.getWelcomeQuickReplies()` 改為 `config.quickReplies`（來自 Widget Config）
+    - `sendMessage` 呼叫 `POST /api/v1/chat/sessions/:sessionToken/messages`，回應採 **`fetch + ReadableStream` SSE 串流**
+  - **完成條件**：KB mock branch 已從 `useChat` 主流程移除；SSE 串流逐字顯示正確運作；`AiStreamingItem` 打字游標動畫正確；各錯誤終態訊息元件正確 append；`useKnowledgeBaseStore` 不再被聊天流呼叫；歡迎訊息與 quickReplies 均來自 Widget Config；console 無 mock TODO 警告
 
 ---
 
@@ -593,12 +617,12 @@
   - **依賴**：T-022
   - **實作內容**：
     - 補充 `app/services/api/chat.ts`：
-      - `submitLead(sessionToken, data: LeadFormData)` → `POST /api/chat/lead`
-      - `requestHandoff(sessionToken)` → `POST /api/chat/handoff`
-      - `getHandoffStatus(sessionToken)` → `GET /api/chat/handoff/status`
-      - `submitFeedback(sessionToken, messageId, type, reason?)` → `POST /api/chat/feedback`
-    - 對應 mock fixtures 補充至 `tests/fixtures/chatFixtures.ts`
-  - **完成條件**：四個 API 函式可呼叫；TypeScript 型別正確；mock fixtures 可用
+      - `submitLead(sessionToken, data: LeadFormData)` → `POST /api/v1/chat/sessions/:sessionToken/lead`
+      - `requestHandoff(sessionToken)` → `POST /api/v1/chat/sessions/:sessionToken/handoff`，回傳 `{ accepted, action, leadId?, ticketId?, message }`
+      - `submitFeedback(sessionToken, messageId, value: 'up' | 'down', reason?: string)` → `POST /api/v1/chat/sessions/:sessionToken/messages/:messageId/feedback`，payload `{ value, reason? }`
+      - ~~`getHandoffStatus(sessionToken)`~~ **（已移除：Handoff 簡化為單次 POST，無需 polling status）**
+    - 對應 mock fixtures 補充至 `tests/fixtures/chatFixtures.ts`（含 feedback 回應）
+  - **完成條件**：三個 API 函式（`submitLead`、`requestHandoff`、`submitFeedback`）可呼叫；TypeScript 型別正確；mock fixtures 可用
 
 ---
 
@@ -611,9 +635,16 @@
     - 管理 state：`formData: LeadFormData`、`status: 'idle' | 'submitting' | 'submitted' | 'error'`
     - `submitLead()` 流程：呼叫 API → 成功 → `status = 'submitted'`，存入 `useChatSessionStore.leadFormState.submitted = true` → 阻止同 session 重複提交
     - 提交失敗：`status = 'error'`，inline 錯誤提示
-    - 驗證規則以 vee-validate 實作（規則層）：`name`（必填）、`company`（必填）、`phone or email`（至少一個，使用自訂 `phoneOrEmail` 規則）、`inquiry` / `note`（選填）
+    - 驗證規則以 vee-validate 實作（規則層）：
+      - `name`：**必填**
+      - `email`：**必填**，格式驗證（標準 email 格式）
+      - `company`：**選填**（無必填限制）
+      - `phone`：**選填**（無必填限制）
+      - `message`：**選填**（備注 / 詢問訊息）
+      - `language`：**自動帶入**當前語系（`zh-TW` / `en`），不需訪客填寫，隨表單提交
+      - ~~`phoneOrEmail` 自訂規則~~ **已移除**
     - 對外暴露欄位驗證狀態（`errors`、`validate()`），供上層的 `UForm` 與既有封裝的 `FormField` 元件消費；composable 本身不直接渲染任何表單 UI
-  - **完成條件**：提交成功後 `status = 'submitted'`；同 session 再次觸發顯示已提交狀態；驗證規則完整；`errors` 物件可供上層元件讀取
+  - **完成條件**：提交成功後 `status = 'submitted'`；同 session 再次觸發顯示已提交狀態；`name` + `email` 必填驗證有效；`company`、`phone`、`message` 為選填不觸發驗證錯誤；`errors` 物件可供上層元件讀取
 
 ---
 
@@ -623,12 +654,18 @@
   - **依賴**：T-036、T-028
   - **實作內容**：
     - 建立 `app/features/chat/components/LeadFormCard.vue`：inline 卡片，嵌入訊息流（作為一種 `message.type = 'lead-form'` 渲染）
-    - 使用 `UForm` 作為表單容器，欄位以既有封裝元件 `app/components/FormField` 渲染（姓名、公司、電話 / Email、詢問品項、備註）
+    - 使用 `UForm` 作為表單容器，欄位以既有封裝元件 `app/components/FormField` 渲染：
+      - **姓名（name）**：必填
+      - **Email**：必填，格式驗證
+      - **公司（company）**：選填
+      - **電話（phone）**：選填
+      - **訊息（message）**：選填（備注 / 詢問訊息）
+    - `language`：由 `useI18n().locale` 自動取得當前語系，隨表單資料提交，不顯示在表單 UI 中
     - 欄位錯誤狀態與錯誤訊息由 `FormField` 封裝元件承接，不直接使用 vee-validate 的畫面元件（`<Form>`、`<Field>`、`<ErrorMessage>`）
     - 表單資料、驗證狀態、提交流程均由 `useLeadForm` composable 提供
     - 提交中：送出按鈕顯示 loading 並 disabled；已提交：卡片整體替換為確認訊息（「感謝您，我們已收到您的資料！」）
     - 若 `useLeadForm.status === 'submitted'` 再次觸發，顯示「已登記」提示，不重渲染表單
-  - **完成條件**：透過 `UForm + FormField` 可正確顯示各欄位驗證錯誤；提交成功後卡片轉為確認訊息；已提交時再次觸發顯示「已登記」不重渲表單
+  - **完成條件**：姓名與 Email 必填驗證有效；公司、電話、訊息空白送出不報錯；提交成功後卡片轉為確認訊息；已提交時再次觸發顯示「已登記」不重渲表單
 
 ---
 
@@ -638,12 +675,15 @@
   - **依賴**：T-035
   - **實作內容**：
     - 建立 `app/features/chat/composables/useHandoff.ts`
-    - 管理 `handoffState`：`'normal' | 'requested' | 'waiting' | 'connected' | 'unavailable'`
-    - `requestHandoff()` → 呼叫 API → `state = 'requested'` → 啟動 polling（10 秒間隔，呼叫 `getHandoffStatus()`）
-    - Polling 回傳 `connected` → `state = 'connected'`，清除 polling timer，Input Bar 鎖定
-    - Polling 回傳 `unavailable` → `state = 'unavailable'`，清除 polling timer，顯示服務時間 + 引導留資
-    - 元件 unmount 時清除 polling（`onUnmounted`）
-  - **完成條件**：四種狀態正確切換；polling 在 connected / unavailable 時停止；unmount 時 timer 清除
+    - 管理 `handoffState`：`'idle' | 'requesting' | 'transferred'`（**簡化版，本期無 polling**）
+    - `requestHandoff()` 流程：
+      1. `handoffState = 'requesting'`
+      2. 呼叫 `POST /api/v1/chat/sessions/:sessionToken/handoff` → 後端回傳 `{ accepted, action, leadId?, ticketId?, message }`
+      3. 成功（`accepted === true`）→ `handoffState = 'transferred'`，顯示靜態訊息「已轉交專人協助」
+      4. 失敗 → 顯示錯誤提示，`handoffState` 回到 `'idle'`
+    - ~~Polling 邏輯~~ **已移除**（無 `setInterval`、無 `getHandoffStatus()` 呼叫）
+    - 多狀態顯示（waiting / connected / unavailable）**延後至後期實作**
+  - **完成條件**：`requestHandoff()` 呼叫後 `handoffState` 轉為 `'transferred'`；顯示靜態「已轉交專人協助」文案；API 失敗時回到 `'idle'`；無 polling 相關程式碼
 
 ---
 
@@ -653,29 +693,28 @@
   - **依賴**：T-038、T-028
   - **實作內容**：
     - 建立 `app/features/chat/components/HandoffStatusCard.vue`：inline 卡片（`message.type = 'handoff-status'`）
-    - 四種狀態顯示：
-      - `requested`：「轉接申請已送出」+ spinner
-      - `waiting`：「等待客服回應中」+ spinner + 等待時間
-      - `connected`：「已連線至客服」+ 綠色勾勾
-      - `unavailable`：「目前非服務時間」+ 服務時間說明（來自 Widget Config）+ 「留下聯絡方式」按鈕
-    - `unavailable` 的「留下聯絡方式」按鈕觸發 `useLeadForm`，append `LeadFormCard` 至訊息流
-  - **完成條件**：四種狀態各渲染正確；`unavailable` 按鈕可觸發 LeadFormCard；服務時間文案來自 Widget Config
+    - **本期簡化版**：僅顯示靜態「已轉交專人協助」確認訊息（對應 `handoffState = 'transferred'`）
+    - `requesting` 狀態：顯示 loading spinner（等待 API 回應中）
+    - ~~多狀態顯示（waiting / connected / unavailable）~~ **延後實作**；`HandoffStatusCard` 多狀態版本於後期 sprint 補充
+    - ~~`unavailable` 的「留下聯絡方式」按鈕~~ **延後**（本期 Handoff 直接觸發 Lead，不需 unavailable 引導流程）
+  - **完成條件**：`requesting` 狀態顯示 spinner；`transferred` 狀態顯示靜態「已轉交專人協助」文案；無 polling 狀態渲染邏輯
 
 ---
 
-- [ ] **T-040** 補強 `AiMessageItem` 內嵌 feedback 互動，並規劃 Phase 2 API 回報
+- [ ] **T-040** 補強 `AiMessageItem` 內嵌 feedback 互動並建立 `useFeedback` composable（Feedback API 串接）
   - **所屬 Phase**：Phase 2
   - **所屬 Workstream**：WS-D
   - **依賴**：T-035、T-028
   - **實作內容**：
-    - `AiMessageItem` 的讚 / 倒讚按鈕已在 Phase 1 內嵌；本任務補強以下：
-      - 點擊倒讚後展開原因選填（chips 清單，預設 4 個選項，TBD 選項內容）
-      - 將 Phase 1 本地 `rating` 狀態擴充為 Phase 2 API 回報：呼叫 `submitFeedback(sessionToken, messageId, type, reason?)` → fire-and-forget（失敗只 `console.error`，不影響 UI）
-    - 建立 `app/features/chat/composables/useFeedback.ts`：
-      - 封裝 `submitFeedback()` API 呼叫邏輯
-      - 不建立獨立 `MessageFeedback` 元件；feedback UI 繼續保持內嵌於 `AiMessageItem`
-    - `rateMessage()` 在切換 `msg.rating` 後，觸發 `useFeedback.submitFeedback()`
-  - **完成條件**：讚 / 倒讚點擊後 icon 狀態更新（Phase 1 已完成）；倒讚後原因 chips 展開；原因選擇後 API fire-and-forget 呼叫；已回饋可切換（`null` 切換）
+    - 建立 `app/features/chat/composables/useFeedback.ts`
+      - `submitFeedback(sessionToken, messageId, value: 'up' | 'down', reason?)` → 呼叫 `services/api/chat.ts: submitFeedback`（`POST /api/v1/chat/sessions/:sessionToken/messages/:messageId/feedback`，payload `{ value, reason? }`）
+      - fire-and-forget：先樂觀更新 `ChatMessageVM.feedbackValue`，API 失敗記錄 console error，不中斷對話流
+      - 再次點擊相同值 → `feedbackValue = null`（取消）
+    - `AiMessageItem` 的讚 / 倒讚按鈕補強：
+      - 點擊後呼叫 `useFeedback.submitFeedback()`，payload 欄位為 `value`（非 `type`）
+      - 點擊 `down` 後展開原因選填 chips（預設 4 個選項，TBD 選項內容）
+      - 選擇原因後帶入 `reason` 參數再次呼叫 API
+  - **完成條件**：讚 / 倒讚點擊後 `POST .../messages/:messageId/feedback` 被呼叫，payload `{ value: 'up'|'down' }`；`feedbackValue` 本地狀態正確切換（含取消邏輯）；API 失敗不影響 UI；`down` 後原因 chips 展開
 
 ---
 
@@ -735,13 +774,16 @@
   - **實作內容**：
     - 測試檔：`tests/unit/features/chat/useLeadForm.test.ts`
     - 測試案例：
-      - 姓名為空時驗證失敗
-      - 公司為空時驗證失敗
-      - 電話與 Email 均空時驗證失敗
-      - 有效 Email 格式通過驗證
+      - 姓名（`name`）為空時驗證失敗
+      - Email 為空時驗證失敗
+      - Email 格式不正確時驗證失敗（例如 `notanemail`）
+      - 公司（`company`）為空時**不報驗證錯誤**（選填）
+      - 電話（`phone`）為空時**不報驗證錯誤**（選填）
+      - 訊息（`message`）為空時**不報驗證錯誤**（選填）
+      - 提交 payload 包含 `language`（取自當前 i18n locale，如 `'zh-TW'`）
       - 提交成功後 `status = 'submitted'`，`leadFormState.submitted = true`
       - 已提交時再次提交被阻止（不重複呼叫 API）
-  - **完成條件**：六個測試案例通過
+  - **完成條件**：九個測試案例通過；`name` + `email` 必填驗證有效；`company`、`phone`、`message` 選填測試通過；`language` 自動帶入測試通過；~~`phoneOrEmail` 自訂規則測試~~ 已移除
 
 ---
 
@@ -752,12 +794,12 @@
   - **實作內容**：
     - 測試檔：`tests/unit/features/chat/LeadFormCard.test.ts`
     - 測試案例：
-      - `UForm + FormField` 正確渲染所有欄位（姓名、公司、聯絡方式）
-      - 空白提交後，各必填欄位透過 `FormField` 顯示對應驗證錯誤訊息
+      - `UForm + FormField` 正確渲染所有欄位（姓名、Email、公司、電話、訊息）
+      - 空白提交後，姓名與 Email 欄位透過 `FormField` 顯示對應驗證錯誤訊息；公司、電話、訊息欄位不顯示錯誤
       - 提交中（`status = 'submitting'`）時，送出按鈕為 disabled + loading 狀態
       - 提交成功（`status = 'submitted'`）後，卡片顯示確認訊息而非表單
       - `useLeadForm.status === 'submitted'` 再次觸發時顯示「已登記」提示而非重渲表單
-  - **完成條件**：五個測試案例通過；測試中不出現對 vee-validate 畫面元件（`<Form>`、`<Field>`、`<ErrorMessage>`）的直接斷言
+  - **完成條件**：五個測試案例通過；測試中不出現對 vee-validate 畫面元件（`<Form>`、`<Field>`、`<ErrorMessage>`）的直接斷言；必填 / 選填欄位行為符合拍板決策（`message` 亦為選填）
 
 ---
 
@@ -767,16 +809,15 @@
   - **依賴**：T-039
   - **實作內容**：
     - 測試檔：`tests/unit/features/chat/HandoffStatusCard.test.ts`
-    - 測試案例：
-      - `state = 'requested'` → 顯示「轉接申請已送出」
-      - `state = 'waiting'` → 顯示 spinner
-      - `state = 'connected'` → 顯示「已連線至客服」
-      - `state = 'unavailable'` → 顯示服務時間 + 留資按鈕
-  - **完成條件**：四個狀態渲染正確
+    - 測試案例（對應本期簡化版）：
+      - `handoffState = 'requesting'` → 顯示 loading spinner
+      - `handoffState = 'transferred'` → 顯示靜態「已轉交專人協助」文案
+    - ~~四狀態測試（waiting / connected / unavailable）~~ **延後**，待多狀態版本實作後補充
+  - **完成條件**：兩個狀態渲染正確；無 polling / 多狀態相關斷言
 
 ---
 
-- [ ] **T-047** 撰寫 `AiMessageItem` 內嵌 feedback 行為測試
+- [ ] **T-047** 撰寫 `AiMessageItem` 內嵌 feedback 行為測試（含 API 呼叫斷言）
   - **所屬 Phase**：Phase 2
   - **所屬 Workstream**：WS-D
   - **依賴**：T-040
@@ -784,11 +825,12 @@
     - 測試檔：`tests/unit/features/chat/AiMessageItem.feedback.test.ts`
     - 測試案例：
       - 初始狀態（`rating: null`）兩個 icon 均未填充
-      - 點擊讚 → 讚 icon 填充；`message.rating` 更新為 `'up'`
-      - 點擊倒讚 → 倒讚 icon 填充；原因 chips 展開；`message.rating` 更新為 `'down'`
-      - 已點讚後再點讚 → `rating` 切回 `null`（取消）
+      - 點擊讚 → 讚 icon 填充；`message.feedbackValue` 更新為 `'up'`；`POST .../messages/:messageId/feedback` 被呼叫（`{ value: 'up' }`）
+      - 點擊倒讚 → 倒讚 icon 填充；原因 chips 展開；`message.feedbackValue` 更新為 `'down'`；API 被呼叫（`{ value: 'down' }`）
+      - 已點讚後再點讚 → `feedbackValue` 切回 `null`（取消）
       - 已點讚後點倒讚 → 狀態切換為 `'down'`
-  - **完成條件**：五個測試案例通過；驗證 `rating` 欄位與 UI 狀態一致；不引用 `MessageFeedback` 獨立元件
+      - API 失敗 → `feedbackValue` 本地狀態仍正確更新；不拋出錯誤（fire-and-forget）
+  - **完成條件**：六個測試案例通過；驗證 `feedbackValue` 欄位與 UI 狀態一致；API 呼叫斷言使用 `value`（非 `type`）；API 失敗不影響 UI 狀態
 
 ---
 
@@ -820,13 +862,15 @@
   - **實作內容**：
     - 完整實作 `AdminSidebar`（`app/features/admin/components/AdminSidebar.vue`）：
       - Logo + 系統名稱
-      - 導覽項目：Dashboard、知識庫、對話紀錄、Lead、Ticket、意圖/模板、快捷提問、Widget 設定、稽核事件、回饋紀錄、報表
+      - 導覽項目（本期）：**Dashboard**、對話紀錄、Lead、**Ticket**、知識庫、意圖/模板、快捷提問、Widget 設定、稽核事件、回饋紀錄
+      - ~~報表~~ **延後（本期 Reports 延後）**
       - 以 `<NuxtLink>` 實作，active 樣式（當前路由高亮）
+      - **預設路由**：`/admin/dashboard`（進入後台後直接到 Dashboard）
     - 完整實作 `AdminTopbar`（`app/features/admin/components/AdminTopbar.vue`）：
       - 當前頁面標題（`useRoute().meta.title`）
       - 右側顯示「返回前台」按鈕（`navigateTo('/')`）
     - 確認 `layouts/admin.vue` 組合以上元件，主內容區 `<slot />` 正確渲染
-  - **完成條件**：所有後台路由顯示完整 layout；導覽項目 active 狀態正確；「返回前台」按鈕可用
+  - **完成條件**：所有後台路由顯示完整 layout；導覽項目 active 狀態正確；「返回前台」按鈕可用；預設路由導向 `/admin/dashboard`
 
 ---
 
@@ -852,12 +896,12 @@
   - **依賴**：T-004、T-005
   - **實作內容**：
     - 建立 `app/services/api/admin/` 目錄
-    - `dashboard.ts`：`getDashboardStats()` → `GET /api/admin/dashboard`
-    - `conversations.ts`：`listConversations(params)` → `GET /api/admin/conversations`；`getConversationDetail(id)` → `GET /api/admin/conversations/:id`；`exportConversations(params)` → `POST /api/admin/conversations/export`
-    - `leads.ts`：`listLeads(params)`、`getLeadDetail(id)`、`updateLead(id, data)`
-    - `tickets.ts`：`listTickets(params)`、`getTicketDetail(id)`、`updateTicket(id, data)`、`addTicketNote(id, note)`
+    - `dashboard.ts`：`getDashboardStats()` → `GET /api/v1/admin/dashboard`（含今日/本月對話數、AI 解答率、待處理 Ticket 數、本月新增 Lead 數、趨勢資料）
+    - `conversations.ts`：`listConversations(params)` → `GET /api/v1/admin/conversations`；`getConversationDetail(id)` → `GET /api/v1/admin/conversations/:id`；`exportConversations(params)` → `POST /api/v1/admin/conversations/export`
+    - `leads.ts`：`listLeads(params)`、`getLeadDetail(id)`、`updateLead(id, data)` → `/api/v1/admin/leads/...`
+    - `tickets.ts`：`listTickets(params)` → `GET /api/v1/admin/tickets`；`getTicketDetail(id)` → `GET /api/v1/admin/tickets/:id`；`updateTicketStatus(id, status)` → `PATCH /api/v1/admin/tickets/:id/status`；`addTicketNote(id, note)` → `POST /api/v1/admin/tickets/:id/notes`
     - 各 service 對應 mock fixtures 建立於 `tests/fixtures/adminFixtures.ts`
-  - **完成條件**：四個 service 可呼叫；mock fixtures 有對應型別的資料；TypeScript 無錯誤
+  - **完成條件**：四個 service（`dashboard.ts`、`conversations.ts`、`leads.ts`、`tickets.ts`）可呼叫；mock fixtures 有對應型別的資料；TypeScript 無錯誤
 
 ---
 
@@ -866,14 +910,13 @@
   - **所屬 Workstream**：WS-E
   - **依賴**：T-050、T-051
   - **實作內容**：
-    - 建立 `app/pages/admin/dashboard.vue`，使用 `admin` layout
-    - 5 個 `AdminStatCard`：今日對話數、本月對話數、AI 自助解答率（%）、待處理 Ticket 數、本月新增 Lead 數
-    - `AdminLineChart`（`app/features/admin/components/AdminLineChart.vue`）：對話量趨勢折線圖（近 7 / 30 天 tab 切換），使用 **Nuxt Charts** 折線圖元件（Line Chart）
-    - `AdminPieChart`（`app/features/admin/components/AdminPieChart.vue`）：意圖分布圓餅圖，使用 **Nuxt Charts** 圓餅圖元件（Donut / Pie Chart）
-    - 最新 5 筆稽核事件 inline 列表（可點擊跳至 `/admin/audit/:id`）
-    - 空狀態：無資料時卡片顯示 0，圖表顯示 `AppEmptyState`
-    - 頁面載入時呼叫 `getDashboardStats()`
-  - **完成條件**：5 個統計卡片正確顯示；折線圖 / 圓餅圖渲染正確；tab 切換後圖表資料更新；空狀態正確呈現
+    - 建立 `app/pages/admin/dashboard.vue`（`/admin/dashboard`，`/admin` 預設導向此頁）
+    - 5 個 `AdminStatCard`：今日對話數、本月對話數、AI 自助解答率、待處理 Ticket 數（連結至 Ticket 列表篩選未處理）、本月新增 Lead 數（連結至 Lead 列表）
+    - `AdminLineChart`（`app/features/admin/components/AdminLineChart.vue`）：Nuxt Charts 折線圖，近 7 / 30 天對話量趨勢，tab 切換天數
+    - `AdminPieChart`（`app/features/admin/components/AdminPieChart.vue`）：Nuxt Charts Donut / 圓餅圖，近 30 天意圖分布（常見意圖 / 轉人工原因）
+    - 最新 5 筆稽核事件 inline 列表，可點擊跳至 `/admin/audit/:id`
+    - 資料來源：`getDashboardStats()` → `GET /api/v1/admin/dashboard`；**最少包含**：對話數、Lead 數、Ticket 數、常見意圖分布、轉人工原因分布、最新稽核事件
+  - **完成條件**：Dashboard 頁面可存取；5 個統計卡片正確顯示數字；折線圖與圓餅圖可渲染（Nuxt Charts，無 console 錯誤）；最新稽核事件列表顯示；API 失敗時顯示 `AppErrorState`
 
 ---
 
@@ -926,14 +969,19 @@
   - **所屬 Workstream**：WS-E
   - **依賴**：T-050、T-051
   - **實作內容**：
-    - 建立 `app/pages/admin/tickets/index.vue`：`AdminDataTable` 顯示 Ticket ID、主旨、建立時間、狀態、優先級；篩選：狀態、優先級、時間範圍
+    - 建立 `app/features/admin/composables/useTickets.ts`：
+      - `tickets`（列表）、`ticket`（詳情）、`loading`、`error` state
+      - `fetchTickets(params)`、`fetchTicketDetail(id)`、`updateTicketStatus(id, status)` → `PATCH /api/v1/admin/tickets/:id/status`、`addTicketNote(id, note)` → `POST /api/v1/admin/tickets/:id/notes` 方法
+    - 建立 `app/pages/admin/tickets/index.vue`：
+      - `AdminDataTable` 顯示：Ticket ID、主旨、建立時間、狀態（`AppStatusBadge`，四態：`open` 藍 / `in_progress` 黃 / `resolved` 綠 / `closed` 灰）、優先級
+      - `AdminFilterBar` 篩選：狀態（四態全選項）、優先級、時間範圍
+      - 點擊列跳至 `/admin/tickets/:id`
     - 建立 `app/pages/admin/tickets/[id].vue`：
-      - 問題描述、關聯對話連結
-      - 處理紀錄時間軸（`UTimeline` 或自訂樣式，依時間倒序列出備註）
-      - 狀態切換下拉（開啟 / 進行中 / 已關閉）
-      - 新增備註 `UTextarea` + 「新增」按鈕 → 呼叫 `addTicketNote()` → 新備註追加至時間軸
-    - 狀態流：開啟 → 進行中 → 已關閉（本期不做 escalation）
-  - **完成條件**：列表可篩選；詳情頁時間軸正確顯示；新增備註後時間軸追加；狀態切換後更新
+      - 問題描述、關聯對話連結（跳至對話詳情頁）
+      - 處理紀錄時間軸（每次狀態變更或備註以時間軸樣式顯示）
+      - 狀態變更下拉（`open → in_progress → resolved → closed` 四態）+ 備註輸入 + 「送出」按鈕
+      - 送出後呼叫 `updateTicketStatus()` / `addTicketNote()`，成功顯示 toast
+  - **完成條件**：Ticket 列表可篩選分頁，四態 badge 正確配色；詳情頁可更新狀態（四態）；備註可送出；處理紀錄時間軸正確顯示；API 呼叫路徑分離（`PATCH .../status` + `POST .../notes`）；API 失敗時顯示 `AppErrorState`
 
 ---
 
@@ -944,13 +992,14 @@
 - [ ] **T-057** 撰寫後台 E2E 測試（Phase 3 核心旅程）
   - **所屬 Phase**：Phase 3
   - **所屬 Workstream**：WS-E
-  - **依賴**：T-055、T-056、T-054
+  - **依賴**：T-052、T-055、T-056、T-054
   - **實作內容**：
     - 測試檔：`tests/e2e/admin/admin-basics.spec.ts`
-    - E2E 旅程「Dashboard 載入」：導向 `/admin/dashboard` → 統計卡片顯示 → 圖表渲染
-    - E2E 旅程「對話紀錄查詢」：進入列表 → 選擇時間範圍篩選 → 點擊 Session → 詳情顯示完整對話
+    - E2E 旅程「Dashboard 載入」：進入 `/admin/dashboard` → 統計卡片顯示數字 → 折線圖與圓餅圖可渲染
+    - E2E 旅程「對話紀錄查詢」：進入 `/admin/conversations` 列表 → 選擇時間範圍篩選 → 點擊 Session → 詳情顯示完整對話
     - E2E 旅程「Lead 狀態更新」：進入 Lead 列表 → 點擊 Lead → 修改狀態 → 儲存 → toast 提示 → 列表狀態更新
-  - **完成條件**：三個 E2E 旅程全數通過
+    - E2E 旅程「Ticket 狀態更新」：進入 Ticket 列表 → 點擊 Ticket → 更新狀態為「進行中（`in_progress`）」→ 新增備註 → 送出 → 時間軸新增紀錄；補充「更新狀態為 `resolved`」旅程驗證四態流轉
+  - **完成條件**：四個 E2E 旅程全數通過
 
 ---
 
@@ -1077,18 +1126,16 @@
   - **依賴**：T-058、T-016 ～ T-021
   - **實作內容**：
     - 建立 `app/pages/admin/widget-settings/index.vue`
-    - 左右兩欄布局：左側設定表單（50% 寬）、右側 `WidgetSettingsPreview`（50% 寬）
-    - 左側設定表單欄位：
+    - 設定表單（100% 寬）
+    - 設定表單欄位：
       - CTA 文案（繁中 / 英文 `UInput`）
       - 歡迎訊息（繁中 / 英文 `UTextarea`）
       - 頁尾免責聲明（繁中 / 英文 `UTextarea`）
       - AI 標記文字（`UInput`）
-      - 線上 / 繁忙 / 離線 / 降級文案（各一個 `UInput`）
+      - 線上 / 離線 / 降級文案（各一個 `UInput`）
       - 聯絡捷徑（最多 3 組，每組：名稱 + URL，可新增 / 刪除）
-    - 右側 `WidgetSettingsPreview.vue`（`app/features/admin/components/`）：縮小版 Chat Panel（直接使用前台 `ChatLauncher`、`ChatPanel` 元件，傳入 local computed `widgetPreviewConfig`）
-    - 任何欄位修改後 `widgetPreviewConfig` computed 即時更新 → 右側預覽 reactive 更新（純前端，不呼叫 API）
     - 「儲存設定」按鈕 → 呼叫 `updateWidgetSettings()` → 成功 toast；失敗顯示 inline 錯誤
-  - **完成條件**：設定修改後右側預覽即時更新；儲存成功 toast；重新整理後設定值正確（重載 API 資料）
+  - **完成條件**：儲存成功 toast；重新整理後設定值正確（重載 API 資料）
 
 ---
 
@@ -1123,11 +1170,11 @@
   - **所屬 Workstream**：WS-G
   - **依賴**：T-051
   - **實作內容**：
-    - `app/services/api/admin/audit.ts`：`listAuditEvents(params)`、`getAuditEventDetail(id)`、`exportAuditEvents(params)`
-    - `app/services/api/admin/feedback.ts`：`listFeedback(params)` → `GET /api/admin/feedback`
-    - `app/services/api/admin/reports.ts`：`getReportData(params: { dateRange, type })` → `GET /api/admin/reports`（統一端點，依 type 回傳不同圖表資料）；`exportReport(type, params)` → `POST /api/admin/reports/export`
+    - `app/services/api/admin/audit.ts`：`listAuditEvents(params)` → `GET /api/v1/admin/audit`；`getAuditEventDetail(id)` → `GET /api/v1/admin/audit/:id`；`exportAuditEvents(params)` → `POST /api/v1/admin/audit/export`
+    - `app/services/api/admin/feedback.ts`：`listFeedback(params)` → `GET /api/v1/admin/feedback`（後台回饋紀錄查詢；前台 Feedback API `POST /api/v1/chat/sessions/:sessionToken/messages/:messageId/feedback` 於 Phase 2 已正式串接，此 service 提供後台查詢介面）
+    - ~~`app/services/api/admin/reports.ts`~~ **延後（Reports 本期延後）**
     - 補充對應 mock fixtures
-  - **完成條件**：三個 service 可呼叫；mock fixtures 含時序資料；TypeScript 正確
+  - **完成條件**：`audit.ts`、`feedback.ts` 兩個 service 可呼叫；mock fixtures 含時序資料；TypeScript 正確；`reports.ts` 本期不建立
 
 ---
 
@@ -1157,6 +1204,7 @@
     - `AdminDataTable` 顯示：時間、Session ID（可點擊跳至對話詳情）、訊息摘要（前 50 字截斷）、回饋類型（讚 / 倒讚，`AppStatusBadge` 配色）、倒讚原因
     - `AdminFilterBar` 篩選：回饋類型、時間範圍
     - 點擊 Session ID 跳至 `/admin/conversations/:sessionId`
+    - **注意**：前台 Feedback API `POST /api/v1/chat/sessions/:sessionToken/messages/:messageId/feedback` 已於 Phase 2 正式串接；後台此頁面顯示後端管理的歷史回饋紀錄（`GET /api/v1/admin/feedback`）
   - **完成條件**：列表可依類型篩選；Session ID 連結正確跳轉；訊息截斷顯示正確
 
 ---
@@ -1175,22 +1223,11 @@
 
 ---
 
-- [ ] **T-071** 建立營運報表頁（含 5 個圖表 + 懶加載 + CSV 匯出）
+- [ ] **T-071** ~~建立營運報表頁（含 5 個圖表 + 懶加載 + CSV 匯出）~~ ⚠️ **本期延後（DEFERRED）**
   - **所屬 Phase**：Phase 5
   - **所屬 Workstream**：WS-G
   - **依賴**：T-052、T-067、T-070
-  - **實作內容**：
-    - 建立 `app/pages/admin/reports/index.vue`
-    - 頁面頂部：`AppDateRangePicker` 時間範圍切換（近 7 天 / 近 30 天 / 自訂），切換後重新 fetch 全部圖表資料
-    - 5 個報表圖表區塊，各使用 `defineAsyncComponent` 懶加載：
-      1. AI 自助解答率趨勢（`AdminLineChart`）
-      2. 意圖分布圓餅圖（`AdminPieChart`）
-      3. 滿意度趨勢，讚 vs 倒讚折線圖（`AdminLineChart`，雙線）
-      4. Lead 與 Ticket 建立數趨勢（`AdminLineChart`，雙線）
-      5. 機密攔截 / Injection 次數趨勢（`AdminLineChart`，雙線）
-    - 每個圖表區塊右上角附「匯出 CSV」按鈕（含 loading 狀態，呼叫 `exportReport(type, params)`）
-    - 時間範圍切換時圖表顯示 skeleton loading
-  - **完成條件**：5 個圖表依時間範圍正確渲染；圖表懶加載（Chrome DevTools Network 可觀察到延遲載入）；各圖表 CSV 匯出可下載；報表頁初始載入不一次下載所有圖表 JS
+  - > **[延後]** 後端本期不提供 Reports API（`GET /api/v1/admin/reports`）。`app/pages/admin/reports/` 目錄、`AdminLineChart`、`AdminPieChart` 元件、`AppDateRangePicker` 組合報表版本均延後至後期 sprint。`services/api/admin/reports.ts` 本期不建立。
 
 ---
 
@@ -1198,15 +1235,15 @@
 
 ---
 
-- [ ] **T-072** 撰寫後台 E2E 測試（Phase 5 維運工具旅程）
+- [ ] **T-072** ~~撰寫後台 E2E 測試（Phase 5 維運工具旅程）~~ ⚠️ **部分延後（DEFERRED）**
   - **所屬 Phase**：Phase 5
   - **所屬 Workstream**：WS-G
-  - **依賴**：T-068、T-069、T-071
+  - **依賴**：T-068、T-069
   - **實作內容**：
     - 測試檔：`tests/e2e/admin/operations.spec.ts`
     - E2E 旅程「稽核事件查詢」：進入稽核事件列表 → 依類型篩選 → 點擊事件 → 詳情頁顯示上下文
-    - E2E 旅程「報表時間範圍切換」：進入報表頁 → 切換「近 30 天」→ 各圖表資料更新 → 點擊某圖表「匯出 CSV」→ 下載觸發
-  - **完成條件**：兩個 E2E 旅程全數通過
+    - ~~E2E 旅程「報表時間範圍切換」~~ **延後（Reports 頁面本期未實作）**
+  - **完成條件**：稽核事件查詢旅程通過；Reports 旅程延後至報表頁實作後補充
 
 ---
 
@@ -1320,12 +1357,12 @@
   - **依賴**：T-038
   - **實作內容**：
     - 測試檔：`tests/unit/features/chat/useHandoff.test.ts`
-    - 測試案例：
-      - `requestHandoff()` 後 state 轉為 `requested`，polling 啟動
-      - Polling 回傳 `connected` → state 轉為 `connected`，polling 停止
-      - Polling 回傳 `unavailable` → state 轉為 `unavailable`，polling 停止
-      - 元件 unmount 時 polling timer 清除（mock `onUnmounted`）
-  - **完成條件**：四個測試案例通過；timer mock 正確
+    - 測試案例（對應本期簡化版）：
+      - `requestHandoff()` 後 `handoffState` 轉為 `'requesting'`，API 呼叫發出
+      - API 成功 → `handoffState` 轉為 `'transferred'`
+      - API 失敗 → `handoffState` 回到 `'idle'`，顯示錯誤
+    - ~~Polling 相關測試~~ **已移除**（本期無 polling）
+  - **完成條件**：三個測試案例通過；無 polling timer mock 需求
 
 ---
 
@@ -1336,11 +1373,12 @@
   - **實作內容**：
     - 測試檔：`tests/unit/features/chat/useFeedback.test.ts`
     - 測試案例：
-      - 點讚後 `FeedbackState['messageId']` = `'up'`
-      - 點倒讚後 state = `'down'`
-      - API 失敗時 UI 狀態不回退（fire-and-forget）
-      - 已點讚後點倒讚 → 狀態切換為 `'down'`
-  - **完成條件**：四個測試案例通過
+      - `submitFeedback(token, messageId, 'up')` → `POST /api/v1/chat/sessions/:sessionToken/messages/:messageId/feedback` 被呼叫，帶入正確參數
+      - 樂觀更新：呼叫後 `ChatMessageVM.rating` 即時更新為 `'up'`（不等待 API 回應）
+      - `submitFeedback(token, messageId, 'down', reason)` → API 帶入 `reason` 參數
+      - 再次送出相同 type → `rating` 切回 `null`（取消）
+      - API 失敗（mock 500）→ console error 記錄；`rating` 狀態仍保持更新（fire-and-forget，不 rollback）
+  - **完成條件**：五個測試案例通過；API 呼叫斷言正確；fire-and-forget 行為驗證
 
 ---
 
@@ -1350,7 +1388,8 @@
   - **依賴**：T-017、T-020、T-028
   - **實作內容**：
     - `ChatLauncher` 測試（`tests/unit/features/chat/ChatLauncher.test.ts`）：
-      - `mode = 'normal'`、config isOnline → 狀態燈綠色
+      - `mode = 'normal'`、config `status: 'online'` → 狀態燈綠色
+      - `mode = 'normal'`、config `status: 'degraded'` → 狀態燈紅色
       - `mode = 'fallback'` → 狀態燈灰色，降級文案顯示
       - 點擊後 `useChatWidgetStore.setOpen` 被呼叫
     - `ChatInputBar` 測試（`tests/unit/features/chat/ChatInputBar.test.ts`）：
@@ -1415,13 +1454,13 @@
 
 | 里程碑              | 對應任務完成   | 可驗證產出                                                                                                                       |
 | ------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| **M0** Phase 0 完成 | T-001 ～ T-015 | `npm run dev` 可啟動；主題設定完成；API client + types + stores 就緒；「進入後台」按鈕可用；Nuxt Charts 折線圖與圓餅圖可正常渲染 |
+| **M0** Phase 0 完成 | T-001 ～ T-015 | `npm run dev` 可啟動；主題設定完成；API client + types + stores 就緒；「進入後台」按鈕可用（導向 `/admin/dashboard`）；Nuxt Charts 折線圖與圓餅圖可正常渲染 |
 | **M1** Phase 1 完成 | T-016 ～ T-034 | 前台 Widget 可互動 MVP；多輪對話（KB mock 回覆）；reset / rating / quick-reply 互動；session 恢復；降級模式；P0 單元測試 + E2E 通過 |
-| **M2** Phase 2 完成 | T-034B ～ T-048 | KB mock 切換為真實 SSE 串流；留資、轉人工、feedback API、語系切換、埋點；Phase 2 E2E 通過 |
-| **M3** Phase 3 完成 | T-049 ～ T-057 | 後台基礎頁面可用（Dashboard + 對話紀錄 + Lead + Ticket）；後台 E2E 通過                                                          |
-| **M4** Phase 4 完成 | T-058 ～ T-066 | 後台內容管理完整（知識庫版本歷史 + 批次匯入；意圖側抽屜；快捷提問拖曳；Widget 即時預覽）；Phase 4 E2E 通過                       |
-| **M5** Phase 5 完成 | T-067 ～ T-072 | 後台維運工具完整（稽核事件 + 回饋紀錄 + 5 圖表報表 + CSV 匯出）；Phase 5 E2E 通過                                                |
-| **M6** Phase 6 完成 | T-073 ～ T-085 | 全系統品質達標；所有測試通過；build 成功；plan.md DoD 全勾                                                                       |
+| **M2** Phase 2 完成 | T-034B ～ T-048 | KB mock 切換為真實 `fetch + ReadableStream` SSE 串流；留資（name+email 必填，`company?` / `phone?` / `message?` 選填，`language?` 自動帶入語系）、轉人工（簡化靜態，`{ accepted, action, ... }` 回應）、Feedback API 正式串接（`POST .../messages/:messageId/feedback`，payload `{ value: 'up'|'down' }`，fire-and-forget）、語系切換、埋點；Phase 2 E2E 通過 |
+| **M3** Phase 3 完成 | T-049 ～ T-057 | 後台基礎頁面可用（Dashboard + 對話紀錄 + Lead + Ticket）；後台 E2E 通過（Dashboard 載入 + 對話查詢 + Lead + Ticket） |
+| **M4** Phase 4 完成 | T-058 ～ T-066 | 後台內容管理完整（知識庫版本歷史 + 批次匯入；意圖側抽屜；快捷提問拖曳；Widget 即時預覽）；Phase 4 E2E 通過 |
+| **M5** Phase 5 完成 | T-067 ～ T-072 | 後台維運工具（稽核事件 + 回饋紀錄（`GET /api/v1/admin/feedback`）；**Reports 延後**）；Phase 5 E2E 通過（Reports 旅程延後） |
+| **M6** Phase 6 完成 | T-073 ～ T-085 | 全系統品質達標；所有測試通過；build 成功；plan.md DoD 全勾 |
 
 ---
 
