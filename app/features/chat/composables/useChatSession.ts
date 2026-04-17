@@ -22,8 +22,7 @@ const LS_KEY = 'chat_session_token';
 export function useChatSession() {
   const sessionStore = useChatSessionStore();
   const configStore = useWidgetConfigStore();
-  const widgetStore = useChatWidgetStore();
-  const { t } = useI18n({ useScope: 'global' });
+  const { t, locale } = useI18n({ useScope: 'global' });
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -43,8 +42,8 @@ export function useChatSession() {
   // ── Welcome message helper ────────────────────────────────────────────────
 
   function _appendWelcomeMessage(): void {
-    const locale = (widgetStore.locale as 'zh-TW' | 'en') ?? 'zh-TW';
-    const welcomeText = configStore.config?.welcomeMessage?.[locale] ?? t('widget.welcome');
+    const currentLocale = (locale.value as 'zh-TW' | 'en') ?? 'zh-TW';
+    const welcomeText = configStore.config?.welcomeMessage?.[currentLocale] ?? t('widget.welcome');
 
     const kbStore = useKnowledgeBaseStore();
 

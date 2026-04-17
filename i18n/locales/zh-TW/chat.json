@@ -11,7 +11,8 @@
     "status": {
       "online": "線上",
       "busy": "繁忙",
-      "offline": "離線"
+      "offline": "離線",
+      "degraded": "服務受限"
     },
     "fallback": {
       "title": "目前 AI 客服暫時無法使用",
@@ -39,22 +40,23 @@
     "title": "留下您的聯絡方式",
     "name": "姓名",
     "namePlaceholder": "請輸入姓名",
+    "email": "Email",
+    "emailPlaceholder": "請輸入 Email",
     "company": "公司",
-    "companyPlaceholder": "請輸入公司名稱",
-    "contact": "電話 / Email",
-    "contactPlaceholder": "請輸入電話或 Email",
-    "inquiry": "詢問品項",
-    "inquiryPlaceholder": "選填，請輸入詢問品項",
-    "note": "備註",
-    "notePlaceholder": "選填，其他備註事項",
+    "companyPlaceholder": "請輸入公司名稱（選填）",
+    "phone": "電話",
+    "phonePlaceholder": "請輸入電話（選填）",
+    "message": "訊息",
+    "messagePlaceholder": "選填，其他備註或詢問事項",
     "submit": "送出",
     "submitting": "送出中…",
     "success": "感謝您，我們已收到您的資料，將盡快與您聯繫！",
     "alreadySubmitted": "您本次對話已登記過聯絡資訊",
+    "submitError": "送出失敗，請稍後再試",
     "validation": {
       "nameRequired": "請輸入姓名",
-      "companyRequired": "請輸入公司名稱",
-      "contactRequired": "請輸入電話或 Email"
+      "emailRequired": "請輸入 Email",
+      "emailFormat": "請輸入正確的 Email 格式"
     }
   },
   "handoff": {

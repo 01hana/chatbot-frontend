@@ -4,7 +4,7 @@
  *
  * 聊天面板容器，包含完整的布局與所有區塊邏輯：
  *   - Header（品牌標題 + 關閉按鈕）
- *   - Info Bar（服務說明，降級時隱藏）
+ *   - Info Bar（服務說明）
  *   - Message Area（委派給 ChatMessageArea，含 Quick Replies）
  *   - Input Bar（委派給 ChatInputBar）
  *   - Disclaimer（底部免責聲明，降級時隱藏）
@@ -18,6 +18,7 @@
 import type { ChatMessageVM } from '~/types/chat';
 import ChatMessageArea from './ChatMessageArea.vue';
 import ChatInputBar from './ChatInputBar.vue';
+import { en, zh_tw } from '@nuxt/ui/locale';
 
 // ── Props / Emits ─────────────────────────────────────────────────────────
 
@@ -39,16 +40,9 @@ const emit = defineEmits<{
 const { setOpen } = useChatWidgetStore();
 const widgetStore = useChatWidgetStore();
 const configStore = useWidgetConfigStore();
-const { t } = useI18n();
+const { t, locale, setLocale } = useI18n();
 
-const locale = computed(() => widgetStore.locale as 'zh-TW' | 'en');
 const isFallback = computed(() => widgetStore.mode === 'fallback');
-
-// Info Bar text（降級時不顯示）
-const infoText = computed(() => {
-  if (isFallback.value) return null;
-  return configStore.config?.infoBarText?.[locale.value] ?? t('widget.infoBar');
-});
 
 // Disclaimer text（降級時不顯示）
 const disclaimer = computed(() => {
@@ -112,6 +106,25 @@ onMounted(() => {
       </div>
 
       <div class="flex items-center gap-1">
+        <!-- Locale switcher (T-041) -->
+        <!-- <UDropdownMenu
+          :items="localeOptions.map(opt => ({ label: opt.label, onSelect: () => switchLocale(opt.value) }))"
+          :content="{ align: 'end' }"
+          data-testid="locale-switcher"
+        >
+          <UButton
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            class="rounded-full px-2 h-7 hover:bg-white/20 text-white text-[10px]"
+            :title="t('common.chooseLanguage')"
+            data-testid="btn-locale"
+          >
+            {{ locale === 'zh-TW' ? '中文' : 'EN' }}
+            <UIcon name="fluent:chevron-down-24-regular" size="10" class="ml-0.5" />
+          </UButton>
+        </UDropdownMenu> -->
+
         <UButton
           data-testid="btn-reset"
           color="neutral"
@@ -139,23 +152,33 @@ onMounted(() => {
 
     <!-- ── Info Bar ────────────────────────────────────────────────── -->
     <div
-      v-if="infoText"
-      class="flex items-center gap-3 px-4 py-2 flex-shrink-0 border-b border-primary-100 bg-primary-50"
+      class="flex items-center justify-between gap-3 px-4 py-2 flex-shrink-0 border-b border-primary-100 bg-primary-50"
     >
-      <UButton
-        :to="`tel:`"
-        color="primary"
-        variant="link"
+      <div class="flex items-center gap-3">
+        <UButton :to="`tel:`" variant="link" class="!p-0 !text-[11px] gap-1" label="聯絡我們">
+          <template #leading>
+            <UIcon name="fluent:call-24-regular" size="11" />
+          </template>
+        </UButton>
+
+        <span class="text-gray-300">|</span>
+
+        <UButton :to="`mailto:`" variant="link" class="!p-0 !text-[11px] gap-1" label="Email">
+          <template #leading>
+            <UIcon name="fluent:mail-24-regular" size="11" />
+          </template>
+        </UButton>
+      </div>
+
+      <ULocaleSelect
+        :model-value="locale"
+        :locales="[en, zh_tw]"
         size="xs"
-        class="!p-0 !text-[11px] gap-1"
-        label="聯絡我們"
-      >
-        <template #leading>
-          <UIcon name="fluent:call-24-regular" size="11" />
-        </template>
-      </UButton>
-      <span class="text-gray-300">|</span>
-      <span class="text-[12px] text-gray-500"> {{ infoText }}</span>
+        :ui="{
+          base: 'ring-0 hover:bg-white/20',
+        }"
+        @update:model-value="setLocale($event as 'en' | 'zh-TW')"
+      />
     </div>
 
     <!-- ── Message Area ────────────────────────────────────────────── -->
@@ -172,20 +195,12 @@ onMounted(() => {
     <footer class="shrink-0 border-t border-gray-100">
       <ChatInputBar @send="emit('send', $event)" @cancel="emit('cancel')" />
 
-      <div class="flex items-center justify-between">
-        <p
-          v-if="disclaimer"
-          class="px-4 pb-3 pt-1 text-[10px] leading-relaxed text-gray-400 text-center"
-        >
-          {{ disclaimer }}
-        </p>
-
-        <UButton :to="`mailto:`" variant="link" class="text-[10px]" label="Email">
-          <template #leading>
-            <UIcon name="fluent:mail-24-regular" size="10" />
-          </template>
-        </UButton>
-      </div>
+      <p
+        v-if="disclaimer"
+        class="px-4 pb-3 pt-1 text-[10px] leading-relaxed text-gray-400 text-center"
+      >
+        {{ disclaimer }}
+      </p>
     </footer>
   </div>
 </template>

@@ -73,10 +73,10 @@ export interface QuickReplyItem {
   en: string
 }
 
-/** Widget configuration fetched from GET /api/widget/config. */
+/** Widget configuration fetched from GET /api/v1/widget/config. */
 export interface WidgetConfigVM {
   /** Online status of the AI service. */
-  status: 'online' | 'busy' | 'offline'
+  status: 'online' | 'offline' | 'degraded'
   /** CTA label shown on the launcher button (per locale). */
   ctaText?: Partial<Record<'zh-TW' | 'en', string>>
   /** Welcome message shown at the top of the panel. */
@@ -106,16 +106,29 @@ export interface ChatSessionVM {
 
 // ── Lead Form ────────────────────────────────────────────────
 
-/** Payload submitted to POST /api/chat/lead. */
+/**
+ * Payload submitted to POST /api/v1/chat/sessions/:sessionToken/lead.
+ * name & email are required; company, phone, message are optional.
+ * language is auto-populated from the current i18n locale.
+ */
 export interface LeadFormData {
   name: string
-  company: string
-  /** Phone number — at least phone or email is required. */
+  email: string
+  company?: string
   phone?: string
-  /** Email — at least phone or email is required. */
-  email?: string
-  inquiry?: string
-  note?: string
+  /** Optional free-text inquiry / note from the visitor. */
+  message?: string
+  /** Auto-populated from current locale (e.g. 'zh-TW' | 'en'). */
+  language: string
+}
+
+/** Response from POST /api/v1/chat/sessions/:sessionToken/handoff. */
+export interface HandoffResponse {
+  accepted: boolean
+  action: string
+  leadId?: string
+  ticketId?: string
+  message: string
 }
 
 /** Tracking state for whether the lead form has been submitted this session. */

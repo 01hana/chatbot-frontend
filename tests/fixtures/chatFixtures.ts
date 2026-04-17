@@ -1,5 +1,5 @@
 /**
- * tests/fixtures/chatFixtures.ts (T-014)
+ * tests/fixtures/chatFixtures.ts (T-014 / T-035)
  *
  * Typed mock data for chat API responses used in unit and E2E tests.
  */
@@ -9,6 +9,8 @@ import type {
   ChatSessionVM,
   WidgetConfigVM,
   QuickReplyItem,
+  LeadFormData,
+  HandoffResponse,
 } from '../../app/types/chat'
 import type { ApiResponse } from '../../app/types/api'
 
@@ -30,6 +32,11 @@ export const mockWidgetConfig: WidgetConfigVM = {
 export const mockOfflineWidgetConfig: WidgetConfigVM = {
   ...mockWidgetConfig,
   status: 'offline',
+}
+
+export const mockDegradedWidgetConfig: WidgetConfigVM = {
+  ...mockWidgetConfig,
+  status: 'degraded',
 }
 
 // ── Chat Session ──────────────────────────────────────────────────────────
@@ -81,7 +88,7 @@ export const mockWidgetConfigResponse: ApiResponse<WidgetConfigVM> = {
 
 /** Mock SSE stream URL returned by getStreamUrl(). */
 export const mockStreamUrl =
-  'http://localhost:3000/api/chat/session/mock-session-token-abc123/stream?message=%E5%A6%82%E4%BD%95%E8%A8%82%E8%B3%BC%EF%BC%9F'
+  'http://localhost:3000/api/v1/chat/sessions/mock-session-token-abc123/messages?message=%E5%A6%82%E4%BD%95%E8%A8%82%E8%B3%BC%EF%BC%9F'
 
 /** Simulated token sequence emitted by the mock streaming service. */
 export const mockTokenSequence = ['您', '好', '！', '以', '下', '是', '訂', '購', '步', '驟', '：']
@@ -97,5 +104,69 @@ export function mockGetSessionHistory() {
 }
 
 export function mockCancelStream() {
+  return Promise.resolve()
+}
+
+// ── Lead Form fixtures (T-035) ─────────────────────────────────────────────
+
+/** A valid lead form payload (all required fields filled). */
+export const mockLeadFormData: LeadFormData = {
+  name: '王小明',
+  email: 'xiaoming.wang@example.com',
+  company: '震南實業',
+  phone: '0912-345-678',
+  message: '想了解產品報價',
+  language: 'zh-TW',
+}
+
+/** Minimal lead form payload (only required fields). */
+export const mockLeadFormDataMinimal: LeadFormData = {
+  name: '張三',
+  email: 'zhang.san@example.com',
+  language: 'zh-TW',
+}
+
+/** API response from POST /api/v1/chat/sessions/:token/lead. */
+export const mockLeadResponse: ApiResponse<{ leadId: string }> = {
+  data: { leadId: 'lead-abc-001' },
+  success: true,
+}
+
+/** Mock submitLead — resolves with mockLeadResponse. */
+export function mockSubmitLead(_sessionToken: string, _data: LeadFormData) {
+  return Promise.resolve(mockLeadResponse)
+}
+
+// ── Handoff fixtures (T-035) ──────────────────────────────────────────────
+
+/** Response from POST /api/v1/chat/sessions/:token/handoff (accepted). */
+export const mockHandoffResponse: HandoffResponse = {
+  accepted: true,
+  action: 'transfer',
+  ticketId: 'ticket-xyz-001',
+  message: '已轉交專人協助，請稍候。',
+}
+
+/** Response from POST .../handoff when unavailable. */
+export const mockHandoffUnavailableResponse: HandoffResponse = {
+  accepted: false,
+  action: 'unavailable',
+  message: '目前非服務時間，請留下聯絡方式。',
+}
+
+/** Mock requestHandoff — resolves with mockHandoffResponse. */
+export function mockRequestHandoff(_sessionToken: string) {
+  return Promise.resolve(mockHandoffResponse)
+}
+
+// ── Feedback fixtures (T-035) ─────────────────────────────────────────────
+
+/** Mock submitFeedback — resolves with void. */
+export function mockSubmitFeedback(
+  _sessionToken: string,
+  _messageId: string,
+  _value: 'up' | 'down',
+  _reason?: string,
+) {
   return Promise.resolve()
 }

@@ -6,10 +6,8 @@
 import type { ChatMessageVM } from '~/types/chat'
 
 defineProps<{ message: ChatMessageVM }>()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const configStore = useWidgetConfigStore()
-const widgetStore = useChatWidgetStore()
-const locale = computed(() => widgetStore.locale as 'zh-TW' | 'en')
 </script>
 
 <template>

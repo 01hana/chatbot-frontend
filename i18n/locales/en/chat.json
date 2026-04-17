@@ -2,6 +2,7 @@
   "widget": {
     "cta": "Need help? Chat now",
     "welcome": "Hello! I'm the AI assistant for Zhen-Nan. How can I help you today?",
+    "description": "Online · How can I help you today?",
     "inputPlaceholder": "Type a message…",
     "send": "Send",
     "cancel": "Cancel",
@@ -10,7 +11,8 @@
     "status": {
       "online": "Online",
       "busy": "Busy",
-      "offline": "Offline"
+      "offline": "Offline",
+      "degraded": "Limited service"
     },
     "fallback": {
       "title": "AI assistant is temporarily unavailable",
@@ -38,22 +40,23 @@
     "title": "Leave your contact details",
     "name": "Name",
     "namePlaceholder": "Enter your name",
+    "email": "Email",
+    "emailPlaceholder": "Enter your email address",
     "company": "Company",
-    "companyPlaceholder": "Enter your company name",
-    "contact": "Phone / Email",
-    "contactPlaceholder": "Enter phone or email",
-    "inquiry": "Inquiry",
-    "inquiryPlaceholder": "Optional – what products are you inquiring about?",
-    "note": "Notes",
-    "notePlaceholder": "Optional – any additional notes",
+    "companyPlaceholder": "Enter your company name (optional)",
+    "phone": "Phone",
+    "phonePlaceholder": "Enter your phone number (optional)",
+    "message": "Message",
+    "messagePlaceholder": "Optional – any additional notes or inquiries",
     "submit": "Submit",
     "submitting": "Submitting…",
     "success": "Thank you! We have received your information and will contact you soon.",
     "alreadySubmitted": "You have already submitted your contact information in this session",
+    "submitError": "Submission failed, please try again later",
     "validation": {
       "nameRequired": "Please enter your name",
-      "companyRequired": "Please enter your company name",
-      "contactRequired": "Please enter your phone number or email"
+      "emailRequired": "Please enter your email address",
+      "emailFormat": "Please enter a valid email format"
     }
   },
   "handoff": {

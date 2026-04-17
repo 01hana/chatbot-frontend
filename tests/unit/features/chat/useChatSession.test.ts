@@ -21,7 +21,7 @@ import {
 
 // ── Mock vue-i18n (useI18n is called at composable top-level) ─────────────────
 vi.mock('vue-i18n', () => ({
-  useI18n: () => ({ t: (key: string) => key }),
+  useI18n: () => ({ t: (key: string) => key, locale: { value: 'zh-TW' } }),
 }))
 
 // ── Mock API ──────────────────────────────────────────────────────────────────

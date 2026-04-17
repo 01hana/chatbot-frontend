@@ -1,14 +1,15 @@
 /**
  * useChatWidgetStore (T-006)
  *
- * Controls the top-level widget open/close state, display mode,
- * and the active locale preference.
+ * Controls the top-level widget open/close state and display mode.
+ *
+ * Locale is no longer stored here. The single source of truth for locale
+ * is useI18n().locale. Persistence to localStorage is handled in ChatWidget.vue.
  */
 
 export const useChatWidgetStore = defineStore('chatWidget', () => {
   const isOpen = ref(false);
   const mode = ref<'normal' | 'fallback'>('normal');
-  const locale = ref<string>('zh-TW');
 
   function setOpen(value: boolean) {
     isOpen.value = value;
@@ -22,27 +23,21 @@ export const useChatWidgetStore = defineStore('chatWidget', () => {
     mode.value = m;
   }
 
-  function setLocale(l: string) {
-    locale.value = l;
-  }
-
   function reset() {
     isOpen.value = false;
     mode.value = 'normal';
-    locale.value = 'zh-TW';
   }
 
   return {
     // state
     isOpen,
     mode,
-    locale,
 
     // actions
     setOpen,
     toggle,
     setMode,
-    setLocale,
     reset,
   };
 });
+

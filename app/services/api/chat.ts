@@ -1,18 +1,22 @@
 /**
- * Chat API Service (T-022)
+ * Chat API Service (T-022 / T-035)
  *
- * Encapsulates all REST calls for the chat domain:
- *   createSession      POST   /api/chat/session
- *   getSessionHistory  GET    /api/chat/session/:token/history
- *   getStreamUrl       helper – returns the SSE endpoint URL for a session+message
- *   cancelStream       DELETE /api/chat/session/:token/stream
+ * Encapsulates all REST calls for the chat domain.
+ * Paths follow the official contract: /api/v1/chat/sessions/:sessionToken/...
  *
- * All functions use the shared chat client from services/api/client.ts so the
- * X-Session-Token header and 5xx toast are applied automatically.
+ *   createSession       POST  /api/v1/chat/sessions
+ *   getSessionHistory   GET   /api/v1/chat/sessions/:sessionToken/history
+ *   getStreamUrl        helper – returns the SSE endpoint URL
+ *   submitLead          POST  /api/v1/chat/sessions/:sessionToken/lead
+ *   requestHandoff      POST  /api/v1/chat/sessions/:sessionToken/handoff
+ *   submitFeedback      POST  /api/v1/chat/sessions/:sessionToken/messages/:messageId/feedback
+ *
+ * Note: Stream cancellation is handled via AbortController in services/streaming.ts,
+ * not via a DELETE endpoint.
  */
 
 import { createChatClient } from '~/services/api/client'
-import type { ChatSessionVM, ChatMessageVM } from '~/types/chat'
+import type { ChatSessionVM, ChatMessageVM, LeadFormData, HandoffResponse } from '~/types/chat'
 import type { ApiResponse } from '~/types/api'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -23,15 +27,15 @@ function apiBase(): string {
   return (config.public.apiBase as string) || 'http://localhost:3000'
 }
 
-// ── Public API ────────────────────────────────────────────────────────────────
+// ── Phase 1 API ───────────────────────────────────────────────────────────────
 
 /**
  * Create a new chat session.
- * POST /api/chat/session → ChatSessionVM
+ * POST /api/v1/chat/sessions → ChatSessionVM
  */
 export async function createSession(): Promise<ChatSessionVM> {
   const client = createChatClient()
-  const res = await client<ApiResponse<ChatSessionVM>>('/api/chat/session', {
+  const res = await client<ApiResponse<ChatSessionVM>>('/api/v1/chat/sessions', {
     method: 'POST',
   })
   return res.data
@@ -39,39 +43,90 @@ export async function createSession(): Promise<ChatSessionVM> {
 
 /**
  * Retrieve the message history for an existing session.
- * GET /api/chat/session/:token/history → ChatMessageVM[]
+ * GET /api/v1/chat/sessions/:sessionToken/history → ChatMessageVM[]
  */
 export async function getSessionHistory(sessionToken: string): Promise<ChatMessageVM[]> {
   const client = createChatClient()
   const res = await client<ApiResponse<ChatMessageVM[]>>(
-    `/api/chat/session/${sessionToken}/history`,
+    `/api/v1/chat/sessions/${sessionToken}/history`,
     { method: 'GET' },
   )
   return res.data
 }
 
 /**
- * Return the SSE streaming endpoint URL for a given session + message.
- *
- * The actual SSE connection is opened by `services/streaming.ts`; this
- * function only constructs and returns the URL so the caller stays clean.
- *
- * Query params:
- *   message – the user's text (URL-encoded)
+ * Return the SSE streaming endpoint URL for a given session.
+ * The actual SSE connection is opened by `services/streaming.ts`.
  */
 export function getStreamUrl(sessionToken: string, message: string): string {
   const base = apiBase()
   const encoded = encodeURIComponent(message)
-  return `${base}/api/chat/session/${sessionToken}/stream?message=${encoded}`
+  return `${base}/api/v1/chat/sessions/${sessionToken}/messages?message=${encoded}`
 }
 
 /**
- * Cancel an in-progress streaming response.
- * DELETE /api/chat/session/:token/stream
+ * @deprecated Stream cancellation uses AbortController, not a DELETE endpoint.
+ * Kept for backward compatibility during Phase 1 → Phase 2 migration.
  */
 export async function cancelStream(sessionToken: string): Promise<void> {
   const client = createChatClient()
-  await client(`/api/chat/session/${sessionToken}/stream`, {
+  await client(`/api/v1/chat/sessions/${sessionToken}/stream`, {
     method: 'DELETE',
   })
+}
+
+// ── Phase 2 API (T-035) ───────────────────────────────────────────────────────
+
+/**
+ * Submit a lead form for the current session.
+ * POST /api/v1/chat/sessions/:sessionToken/lead
+ *
+ * NOTE: Backend Phase 2 API not yet available.
+ *       This method provides the correct typed interface for when it is ready.
+ */
+export async function submitLead(
+  sessionToken: string,
+  data: LeadFormData,
+): Promise<ApiResponse<{ leadId: string }>> {
+  const client = createChatClient()
+  return client<ApiResponse<{ leadId: string }>>(
+    `/api/v1/chat/sessions/${sessionToken}/lead`,
+    { method: 'POST', body: data },
+  )
+}
+
+/**
+ * Request a handoff to a human agent for the current session.
+ * POST /api/v1/chat/sessions/:sessionToken/handoff
+ *
+ * NOTE: Backend Phase 2 API not yet available.
+ *       This method provides the correct typed interface for when it is ready.
+ */
+export async function requestHandoff(sessionToken: string): Promise<HandoffResponse> {
+  const client = createChatClient()
+  const res = await client<ApiResponse<HandoffResponse>>(
+    `/api/v1/chat/sessions/${sessionToken}/handoff`,
+    { method: 'POST' },
+  )
+  return res.data
+}
+
+/**
+ * Submit feedback (thumbs up/down) for a specific AI message.
+ * POST /api/v1/chat/sessions/:sessionToken/messages/:messageId/feedback
+ *
+ * NOTE: Backend Phase 2 API not yet available.
+ *       This method provides the correct typed interface for when it is ready.
+ */
+export async function submitFeedback(
+  sessionToken: string,
+  messageId: string,
+  value: 'up' | 'down',
+  reason?: string,
+): Promise<void> {
+  const client = createChatClient()
+  await client(
+    `/api/v1/chat/sessions/${sessionToken}/messages/${messageId}/feedback`,
+    { method: 'POST', body: { value, ...(reason ? { reason } : {}) } },
+  )
 }

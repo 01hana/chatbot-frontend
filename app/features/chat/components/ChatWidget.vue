@@ -13,6 +13,28 @@ import ChatPanel from './ChatPanel.vue';
 const { isOpen } = storeToRefs(useChatWidgetStore());
 const { setOpen } = useChatWidgetStore();
 
+// ── Locale initialisation & persistence (T-041) ───────────────────────────
+// Single source of truth: useI18n().locale
+// On mount: restore persisted preference from localStorage.
+// On change: write back to localStorage automatically.
+
+const LOCALE_LS_KEY = 'chat_locale'
+const { locale, setLocale } = useI18n()
+
+onMounted(() => {
+  if (import.meta.env.SSR) return
+  const stored = localStorage.getItem(LOCALE_LS_KEY)
+  if ((stored === 'zh-TW' || stored === 'en') && stored !== locale.value) {
+    setLocale(stored)
+  }
+})
+
+watch(locale, (val) => {
+  if (!import.meta.env.SSR) {
+    localStorage.setItem(LOCALE_LS_KEY, val)
+  }
+})
+
 // ── Composable 整合 ───────────────────────────────────────────────────────
 const { initSession, restartSession } = useChatSession();
 const { sendMessage, cancelStream, retryLastMessage, rateMessage, messages } = useChat();

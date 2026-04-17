@@ -611,7 +611,7 @@
 
 ---
 
-- [ ] **T-035** 建立 `services/api/chat.ts` 補充（Lead、Handoff、Feedback API）
+- [x] **T-035** 建立 `services/api/chat.ts` 補充（Lead、Handoff、Feedback API）
   - **所屬 Phase**：Phase 2
   - **所屬 Workstream**：WS-D
   - **依賴**：T-022
@@ -626,7 +626,7 @@
 
 ---
 
-- [ ] **T-036** 實作 `useLeadForm` composable
+- [x] **T-036** 實作 `useLeadForm` composable
   - **所屬 Phase**：Phase 2
   - **所屬 Workstream**：WS-D
   - **依賴**：T-035、T-007
@@ -648,7 +648,7 @@
 
 ---
 
-- [ ] **T-037** 建立 `LeadFormCard` 元件
+- [x] **T-037** 建立 `LeadFormCard` 元件
   - **所屬 Phase**：Phase 2
   - **所屬 Workstream**：WS-D
   - **依賴**：T-036、T-028
@@ -718,20 +718,20 @@
 
 ---
 
-- [ ] **T-041** 實作語系切換功能
+- [x] **T-041** 實作語系切換功能
   - **所屬 Phase**：Phase 2
   - **所屬 Workstream**：WS-D
   - **依賴**：T-019、T-008
   - **實作內容**：
     - 在 `ChatPanel` 內的 **header 區塊**（已直接內嵌於 `ChatPanel`，非獨立 `ChatHeader` 元件）實作語系切換 `UDropdownMenu`：選項「繁體中文 / English」
-    - 切換後呼叫 `$i18n.setLocale(locale)` → 所有靜態文案即時更新
+    - 切換後透過 `const { setLocale } = useI18n(); setLocale(locale)` → 所有靜態文案即時更新
     - 語系偏好儲存至 `localStorage.chat_locale`；初始化時讀取（在 `useChatWidgetStore` 或 `useWidgetConfig` 初始化階段）
     - Widget Config 提供的動態文案依當前語系顯示對應版本（`quickReplies.zh-TW` vs `quickReplies.en`）
   - **完成條件**：切換至 English 後所有靜態文案更新；快捷提問顯示英文版本；`localStorage.chat_locale` 正確存寫；重整後語系保持
 
 ---
 
-- [ ] **T-042** 補完英文 i18n 文案（`i18n/locales/en/`）
+- [x] **T-042** 補完英文 i18n 文案（`i18n/locales/en/`）
   - **所屬 Phase**：Phase 2
   - **所屬 Workstream**：WS-D
   - **依賴**：T-008、T-041
@@ -767,7 +767,7 @@
 
 ---
 
-- [ ] **T-044** 撰寫 `useLeadForm` 單元測試
+- [x] **T-044** 撰寫 `useLeadForm` 單元測試
   - **所屬 Phase**：Phase 2
   - **所屬 Workstream**：WS-D
   - **依賴**：T-036
@@ -787,7 +787,7 @@
 
 ---
 
-- [ ] **T-045** 撰寫 `LeadFormCard` 元件測試
+- [x] **T-045** 撰寫 `LeadFormCard` 元件測試
   - **所屬 Phase**：Phase 2
   - **所屬 Workstream**：WS-D
   - **依賴**：T-037、T-014
