@@ -2,6 +2,8 @@
  * Chat-related ViewModel types (T-005)
  */
 
+export type LocaleKey = 'zh-TW' | 'en';
+
 // ── Streaming ────────────────────────────────────────────────
 
 /** All possible states of the SSE streaming state machine. */
@@ -13,7 +15,7 @@ export type StreamingState =
   | 'error'
   | 'timeout'
   | 'interrupted'
-  | 'cancelled'
+  | 'cancelled';
 
 // ── Messages ────────────────────────────────────────────────
 
@@ -28,16 +30,16 @@ export type ChatMessageType =
   | 'system-low-confidence'
   | 'system-fallback'
   | 'lead-form'
-  | 'handoff-status'
+  | 'handoff-status';
 
 /** Metadata attached to AI messages. */
 export interface AiMessageMeta {
   /** Confidence score returned by the backend (0–1). */
-  confidence?: number
+  confidence?: number;
   /** Intent label matched by the backend. */
-  intent?: string
+  intent?: string;
   /** Type of content interception (if applicable). */
-  interceptType?: 'secret' | 'injection'
+  interceptType?: 'secret' | 'injection';
 }
 
 /**
@@ -46,62 +48,72 @@ export interface AiMessageMeta {
  */
 export interface ChatMessageVM {
   /** Unique identifier (UUID or server-assigned ID). */
-  id: string
-  type: ChatMessageType
-  content: string
+  id: string;
+  type: ChatMessageType;
+  content: string;
   /** ISO-8601 timestamp. */
-  timestamp: string
+  timestamp: string;
   /** Only present on AI / system messages. */
-  metadata?: AiMessageMeta
+  metadata?: AiMessageMeta;
   /**
    * Quick-reply chips shown beneath an AI message.
    * Populated from the knowledge base (mock) or backend response.
    */
-  quickReplies?: string[]
+  quickReplies?: string[];
   /**
    * User feedback rating for this AI message.
    * null = not yet rated, 'up' = liked, 'down' = disliked.
    */
-  rating?: FeedbackValue
+  rating?: FeedbackValue;
 }
+
+/** Raw message DTO returned by GET /history endpoint (backend shape). */
+export interface HistoryMessageDTO {
+  id: string | number;
+  role: 'user' | 'assistant' | string;
+  content: string;
+  createdAt: string;
+}
+
+export type SessionHistoryResponse = {
+  sessionToken: string;
+  messages: HistoryMessageDTO[];
+};
 
 // ── Widget Config ────────────────────────────────────────────
 
 /** Quick-reply item, one label per supported locale. */
-export interface QuickReplyItem {
-  'zh-TW': string
-  en: string
-}
+export type QuickRepliesMap = Partial<Record<LocaleKey, string[]>>;
 
 /** Widget configuration fetched from GET /api/v1/widget/config. */
 export interface WidgetConfigVM {
   /** Online status of the AI service. */
-  status: 'online' | 'offline' | 'degraded'
+  status: 'online' | 'offline' | 'degraded';
   /** CTA label shown on the launcher button (per locale). */
-  ctaText?: Partial<Record<'zh-TW' | 'en', string>>
+  ctaText?: Partial<Record<'zh-TW' | 'en', string>>;
   /** Welcome message shown at the top of the panel. */
-  welcomeMessage?: Partial<Record<'zh-TW' | 'en', string>>
+  welcomeMessage?: Partial<Record<'zh-TW' | 'en', string>>;
   /** Info bar subtitle. */
-  infoBarText?: Partial<Record<'zh-TW' | 'en', string>>
+  infoBarText?: Partial<Record<'zh-TW' | 'en', string>>;
   /** Disclaimer text at the bottom. */
-  disclaimer?: Partial<Record<'zh-TW' | 'en', string>>
+  disclaimer?: Partial<Record<'zh-TW' | 'en', string>>;
   /** Service hours string displayed in handoff unavailable state. */
-  serviceHours?: Partial<Record<'zh-TW' | 'en', string>>
+  serviceHours?: Partial<Record<'zh-TW' | 'en', string>>;
   /** Quick-reply chips. */
-  quickReplies: QuickReplyItem[]
+  quickReplies: QuickRepliesMap;
 }
 
 // ── Session ──────────────────────────────────────────────────
 
 /** Session status as returned by the backend. */
-export type SessionStatus = 'active' | 'expired' | 'closed'
+export type SessionStatus = 'active' | 'expired' | 'closed';
 
 /** Chat session data returned from POST /api/chat/session. */
 export interface ChatSessionVM {
-  sessionToken: string
-  status: SessionStatus
-  createdAt: string
-  expiresAt?: string
+  sessionToken: string;
+  status: SessionStatus;
+  createdAt: string;
+  expiresAt?: string;
 }
 
 // ── Lead Form ────────────────────────────────────────────────
@@ -112,46 +124,46 @@ export interface ChatSessionVM {
  * language is auto-populated from the current i18n locale.
  */
 export interface LeadFormData {
-  name: string
-  email: string
-  company?: string
-  phone?: string
+  name: string;
+  email: string;
+  company?: string;
+  phone?: string;
   /** Optional free-text inquiry / note from the visitor. */
-  message?: string
+  message?: string;
   /** Auto-populated from current locale (e.g. 'zh-TW' | 'en'). */
-  language: string
+  language: string;
 }
 
 /** Response from POST /api/v1/chat/sessions/:sessionToken/handoff. */
 export interface HandoffResponse {
-  accepted: boolean
-  action: string
-  leadId?: string
-  ticketId?: string
-  message: string
+  accepted: boolean;
+  action: string;
+  leadId?: string;
+  ticketId?: string;
+  message: string;
 }
 
 /** Tracking state for whether the lead form has been submitted this session. */
 export interface LeadFormState {
-  submitted: boolean
-  submittedAt?: string
+  submitted: boolean;
+  submittedAt?: string;
 }
 
 // ── Feedback ────────────────────────────────────────────────
 
 /** Per-message feedback value. */
-export type FeedbackValue = null | 'up' | 'down'
+export type FeedbackValue = null | 'up' | 'down';
 
 /** Feedback state keyed by message ID. */
-export type FeedbackState = Map<string, FeedbackValue>
+export type FeedbackState = Map<string, FeedbackValue>;
 
 // ── Handoff ─────────────────────────────────────────────────
 
 /** All possible handoff request states. */
-export type HandoffStatus = 'normal' | 'requested' | 'waiting' | 'connected' | 'unavailable'
+export type HandoffStatus = 'normal' | 'requested' | 'waiting' | 'connected' | 'unavailable';
 
 /** Handoff state tracked in the session store. */
 export interface HandoffState {
-  status: HandoffStatus
-  requestedAt?: string
+  status: HandoffStatus;
+  requestedAt?: string;
 }

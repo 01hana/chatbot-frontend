@@ -85,7 +85,7 @@ export function useStreaming() {
       }
     }, FIRST_TOKEN_TIMEOUT_MS)
 
-    const streamUrl = getStreamUrl(token, message)
+    const streamUrl = getStreamUrl(token)
     let firstTokenReceived = false
 
     startStream(streamUrl, message, {
@@ -114,6 +114,18 @@ export function useStreaming() {
         // Distinguish "backend sent an error" (interrupted) from "we cancelled it"
         const currentState = sessionStore.streamingState
         if (currentState === 'cancelled') return
+        setState('interrupted')
+      },
+
+      onTimeout(message?: string) {
+        _clearTimeout()
+        if (message) console.warn('[useStreaming] server timeout:', message)
+        setState('timeout')
+      },
+
+      onInterrupted(message?: string) {
+        _clearTimeout()
+        if (message) console.warn('[useStreaming] stream interrupted:', message)
         setState('interrupted')
       },
     })

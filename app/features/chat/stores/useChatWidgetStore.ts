@@ -29,15 +29,12 @@ export const useChatWidgetStore = defineStore('chatWidget', () => {
   }
 
   return {
-    // state
     isOpen,
     mode,
 
-    // actions
     setOpen,
     toggle,
     setMode,
     reset,
   };
 });
-

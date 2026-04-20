@@ -37,21 +37,19 @@ watch(locale, (val) => {
 
 // ── Composable 整合 ───────────────────────────────────────────────────────
 const { initSession, restartSession } = useChatSession();
-const { sendMessage, cancelStream, retryLastMessage, rateMessage, messages } = useChat();
+const { sendMessage, cancelStream, retryLastMessage, messages } = useChat();
 
 // Widget Config 在 isOpen 時自動 fetch（useWidgetConfig 內部 watch isOpen）
 useWidgetConfig();
 
-// 第一次展開時初始化 session；同時處理 mobile body scroll lock
-let _sessionInitialised = false;
+// 每次展開時初始化 session（re-open 時重新檢查 token / 歷史訊息）；同時處理 mobile body scroll lock
 watch(
   isOpen,
   async (open) => {
     if (typeof document !== 'undefined') {
       document.body.style.overflow = open ? 'hidden' : '';
     }
-    if (open && !_sessionInitialised) {
-      _sessionInitialised = true;
+    if (open) {
       await initSession();
     }
   },
@@ -65,6 +63,9 @@ onUnmounted(() => {
 async function handleSend(text: string) {
   await sendMessage(text);
 }
+async function handleQuickReply(text: string) {
+  await sendMessage(text);
+}
 async function handleCancel() {
   await cancelStream();
 }
@@ -72,11 +73,7 @@ async function handleRetry(_messageId: string) {
   await retryLastMessage();
 }
 async function handleReset() {
-  _sessionInitialised = false;
   await restartSession();
-}
-function handleRate(messageId: string, value: import('~/types/chat').FeedbackValue) {
-  rateMessage(messageId, value);
 }
 </script>
 
@@ -109,9 +106,8 @@ function handleRate(messageId: string, value: import('~/types/chat').FeedbackVal
       :messages
       @send="handleSend"
       @cancel="handleCancel"
-      @quick-reply="handleSend"
+      @quick-reply="handleQuickReply"
       @retry="handleRetry"
-      @rate="handleRate"
       @reset="handleReset"
     />
   </div>

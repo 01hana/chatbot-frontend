@@ -17,6 +17,8 @@ import { createPinia, setActivePinia } from 'pinia'
 import {
   mockSession,
   mockHistoryMessages,
+  mockHistoryDTOs,
+  mockHistorySessionResponse,
 } from '../../../fixtures/chatFixtures'
 
 // ── Mock vue-i18n (useI18n is called at composable top-level) ─────────────────
@@ -64,7 +66,7 @@ describe('useChatSession', () => {
     mockGetSessionHistory.mockReset()
     // Default happy-path mocks
     mockCreateSession.mockResolvedValue(mockSession)
-    mockGetSessionHistory.mockResolvedValue(mockHistoryMessages)
+    mockGetSessionHistory.mockResolvedValue(mockHistorySessionResponse)
     setupPinia()
   })
 
@@ -131,8 +133,10 @@ describe('useChatSession', () => {
       await initSession()
 
       const sessionStore = useChatSessionStore()
-      expect(sessionStore.messages.length).toBe(mockHistoryMessages.length)
-      expect(sessionStore.messages[0].id).toBe(mockHistoryMessages[0].id)
+      expect(sessionStore.messages.length).toBe(mockHistoryDTOs.length)
+      expect(sessionStore.messages[0].id).toBe(String(mockHistoryDTOs[0].id))
+      expect(sessionStore.messages[0].type).toBe('user')
+      expect(sessionStore.messages[1].type).toBe('ai')
     })
 
     it('sessionStore.sessionToken 保持為現有 token', async () => {
@@ -243,16 +247,7 @@ describe('useChatSession', () => {
     })
   })
 
-  // ── Guard: already active ─────────────────────────────────────────────────
-
-  it('initSession を複数回呼ぶと 2 回目はスキップ（already active）', async () => {
-    const sessionStore = useChatSessionStore()
-    sessionStore.setSessionStatus('active')
-
-    const { initSession } = useChatSession()
-    await initSession()
-
-    expect(mockCreateSession).not.toHaveBeenCalled()
-    expect(mockGetSessionHistory).not.toHaveBeenCalled()
-  })
+  // ── Guard: already active (removed) ─────────────────────────────────────
+  // initSession() no longer skips when status === 'active'.
+  // Every widget open re-checks the token and restores or creates as needed.
 })

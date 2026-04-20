@@ -1,28 +1,71 @@
 <script setup lang="ts">
 /**
- * AiMessageItem (T-028)
+ * AiMessageItem (T-028 / T-040)
  * Left-aligned AI bubble with avatar, markdown rendering, relative timestamp,
- * inline feedback (thumb up/down) and per-message quick-reply chips.
+ * inline feedback (thumb up/down + reason chips) and per-message quick-reply chips.
  *
+ * T-040 changes:
+ *   - Uses useFeedback for API call (fire-and-forget).
+ *   - Optimistic local toggle on ChatMessageVM.rating (direct store mutation).
+ *   - 'down' expands reason chips; selecting a reason re-fires the API with reason.
+ *   - Re-clicking the same value cancels the rating (no API call on cancel).
  * Also handles ai-streaming state: shows TypingIndicator when
  * message.type === 'ai-streaming' and content is empty.
  */
-import type { ChatMessageVM, FeedbackValue } from '~/types/chat';
+import type { ChatMessageVM } from '~/types/chat';
 import { formatDateTime } from '~/utils/format';
 import { renderMarkdown } from '~/utils/markdown';
+import { useFeedback } from '~/features/chat/composables/useFeedback';
 
 const props = defineProps<{ message: ChatMessageVM }>();
 
 const emit = defineEmits<{
-  rate: [id: string, value: FeedbackValue];
   'quick-reply': [text: string];
 }>();
+
+const { t } = useI18n();
+const { submitFeedback } = useFeedback();
 
 const html = computed(() => renderMarkdown(props.message.content));
 const timeStr = computed(() => formatDateTime(props.message.timestamp));
 
 // Typing indicator: ai-streaming with no tokens yet
 const isStreaming = computed(() => props.message.type === 'ai-streaming');
+
+// ── Feedback ─────────────────────────────────────────────────────────────────
+
+/** Show reason chips after a 'down' vote. */
+const showReasonChips = ref(false);
+
+const REASON_KEYS = ['inaccurate', 'incomplete', 'notRelevant', 'other'] as const;
+type ReasonKey = typeof REASON_KEYS[number];
+
+function handleRateUp() {
+  const wasCancelled = props.message.rating === 'up';
+  // Optimistic toggle
+  props.message.rating = wasCancelled ? null : 'up';
+  showReasonChips.value = false;
+  if (!wasCancelled) {
+    submitFeedback(props.message.id, 'up');
+  }
+}
+
+function handleRateDown() {
+  const wasCancelled = props.message.rating === 'down';
+  // Optimistic toggle
+  props.message.rating = wasCancelled ? null : 'down';
+  if (wasCancelled) {
+    showReasonChips.value = false;
+  } else {
+    showReasonChips.value = true;
+    submitFeedback(props.message.id, 'down');
+  }
+}
+
+function handleReason(key: ReasonKey) {
+  submitFeedback(props.message.id, 'down', key);
+  showReasonChips.value = false;
+}
 </script>
 
 <template>
@@ -63,7 +106,7 @@ const isStreaming = computed(() => props.message.type === 'ai-streaming');
       <div v-if="!isStreaming" class="flex items-center gap-2 px-1">
         <time data-testid="message-time" class="text-[10px] text-gray-400">{{ timeStr }}</time>
 
-        <!-- Thumb buttons (ref: ChatBubble.vue UButton block) -->
+        <!-- Thumb buttons -->
         <div class="flex gap-1">
           <UButton
             data-testid="btn-rate-up"
@@ -74,7 +117,7 @@ const isStreaming = computed(() => props.message.type === 'ai-streaming');
             :class="
               message.rating === 'up' ? 'text-emerald-500' : 'text-gray-300 hover:text-gray-500'
             "
-            @click="emit('rate', message.id, 'up')"
+            @click="handleRateUp"
           >
             <UIcon name="fluent:thumb-like-24-regular" size="13" />
           </UButton>
@@ -88,11 +131,31 @@ const isStreaming = computed(() => props.message.type === 'ai-streaming');
             :class="
               message.rating === 'down' ? 'text-red-400' : 'text-gray-300 hover:text-gray-500'
             "
-            @click="emit('rate', message.id, 'down')"
+            @click="handleRateDown"
           >
             <UIcon name="fluent:thumb-dislike-24-regular" size="13" />
           </UButton>
         </div>
+      </div>
+
+      <!-- Reason chips (shown after 'down' vote) -->
+      <div
+        v-if="showReasonChips"
+        data-testid="feedback-reason-chips"
+        class="flex flex-wrap gap-1.5 px-1 mt-0.5"
+      >
+        <UButton
+          v-for="key in REASON_KEYS"
+          :key="key"
+          :data-testid="`reason-${key}`"
+          size="xs"
+          color="neutral"
+          variant="outline"
+          class="rounded-full text-xs"
+          @click="handleReason(key)"
+        >
+          {{ t(`feedback.reasons.${key}`) }}
+        </UButton>
       </div>
 
       <!-- Per-message quick-reply chips -->

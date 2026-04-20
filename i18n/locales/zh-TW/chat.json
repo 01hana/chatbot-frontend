@@ -62,6 +62,8 @@
   "handoff": {
     "request": "轉接人工客服",
     "requested": "轉接申請已送出",
+    "transferred": "已轉交專人協助",
+    "error": "轉接請求失敗，請稍後再試",
     "waiting": "等待客服回應中",
     "connected": "已連線至客服",
     "unavailable": "目前非服務時間",

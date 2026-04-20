@@ -62,6 +62,8 @@
   "handoff": {
     "request": "Transfer to human agent",
     "requested": "Transfer request submitted",
+    "transferred": "You have been transferred to a human agent",
+    "error": "Transfer request failed, please try again later",
     "waiting": "Waiting for an agent",
     "connected": "Connected to an agent",
     "unavailable": "Outside service hours",

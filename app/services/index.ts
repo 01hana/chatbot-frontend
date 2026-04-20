@@ -32,7 +32,7 @@ class HttpRequest {
     const config = useRuntimeConfig();
 
     const requestOptions: any = {
-      baseURL: config.public.API_URL || 'http://localhost:3000/api/v1/',
+      baseURL: config.public.API_URL || 'http://localhost:3001/api/v1/',
       method,
       headers,
       ...options,

@@ -15,47 +15,47 @@
  * clearMessages() — wipe store messages array
  */
 
-import type { ChatMessageVM, FeedbackValue } from '~/types/chat'
+import type { ChatMessageVM, FeedbackValue } from '~/types/chat';
+
 
 export function useChat() {
-  const sessionStore = useChatSessionStore()
-  const { startStreaming, cancelStreaming, streamingState } = useStreaming()
-  const kbStore = useKnowledgeBaseStore()
+  const sessionStore = useChatSessionStore();
+  const { startStreaming, cancelStreaming, streamingState } = useStreaming();
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
   function _now(): string {
-    return new Date().toISOString()
+    return new Date().toISOString();
   }
 
   function _makeId(): string {
-    return crypto.randomUUID()
+    return crypto.randomUUID();
   }
 
   // Watch terminal streaming states to replace the placeholder ai-streaming item
-  watch(streamingState, (state) => {
-    const last = sessionStore.messages.at(-1)
-    if (!last || last.type !== 'ai-streaming') return
+  watch(streamingState, state => {
+    const last = sessionStore.messages.at(-1);
+    if (!last || last.type !== 'ai-streaming') return;
 
     if (state === 'cancelled') {
       // User-initiated cancel: remove the empty placeholder silently
-      sessionStore.messages.pop()
-      return
+      sessionStore.messages.pop();
+      return;
     }
 
     const terminalTypeMap: Partial<Record<typeof state, ChatMessageVM['type']>> = {
       error: 'system-error',
       timeout: 'system-timeout',
       interrupted: 'system-error',
-    }
+    };
 
-    const systemType = terminalTypeMap[state]
+    const systemType = terminalTypeMap[state];
     if (systemType) {
-      last.type = systemType
-      last.content = '' // component will show i18n text
+      last.type = systemType;
+      last.content = ''; // component will show i18n text
     }
     // 'completed' is handled inside useStreaming (flips to 'ai' directly)
-  })
+  });
 
   // ── Public: sendMessage ───────────────────────────────────────────────────
 
@@ -66,7 +66,7 @@ export function useChat() {
    * TODO: 串接後台 API 後，移除 kbStore.query 分支，全部走 startStreaming。
    */
   async function sendMessage(text: string): Promise<void> {
-    if (!text.trim()) return
+    if (!text.trim()) return;
 
     // 1. User message
     const userMsg: ChatMessageVM = {
@@ -74,46 +74,21 @@ export function useChat() {
       type: 'user',
       content: text.trim(),
       timestamp: _now(),
-    }
-    sessionStore.appendMessage(userMsg)
+    };
+    sessionStore.appendMessage(userMsg);
 
-    // ── Mock: 知識庫模擬回覆（串接 API 後移除此區塊）──────────────────
-    const kbResponse = kbStore.query(text.trim())
-
-    // 2. Append ai-streaming placeholder first (shows TypingIndicator)
-    const placeholderId = _makeId()
-    const placeholder: ChatMessageVM = {
-      id: placeholderId,
+    // 2. AI streaming placeholder
+    const aiPlaceholder: ChatMessageVM = {
+      id: _makeId(),
       type: 'ai-streaming',
       content: '',
       timestamp: _now(),
-    }
-    sessionStore.appendMessage(placeholder)
+    };
+    sessionStore.appendMessage(aiPlaceholder);
 
-    // 3. Wait to simulate network latency, then flip to final ai message
-    const delay = 600 + Math.random() * 700
-    await new Promise(resolve => setTimeout(resolve, delay))
+    // 3. Start the real SSE streaming pipeline
 
-    const target = sessionStore.messages.find(m => m.id === placeholderId)
-    if (target) {
-      target.type = 'ai'
-      target.content = kbResponse.content
-      target.quickReplies = kbResponse.quickReplies
-      target.rating = null
-    }
-    // ── End Mock ──────────────────────────────────────────────────────
-
-    // TODO: uncomment the block below after API integration
-    // // 2. AI streaming placeholder
-    // const aiPlaceholder: ChatMessageVM = {
-    //   id: _makeId(),
-    //   type: 'ai-streaming',
-    //   content: '',
-    //   timestamp: _now(),
-    // }
-    // sessionStore.appendMessage(aiPlaceholder)
-    // // 3. Start the streaming pipeline
-    // await startStreaming(text.trim())
+    await startStreaming(text.trim());
   }
 
   // ── Public: rateMessage ───────────────────────────────────────────────────
@@ -123,21 +98,23 @@ export function useChat() {
    * If the same value is given again, it resets to null (un-rate).
    */
   function rateMessage(messageId: string, value: FeedbackValue): void {
-    const msg = sessionStore.messages.find(m => m.id === messageId)
-    if (!msg || msg.type !== 'ai') return
-    msg.rating = msg.rating === value ? null : value
+    const msg = sessionStore.messages.find(m => m.id === messageId);
+
+    if (!msg || msg.type !== 'ai') return;
+
+    msg.rating = msg.rating === value ? null : value;
   }
 
   // ── Public: cancelStream ──────────────────────────────────────────────────
 
   async function cancelStream(): Promise<void> {
-    await cancelStreaming()
+    await cancelStreaming();
   }
 
   // ── Public: clearMessages ─────────────────────────────────────────────────
 
   function clearMessages(): void {
-    sessionStore.clearMessages()
+    sessionStore.clearMessages();
   }
 
   // ── Public: retryLastMessage ──────────────────────────────────────────────
@@ -147,21 +124,21 @@ export function useChat() {
    * the last user message.
    */
   async function retryLastMessage(): Promise<void> {
-    const msgs = sessionStore.messages
+    const msgs = sessionStore.messages;
     // Find the last user message
-    let lastUserText: string | null = null
+    let lastUserText: string | null = null;
     for (let i = msgs.length - 1; i >= 0; i--) {
       if (msgs[i]!.type === 'user') {
-        lastUserText = msgs[i]!.content
-        break
+        lastUserText = msgs[i]!.content;
+        break;
       }
     }
-    if (!lastUserText) return
+    if (!lastUserText) return;
 
     // Remove the last system item (error/timeout) if present
-    const last = msgs.at(-1)
+    const last = msgs.at(-1);
     if (last && (last.type === 'system-error' || last.type === 'system-timeout')) {
-      msgs.pop()
+      msgs.pop();
     }
 
     // Re-add the streaming placeholder and restart
@@ -170,9 +147,9 @@ export function useChat() {
       type: 'ai-streaming',
       content: '',
       timestamp: _now(),
-    }
-    sessionStore.appendMessage(aiPlaceholder)
-    await startStreaming(lastUserText)
+    };
+    sessionStore.appendMessage(aiPlaceholder);
+    await startStreaming(lastUserText);
   }
 
   return {
@@ -184,5 +161,5 @@ export function useChat() {
     clearMessages,
     retryLastMessage,
     rateMessage,
-  }
+  };
 }

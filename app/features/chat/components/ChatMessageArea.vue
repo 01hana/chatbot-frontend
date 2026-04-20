@@ -17,6 +17,8 @@ import SystemTimeoutItem from './SystemTimeoutItem.vue';
 import SystemInterceptedItem from './SystemInterceptedItem.vue';
 import SystemLowConfidenceItem from './SystemLowConfidenceItem.vue';
 import SystemFallbackItem from './SystemFallbackItem.vue';
+import LeadFormCard from './LeadFormCard.vue';
+import HandoffStatusCard from './HandoffStatusCard.vue';
 import { renderMarkdown } from '~/utils/markdown';
 
 // ── Component registry ────────────────────────────────────────────────────
@@ -31,9 +33,9 @@ const componentMap: Record<ChatMessageVM['type'], MessageComponent> = {
   'system-intercepted': SystemInterceptedItem,
   'system-low-confidence': SystemLowConfidenceItem,
   'system-fallback': SystemFallbackItem,
-  // Phase 2 items — rendered as empty div until implemented
-  'lead-form': defineComponent({ template: '<div />' }),
-  'handoff-status': defineComponent({ template: '<div />' }),
+  // Phase 2 items
+  'lead-form': LeadFormCard,
+  'handoff-status': HandoffStatusCard,
 };
 
 // ── Props / emits ─────────────────────────────────────────────────────────
@@ -44,7 +46,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   retry: [messageId: string];
-  rate: [messageId: string, value: import('~/types/chat').FeedbackValue];
   'quick-reply': [text: string];
 }>();
 
@@ -106,7 +107,6 @@ const welcomeHtml = computed(() => renderMarkdown(welcome.value.content));
         :key="message.id"
         :message
         @retry="emit('retry', message.id)"
-        @rate="(id: string, val: import('~/types/chat').FeedbackValue) => emit('rate', id, val)"
         @quick-reply="(text: string) => emit('quick-reply', text)"
       />
     </template>

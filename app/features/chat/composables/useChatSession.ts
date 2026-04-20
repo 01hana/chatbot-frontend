@@ -15,7 +15,7 @@
  */
 
 import { createSession, getSessionHistory } from '~/services/api/chat';
-import type { ChatMessageVM } from '~/types/chat';
+import type { ChatMessageVM, HistoryMessageDTO } from '~/types/chat';
 
 const LS_KEY = 'chat_session_token';
 
@@ -42,17 +42,25 @@ export function useChatSession() {
   // ── Welcome message helper ────────────────────────────────────────────────
 
   function _appendWelcomeMessage(): void {
-    const currentLocale = (locale.value as 'zh-TW' | 'en') ?? 'zh-TW';
-    const welcomeText = configStore.config?.welcomeMessage?.[currentLocale] ?? t('widget.welcome');
+    const { config } = configStore;
 
-    const kbStore = useKnowledgeBaseStore();
+    const currentLocale = (locale.value as 'zh-TW' | 'en') ?? 'zh-TW';
+    const welcomeText = config?.welcomeMessage?.[currentLocale] ?? t('widget.welcome');
+
+    // Derive locale-specific quick-reply strings from widget config.
+    // Falls back to an empty array when config is not yet loaded.
+    const quickReplies = (
+      config?.quickReplies?.[currentLocale] ??
+      config?.quickReplies?.['zh-TW'] ??
+      []
+    ).filter(Boolean) as string[];
 
     const welcome: ChatMessageVM = {
       id: crypto.randomUUID(),
       type: 'ai',
       content: welcomeText,
       timestamp: new Date().toISOString(),
-      quickReplies: kbStore.getWelcomeQuickReplies(),
+      quickReplies,
       rating: null,
     };
 
@@ -63,10 +71,14 @@ export function useChatSession() {
 
   async function _createNewSession(): Promise<void> {
     sessionStore.setSessionStatus('initialising');
+
     const session = await createSession();
+
     if (!session || !session.sessionToken) {
       console.warn('[useChatSession] createSession returned invalid data', session);
+
       sessionStore.setSessionStatus('error');
+
       return;
     }
     sessionStore.setSessionToken(session.sessionToken);
@@ -82,21 +94,32 @@ export function useChatSession() {
 
   async function _restoreSession(token: string): Promise<void> {
     sessionStore.setSessionStatus('initialising');
+    // Always clear before restoring to avoid duplicate appends on re-open
+    sessionStore.clearMessages();
+
     try {
       const history = await getSessionHistory(token);
-      if (!Array.isArray(history)) {
+
+      if (!history || !Array.isArray(history.messages)) {
         console.warn('[useChatSession] history response is not an array', history);
-        // Treat as failure and create a new session
         removeToken();
         await _createNewSession();
         return;
       }
       sessionStore.setSessionToken(token);
-      // Restore messages
-      history.forEach(msg => sessionStore.appendMessage(msg));
+      // Map backend DTOs → frontend ChatMessageVM
+      const vms: ChatMessageVM[] = history.messages.map((msg: HistoryMessageDTO) => ({
+        id: String(msg.id),
+        type: msg.role === 'user' ? 'user' : 'ai',
+        content: msg.content,
+        timestamp: msg.createdAt,
+        rating: null,
+      }));
+      vms.forEach(vm => sessionStore.appendMessage(vm));
       sessionStore.setSessionStatus('active');
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
+
       if (status === 401 || status === 404) {
         // Stale / invalid token – start fresh
         removeToken();
@@ -114,11 +137,10 @@ export function useChatSession() {
 
   /**
    * Initialise the session on widget open.
-   * Safe to call multiple times – skips if session is already active.
+   * Called every time the widget opens — re-checks the stored token and
+   * restores history or creates a new session as needed.
    */
   async function initSession(): Promise<void> {
-    if (sessionStore.sessionStatus === 'active') return;
-
     try {
       const stored = readStoredToken();
       if (stored) {

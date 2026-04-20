@@ -16,7 +16,7 @@ export function createChatClient() {
   const config = useRuntimeConfig();
 
   return $fetch.create({
-    baseURL: config.public.apiBase || 'http://localhost:3000',
+    baseURL: config.public.apiBase || 'http://localhost:3001',
     timeout: 15_000,
     onRequest({ options }) {
       // Attach session token when available (store created in T-006).
@@ -65,7 +65,7 @@ export function createAdminClient() {
   const config = useRuntimeConfig();
 
   return $fetch.create({
-    baseURL: config.public.apiBase || 'http://localhost:3000',
+    baseURL: config.public.apiBase || 'http://localhost:3001',
     timeout: 15_000,
     onResponseError({ response }) {
       if (response.status >= 500) {

@@ -595,7 +595,7 @@
 
 ---
 
-- [ ] **T-034B** 將聊天流從 KB mock 切換回真實 API / SSE 串流
+- [x] **T-034B** 將聊天流從 KB mock 切換回真實 API / SSE 串流
   - **所屬 Phase**：Phase 2
   - **所屬 Workstream**：WS-D
   - **依賴**：T-022、T-029
@@ -669,7 +669,7 @@
 
 ---
 
-- [ ] **T-038** 實作 `useHandoff` composable
+- [x] **T-038** 實作 `useHandoff` composable
   - **所屬 Phase**：Phase 2
   - **所屬 Workstream**：WS-D
   - **依賴**：T-035
@@ -687,7 +687,7 @@
 
 ---
 
-- [ ] **T-039** 建立 `HandoffStatusCard` 元件
+- [x] **T-039** 建立 `HandoffStatusCard` 元件
   - **所屬 Phase**：Phase 2
   - **所屬 Workstream**：WS-D
   - **依賴**：T-038、T-028
@@ -701,7 +701,7 @@
 
 ---
 
-- [ ] **T-040** 補強 `AiMessageItem` 內嵌 feedback 互動並建立 `useFeedback` composable（Feedback API 串接）
+- [x] **T-040** 補強 `AiMessageItem` 內嵌 feedback 互動並建立 `useFeedback` composable（Feedback API 串接）
   - **所屬 Phase**：Phase 2
   - **所屬 Workstream**：WS-D
   - **依賴**：T-035、T-028
@@ -744,22 +744,26 @@
 
 ---
 
-- [ ] **T-043** 補完 `utils/analytics.ts` 事件追蹤實作
+- [ ] **T-043** ~~補完 `utils/analytics.ts` 事件追蹤實作~~ **【延後 Deferred】**
   - **所屬 Phase**：Phase 2
   - **所屬 Workstream**：WS-D
   - **依賴**：T-012、T-027、T-040、T-041
-  - **實作內容**：
-    - 定義 `AnalyticsEvent` union type（含所有事件：`widget_open`、`widget_close`、`quick_reply_click`、`message_sent`、`lead_form_open`、`lead_form_submit`、`handoff_requested`、`feedback_up`、`feedback_down`、`locale_switch`）
-    - 實作 `trackEvent(event)` → `POST /api/analytics/event`（API 端點 TBD，失敗不影響主流程）
-    - 在對應位置呼叫 `trackEvent`：
-      - `useChatWidgetStore.setOpen()` → `widget_open` / `widget_close`
-      - `ChatQuickReplies` 點擊 → `quick_reply_click`
+  - **延後原因**：
+    - 後端尚未提供 analytics endpoint（`POST /api/v1/analytics/events`）
+    - 前端已移除所有 `trackEvent(...)` 實際呼叫點（`useChat`、`useFeedback`、`useHandoff`、`useLeadForm`、`ChatWidget.vue`、`LeadFormCard.vue`）
+    - `utils/analytics.ts` 保留為型別占位檔（`trackEvent` 目前為 no-op），待後端就緒後恢復
+  - **待恢復時實作內容**：
+    - 恢復 `trackEvent(event)` → `POST /api/v1/analytics/events`（fire-and-forget，失敗不影響主流程）
+    - 在以下位置補回 `trackEvent` 呼叫：
+      - `ChatWidget.vue` isOpen watch → `widget_open` / `widget_close`
+      - `ChatWidget.vue` handleQuickReply → `quick_reply_click`
+      - `ChatWidget.vue` locale watch → `locale_switch`
       - `useChat.sendMessage()` → `message_sent`
       - `useLeadForm.submitLead()` → `lead_form_submit`
+      - `LeadFormCard.vue` onMounted → `lead_form_open`
       - `useHandoff.requestHandoff()` → `handoff_requested`
       - `useFeedback.submitFeedback()` → `feedback_up` / `feedback_down`
-      - 語系切換 → `locale_switch`
-  - **完成條件**：對應操作時 `trackEvent` 被呼叫；API 失敗不影響 UI；TypeScript 事件型別完整
+  - **完成條件（deferred）**：後端 endpoint 就緒後補回所有呼叫點；API 失敗不影響 UI；TypeScript 事件型別完整
 
 ---
 

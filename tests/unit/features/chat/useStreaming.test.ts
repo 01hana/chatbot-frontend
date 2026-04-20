@@ -21,6 +21,8 @@ let _capturedCallbacks: {
   onToken: (t: string) => void
   onDone: () => void
   onError: (e: Error) => void
+  onTimeout?: (message?: string) => void
+  onInterrupted?: (message?: string) => void
 } | null = null
 
 const mockStartStream = vi.fn((_url: string, _msg: string, cbs: typeof _capturedCallbacks) => {
@@ -202,6 +204,29 @@ describe('useStreaming', () => {
     // Stream service still fires onError after cancel – should be ignored
     _capturedCallbacks!.onError(new Error('aborted'))
     expect(sessionStore.streamingState).toBe('cancelled')
+  })
+
+  // ── SSE contract: event-typed timeout / interrupted ───────────────────────
+
+  it('onTimeout callback（event: timeout）→ state 為 timeout', () => {
+    const { startStreaming } = useStreaming()
+    startStreaming('ping')
+
+    // Server sends: event: timeout / data: {"message":"request timed out"}
+    _capturedCallbacks!.onTimeout?.('request timed out')
+
+    expect(sessionStore.streamingState).toBe('timeout')
+  })
+
+  it('onInterrupted callback（event: interrupted）→ state 為 interrupted', () => {
+    const { startStreaming } = useStreaming()
+    startStreaming('ping')
+
+    _capturedCallbacks!.onToken('partial')
+    // Server sends: event: interrupted / data: {"message":"stream cut off"}
+    _capturedCallbacks!.onInterrupted?.('stream cut off')
+
+    expect(sessionStore.streamingState).toBe('interrupted')
   })
 
   // ── No session token ─────────────────────────────────────────────────────

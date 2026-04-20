@@ -31,7 +31,6 @@ const emit = defineEmits<{
   cancel: [];
   'quick-reply': [text: string];
   retry: [messageId: string];
-  rate: [messageId: string, value: import('~/types/chat').FeedbackValue];
   reset: [];
 }>();
 
@@ -106,25 +105,6 @@ onMounted(() => {
       </div>
 
       <div class="flex items-center gap-1">
-        <!-- Locale switcher (T-041) -->
-        <!-- <UDropdownMenu
-          :items="localeOptions.map(opt => ({ label: opt.label, onSelect: () => switchLocale(opt.value) }))"
-          :content="{ align: 'end' }"
-          data-testid="locale-switcher"
-        >
-          <UButton
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            class="rounded-full px-2 h-7 hover:bg-white/20 text-white text-[10px]"
-            :title="t('common.chooseLanguage')"
-            data-testid="btn-locale"
-          >
-            {{ locale === 'zh-TW' ? '中文' : 'EN' }}
-            <UIcon name="fluent:chevron-down-24-regular" size="10" class="ml-0.5" />
-          </UButton>
-        </UDropdownMenu> -->
-
         <UButton
           data-testid="btn-reset"
           color="neutral"
@@ -186,7 +166,6 @@ onMounted(() => {
       <ChatMessageArea
         :messages
         @retry="emit('retry', $event)"
-        @rate="(id, val) => emit('rate', id, val)"
         @quick-reply="emit('quick-reply', $event)"
       />
     </main>

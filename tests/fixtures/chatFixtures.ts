@@ -11,6 +11,8 @@ import type {
   QuickReplyItem,
   LeadFormData,
   HandoffResponse,
+  HistoryMessageDTO,
+  SessionHistoryResponse,
 } from '../../app/types/chat'
 import type { ApiResponse } from '../../app/types/api'
 
@@ -67,6 +69,28 @@ export const mockAiMessage: ChatMessageVM = {
 
 export const mockHistoryMessages: ChatMessageVM[] = [mockUserMessage, mockAiMessage]
 
+/** Backend DTO format returned by GET /history (before mapping to VM). */
+export const mockHistoryDTOs: HistoryMessageDTO[] = [
+  {
+    id: 'msg-user-1',
+    role: 'user',
+    content: '如何訂購？',
+    createdAt: new Date('2026-04-07T08:01:00Z').toISOString(),
+  },
+  {
+    id: 'msg-ai-1',
+    role: 'assistant',
+    content: '您好！您可以透過以下步驟完成訂購：\n\n1. 選擇商品\n2. 加入購物車\n3. 結帳付款',
+    createdAt: new Date('2026-04-07T08:01:05Z').toISOString(),
+  },
+]
+
+/** Full SessionHistoryResponse as returned by getSessionHistory(). */
+export const mockHistorySessionResponse: SessionHistoryResponse = {
+  sessionToken: mockSession.sessionToken,
+  messages: mockHistoryDTOs,
+}
+
 // ── API Response Wrappers ─────────────────────────────────────────────────
 
 export const mockSessionResponse: ApiResponse<ChatSessionVM> = {
@@ -88,7 +112,7 @@ export const mockWidgetConfigResponse: ApiResponse<WidgetConfigVM> = {
 
 /** Mock SSE stream URL returned by getStreamUrl(). */
 export const mockStreamUrl =
-  'http://localhost:3000/api/v1/chat/sessions/mock-session-token-abc123/messages?message=%E5%A6%82%E4%BD%95%E8%A8%82%E8%B3%BC%EF%BC%9F'
+  'http://localhost:3001/api/v1/chat/sessions/mock-session-token-abc123/messages?message=%E5%A6%82%E4%BD%95%E8%A8%82%E8%B3%BC%EF%BC%9F'
 
 /** Simulated token sequence emitted by the mock streaming service. */
 export const mockTokenSequence = ['您', '好', '！', '以', '下', '是', '訂', '購', '步', '驟', '：']

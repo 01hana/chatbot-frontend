@@ -64,9 +64,9 @@ export function useLeadForm() {
       return;
     }
 
-    // const result = await validate();
+    const result = await validate();
 
-    // if (!result.valid) return;
+    if (!result.valid) return;
 
     status.value = 'submitting';
 
