@@ -19,13 +19,15 @@
  *   falls back to a ReadableStream simulation that pushes one token every 80ms.
  */
 
+import type { SseDonePayload } from '~/types/chat'
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface StreamCallbacks {
   /** Called for every decoded token. */
   onToken: (token: string) => void;
-  /** Called when the stream ends normally (all tokens delivered). */
-  onDone: () => void;
+  /** Called when the stream ends normally. Receives optional backend metadata. */
+  onDone: (payload?: SseDonePayload) => void;
   /** Called on any transport or network error. */
   onError: (err: Error) => void;
   /** Called when the server sends `event: timeout` with an optional message. */
@@ -68,7 +70,7 @@ function parseSseBlock(
   dataLine: string,
 ):
   | { token: string }
-  | { done: true }
+  | { done: true; donePayload: SseDonePayload }
   | { error: string }
   | { timeout: string }
   | { interrupted: string }
@@ -88,7 +90,7 @@ function parseSseBlock(
     case 'token':
       return typeof payload.token === 'string' ? { token: payload.token } : null;
     case 'done':
-      return { done: true };
+      return { done: true, donePayload: payload as SseDonePayload };
     case 'error':
       return { error: msg };
     case 'timeout':
@@ -98,7 +100,7 @@ function parseSseBlock(
     default:
       // Fallback: handle legacy / non-event-typed streams gracefully
       if (typeof payload.error === 'string') return { error: payload.error };
-      if (payload.done === true) return { done: true };
+      if (payload.done === true) return { done: true, donePayload: {} };
       if (typeof payload.token === 'string') return { token: payload.token };
       return null;
   }
@@ -126,7 +128,7 @@ function startMockStream(callbacks: StreamCallbacks): void {
     } else {
       clearInterval(_mockTimer!);
       _mockTimer = null;
-      callbacks.onDone();
+      callbacks.onDone({});
     }
   }, 80);
 }
@@ -178,7 +180,7 @@ async function startRealStream(
         return false;
       }
       if ('done' in parsed) {
-        callbacks.onDone();
+        callbacks.onDone(parsed.donePayload);
         return false;
       }
       if ('timeout' in parsed) {

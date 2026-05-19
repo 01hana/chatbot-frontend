@@ -17,6 +17,18 @@ export type StreamingState =
   | 'interrupted'
   | 'cancelled';
 
+/**
+ * Payload carried by the SSE `done` event.
+ * All fields are optional — the backend may omit any of them.
+ */
+export interface SseDonePayload {
+  messageId?: string | null;
+  action?: string | null;
+  intentLabel?: string | null;
+  sourceReferences?: unknown[];
+  usage?: Record<string, unknown>;
+}
+
 // ── Messages ────────────────────────────────────────────────
 
 /** Discriminated union of all message types rendered in the chat. */

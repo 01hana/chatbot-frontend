@@ -20,7 +20,10 @@
 
 import { startStream, cancelStream as serviceCancel } from '~/services/streaming'
 import { getStreamUrl, cancelStream as apiCancel } from '~/services/api/chat'
-import type { StreamingState } from '~/types/chat'
+import type { StreamingState, LocaleKey } from '~/types/chat'
+import { getQuickReplies } from '~/features/chat/utils/quickReplyMapping'
+
+const LOCALE_LS_KEY = 'chat_locale'
 
 /** How long (ms) we wait for the first token before declaring a timeout. */
 const FIRST_TOKEN_TIMEOUT_MS = 30_000
@@ -98,12 +101,23 @@ export function useStreaming() {
         _appendToken(t)
       },
 
-      onDone() {
+      onDone(payload) {
         _clearTimeout()
         // Transition the last streaming message to a finished AI message
         const last = sessionStore.messages.at(-1)
         if (last?.type === 'ai-streaming') {
           last.type = 'ai'
+          // Inject per-message quickReplies from done payload
+          const storedLocale = (typeof localStorage !== 'undefined'
+            ? localStorage.getItem(LOCALE_LS_KEY)
+            : null) as LocaleKey | null
+          const currentLocale: LocaleKey = storedLocale ?? 'zh-TW'
+          last.quickReplies = getQuickReplies(
+            payload?.action,
+            payload?.intentLabel,
+            last.content,
+            currentLocale,
+          )
         }
         setState('completed')
       },
