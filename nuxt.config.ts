@@ -37,6 +37,9 @@ export default defineNuxtConfig({
       apiBase: process.env.NUXT_PUBLIC_API_BASE ?? '',
     },
   },
+  pinia: {
+    storesDirs: ['./stores/**', './features/**/stores/**'],
+  },
   // auth: {
   //   origin: process.env.ORIGIN || 'http://localhost:3000',
   //   enableGlobalAppMiddleware: true,
@@ -85,7 +88,13 @@ export default defineNuxtConfig({
   },
   vite: {
     optimizeDeps: {
-      include: ['@vue/devtools-core', '@vue/devtools-kit', '@vee-validate/i18n', 'gsap'],
+      include: [
+        '@vue/devtools-core',
+        '@vue/devtools-kit',
+        '@vee-validate/i18n',
+        'vxe-table',
+        'vxe-pc-ui',
+      ],
     },
   },
   ssr: false,

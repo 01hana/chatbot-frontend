@@ -74,7 +74,7 @@ export const mockDashboardStats: DashboardStatsVM = {
 export const mockConversationSummaries: ConversationSummaryVM[] = [
   {
     sessionId: 'sess-001',
-    startTime: '2026-04-07T08:00:00Z',
+    createdAt: '2026-04-07T08:00:00Z',
     endTime: '2026-04-07T08:03:22Z',
     durationSeconds: 202,
     messageCount: 6,
@@ -83,14 +83,14 @@ export const mockConversationSummaries: ConversationSummaryVM[] = [
   },
   {
     sessionId: 'sess-002',
-    startTime: '2026-04-07T09:15:00Z',
+    createdAt: '2026-04-07T09:15:00Z',
     messageCount: 2,
     status: 'active',
     leadSubmitted: false,
   },
   {
     sessionId: 'sess-003',
-    startTime: '2026-04-07T10:00:00Z',
+    createdAt: '2026-04-07T10:00:00Z',
     endTime: '2026-04-07T10:12:00Z',
     durationSeconds: 720,
     messageCount: 12,
@@ -302,7 +302,7 @@ export const mockDashboardStats: DashboardStatsVM = {
 export const mockConversationSummaries: ConversationSummaryVM[] = [
   {
     sessionId: 'sess-001',
-    startTime: '2026-04-07T08:00:00Z',
+    createdAt: '2026-04-07T08:00:00Z',
     endTime: '2026-04-07T08:03:22Z',
     durationSeconds: 202,
     messageCount: 6,
@@ -311,7 +311,7 @@ export const mockConversationSummaries: ConversationSummaryVM[] = [
   },
   {
     sessionId: 'sess-002',
-    startTime: '2026-04-07T09:15:00Z',
+    createdAt: '2026-04-07T09:15:00Z',
     messageCount: 2,
     status: 'active',
     leadSubmitted: false,

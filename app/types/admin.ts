@@ -6,181 +6,181 @@
 
 /** Pagination metadata returned by list endpoints. */
 export interface PaginationMeta {
-  total: number
-  page: number
-  pageSize: number
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 /** Common date-range filter used by list endpoints. */
 export interface DateRangeFilter {
-  startDate?: string
-  endDate?: string
+  startDate?: string;
+  endDate?: string;
 }
 
 /** Generic admin list query params (extend per endpoint). */
 export interface AdminListParams extends DateRangeFilter {
-  page?: number
-  pageSize?: number
-  keyword?: string
-  status?: string
-  sortBy?: string
-  sortOrder?: 'asc' | 'desc'
+  page?: number;
+  pageSize?: number;
+  keyword?: string;
+  status?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
 // ── Conversations ────────────────────────────────────────────
 
 /** Summary row shown in the conversations list table. */
 export interface ConversationSummaryVM {
-  sessionId: string
-  startTime: string
-  endTime?: string
+  sessionId: string;
+  createdAt: string;
+  endTime?: string;
   /** Duration in seconds. */
-  durationSeconds?: number
-  messageCount: number
-  status: 'active' | 'closed' | 'handoff'
-  leadSubmitted: boolean
+  durationSeconds?: number;
+  messageCount: number;
+  status: 'active' | 'closed' | 'handoff';
+  leadSubmitted: boolean;
 }
 
 /** Full conversation detail including all messages. */
 export interface ConversationDetailVM extends ConversationSummaryVM {
-  messages: import('./chat').ChatMessageVM[]
+  messages: import('./chat').ChatMessageVM[];
 }
 
 export interface ConversationListParams extends AdminListParams {
-  status?: ConversationSummaryVM['status']
+  status?: ConversationSummaryVM['status'];
 }
 
 // ── Leads ────────────────────────────────────────────────────
 
-export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'closed'
+export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'closed';
 
 /** A lead record stored after form submission. */
 export interface LeadVM {
-  id: string
-  sessionId: string
-  name: string
-  company: string
-  phone?: string
-  email?: string
+  id: string;
+  sessionId: string;
+  name: string;
+  company: string;
+  phone?: string;
+  email?: string;
   /** Original field name in admin API (message field from lead form). */
-  inquiry?: string
-  note?: string
-  status?: LeadStatus
+  inquiry?: string;
+  note?: string;
+  status?: LeadStatus;
   /** Locale tag e.g. 'zh-TW' | 'en'. */
-  language?: string
-  submittedAt: string
+  language?: string;
+  submittedAt: string;
 }
 
 export interface LeadListParams extends AdminListParams {
-  status?: LeadStatus
+  status?: LeadStatus;
 }
 
 export interface LeadUpdatePayload {
-  status?: LeadStatus
-  note?: string
+  status?: LeadStatus;
+  note?: string;
 }
 
 // ── Tickets ──────────────────────────────────────────────────
 
-export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed'
-export type TicketPriority = 'low' | 'medium' | 'high'
+export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+export type TicketPriority = 'low' | 'medium' | 'high';
 
 export interface TicketNoteVM {
-  id: string
-  content: string
-  createdAt: string
-  createdBy?: string
+  id: string;
+  content: string;
+  createdAt: string;
+  createdBy?: string;
 }
 
 export interface TicketTimelineEvent {
-  id: string
-  eventType: 'created' | 'status_change' | 'note_added'
-  fromStatus?: TicketStatus
-  toStatus?: TicketStatus
-  content?: string
-  occurredAt: string
-  createdBy?: string
+  id: string;
+  eventType: 'created' | 'status_change' | 'note_added';
+  fromStatus?: TicketStatus;
+  toStatus?: TicketStatus;
+  content?: string;
+  occurredAt: string;
+  createdBy?: string;
 }
 
 /** A ticket created when a user requests human handoff. */
 export interface TicketVM {
-  id: string
-  sessionId: string
+  id: string;
+  sessionId: string;
   /** Short subject/title for the ticket. */
-  title?: string
+  title?: string;
   /** Full problem description. */
-  summary?: string
-  priority?: TicketPriority
-  status: TicketStatus
-  createdAt: string
-  resolvedAt?: string
-  notes?: TicketNoteVM[]
-  timeline?: TicketTimelineEvent[]
+  summary?: string;
+  priority?: TicketPriority;
+  status: TicketStatus;
+  createdAt: string;
+  resolvedAt?: string;
+  notes?: TicketNoteVM[];
+  timeline?: TicketTimelineEvent[];
 }
 
 export interface TicketListParams extends AdminListParams {
-  status?: TicketStatus
-  priority?: TicketPriority
+  status?: TicketStatus;
+  priority?: TicketPriority;
 }
 
 // ── Knowledge Base ───────────────────────────────────────────
 
 /** A single knowledge base entry (Q&A pair). */
 export interface KnowledgeEntryVM {
-  id: string
-  question: string
-  answer: string
-  category?: string
-  status: 'active' | 'inactive'
-  version: number
-  updatedAt: string
+  id: string;
+  question: string;
+  answer: string;
+  category?: string;
+  status: 'active' | 'inactive';
+  version: number;
+  updatedAt: string;
 }
 
 // ── Intents ──────────────────────────────────────────────────
 
 /** An intent definition used for routing/matching. */
 export interface IntentVM {
-  id: string
-  name: string
+  id: string;
+  name: string;
   /** Sample utterances that map to this intent. */
-  examples: string[]
+  examples: string[];
   /** Tags/trigger keywords. */
-  keywords: string[]
-  status: 'active' | 'inactive'
-  sortOrder: number
+  keywords: string[];
+  status: 'active' | 'inactive';
+  sortOrder: number;
 }
 
 // ── Quick Replies ────────────────────────────────────────────
 
 /** Admin-managed quick reply chip shown in the chat widget. */
 export interface QuickReplyVM {
-  id: string
-  label: Partial<Record<'zh-TW' | 'en', string>>
-  sortOrder: number
-  status: 'active' | 'inactive'
+  id: string;
+  label: Partial<Record<'zh-TW' | 'en', string>>;
+  sortOrder: number;
+  status: 'active' | 'inactive';
 }
 
 // ── Audit Events ────────────────────────────────────────────
 
 /** An entry in the admin audit log. */
 export interface AuditEventVM {
-  id: string
-  eventType: string
-  sessionId?: string
-  payload?: Record<string, unknown>
-  createdAt: string
+  id: string;
+  eventType: string;
+  sessionId?: string;
+  payload?: Record<string, unknown>;
+  createdAt: string;
 }
 
 // ── Feedback ────────────────────────────────────────────────
 
 /** A user feedback record stored by the backend. */
 export interface FeedbackVM {
-  id: string
-  sessionId: string
-  messageId: string
-  type: 'up' | 'down'
-  reason?: string
-  submittedAt: string
+  id: string;
+  sessionId: string;
+  messageId: string;
+  type: 'up' | 'down';
+  reason?: string;
+  submittedAt: string;
 }
 
 // ── Dashboard ────────────────────────────────────────────────
@@ -188,28 +188,28 @@ export interface FeedbackVM {
 /** KPI stats for the dashboard stat cards. */
 export interface DashboardStatsVM {
   /** Today's total conversations. */
-  todayConversations: number
+  todayConversations: number;
   /** This month's total conversations (legacy field). */
-  monthConversations: number
+  monthConversations: number;
   /** This month's total conversations (preferred alias). */
-  monthlyConversations?: number
+  monthlyConversations?: number;
   /** Percentage (0–100) — legacy field. */
-  selfServiceRate: number
+  selfServiceRate: number;
   /** AI resolution rate percentage (0–100). */
-  aiResolutionRate?: number
-  pendingTickets: number
+  aiResolutionRate?: number;
+  pendingTickets: number;
   /** Legacy field. */
-  newLeadsThisMonth: number
+  newLeadsThisMonth: number;
   /** This month's new leads (preferred alias). */
-  monthlyLeads?: number
+  monthlyLeads?: number;
   /** Daily conversation count trend (last N days). */
-  conversationTrend?: { date: string; value: number }[]
+  conversationTrend?: { date: string; value: number }[];
   /** Intent hit distribution. */
-  intentDistribution?: { label: string; value: number }[]
+  intentDistribution?: { label: string; value: number }[];
   /** Handoff reason distribution. */
-  handoffReasonDistribution?: { label: string; value: number }[]
+  handoffReasonDistribution?: { label: string; value: number }[];
   /** Latest audit events for the activity feed. */
-  latestAuditEvents?: AuditEventVM[]
+  latestAuditEvents?: AuditEventVM[];
 }
 
 // ── Reports ──────────────────────────────────────────────────
@@ -217,35 +217,35 @@ export interface DashboardStatsVM {
 /** A single data point in a time-series report chart. */
 export interface ReportDataPoint {
   /** Date label (e.g. "2026-04-01"). */
-  date: string
-  value: number
+  date: string;
+  value: number;
 }
 
 /** Aggregated report data for the reports page. */
 export interface ReportDataVM {
-  conversationTrend: ReportDataPoint[]
-  intentDistribution: { label: string; value: number }[]
-  feedbackSummary: { up: number; down: number }
-  selfServiceRateTrend: ReportDataPoint[]
-  avgResponseTimeTrend: ReportDataPoint[]
+  conversationTrend: ReportDataPoint[];
+  intentDistribution: { label: string; value: number }[];
+  feedbackSummary: { up: number; down: number };
+  selfServiceRateTrend: ReportDataPoint[];
+  avgResponseTimeTrend: ReportDataPoint[];
 }
-
 
 // ── Conversations ────────────────────────────────────────────
 
 /** Summary row shown in the conversations list table. */
 export interface ConversationSummaryVM {
-  sessionId: string
-  startTime: string
-  endTime?: string
+  id: number;
+  sessionId: string;
+  createdAt: string;
+  endTime?: string;
   /** Duration in seconds. */
-  durationSeconds?: number
-  messageCount: number
-  status: 'active' | 'closed' | 'handoff'
-  leadSubmitted: boolean
+  durationSeconds?: number;
+  messageCount: number;
+  status: 'active' | 'closed' | 'handoff';
+  leadSubmitted: boolean;
 }
 
 /** Full conversation detail including all messages. */
 export interface ConversationDetailVM extends ConversationSummaryVM {
-  messages: import('./chat').ChatMessageVM[]
+  messages: import('./chat').ChatMessageVM[];
 }

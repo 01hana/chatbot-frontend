@@ -29,7 +29,7 @@
   "conversations": {
     "title": "對話紀錄",
     "sessionId": "對話 ID",
-    "startTime": "開始時間",
+    "createdAt": "開始時間",
     "duration": "對話時長",
     "messageCount": "訊息數",
     "status": "狀態",

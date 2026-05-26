@@ -1,15 +1,8 @@
 import type { StoreGeneric } from 'pinia';
 
 import type { VxeTableInstance, VxeColumnPropTypes, VxeTablePropTypes } from 'vxe-table';
+import type { DtParams, DtSort } from './types';
 // import { VxePager } from 'vxe-pc-ui';
-
-interface Params {
-  p: number | undefined;
-  length: number | undefined;
-  sort: any[] | null;
-  searches: any;
-  filters: any;
-}
 
 export default class Base {
   protected store: StoreGeneric;
@@ -39,7 +32,7 @@ export default class Base {
   public isSelected = computed<boolean>(() => this.select.count > 0);
   public isSelectBatch = shallowRef<boolean>(false);
 
-  protected _params = reactive<Params>({
+  protected _params = reactive<DtParams>({
     p: this.pager.p,
     length: this.pager.length,
     sort: null,
@@ -51,23 +44,23 @@ export default class Base {
   //   const ignore = ['searches', 'filters'];
 
   //   return Object.keys(this._params).reduce((acc, key) => {
-  //     const value = this._params[key as keyof Params];
+  //     const value = this._params[key as keyof DtParams];
 
   //     if (ignore.includes(key)) {
-  //       if (value && Object.keys(value).length > 0) acc[key as keyof Params] = value;
+  //       if (value && Object.keys(value).length > 0) acc[key as keyof DtParams] = value;
 
   //       return acc;
   //     }
 
-  //     acc[key as keyof Params] = value;
+  //     acc[key as keyof DtParams] = value;
 
   //     return acc;
-  //   }, {} as Partial<Params>);
+  //   }, {} as Partial<DtParams>);
   // });
 
   public params = computed(() => this._params);
 
-  private defaultSort: [string, 'asc' | 'desc'] | null = null;
+  private defaultSort: DtSort = null;
 
   constructor(store: StoreGeneric) {
     this.store = store;

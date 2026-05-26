@@ -6,6 +6,10 @@ defineOptions({ inheritAttrs: false });
 const { sort, pageConfig } = defineProps<{
   sort: [string, 'asc' | 'desc'];
   pageConfig?: {};
+  actions?: {
+    edit?: boolean;
+    remove?: boolean;
+  };
 }>();
 
 const { setModal } = inject(useModalKey) as ModalProps;
@@ -99,6 +103,7 @@ async function onRemove() {
       />
 
       <vxe-column
+        v-if="actions?.edit || actions?.remove"
         min-width="80"
         width="100"
         field="actions"
@@ -110,12 +115,14 @@ async function onRemove() {
           <slot name="actions" :row :setDeleteConfirm>
             <div class="d-flex justify-end flex-wrap gap-1">
               <UButton
+                v-show="actions.edit"
                 icon="fluent:edit-line-horizontal-3-24-regular"
                 variant="ghost"
                 @click="setModal(row.id)"
               />
 
               <UButton
+                v-show="actions.remove"
                 icon="fluent:delete-24-regular"
                 variant="ghost"
                 color="error"

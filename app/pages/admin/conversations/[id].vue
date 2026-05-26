@@ -8,7 +8,7 @@
  * - useAdminStatus     — via AppStatusBadge (no local STATUS_LABEL)
  */
 
-import { getConversationDetail } from '~/services/api/admin/conversations';
+// import { getConversationDetail } from '~/services/api/admin/conversations';
 import type { ConversationDetailVM } from '~/types/admin';
 import ConversationViewer from '~/features/admin/components/ConversationViewer.vue';
 import AppStatusBadge from '~/features/admin/components/AppStatusBadge.vue';
@@ -22,6 +22,7 @@ const id = computed(() => String(route.params.id));
 
 const { formatDateTime } = useFormat();
 const { buildFeedbackSummary } = useFeedbackSummary();
+const { get } = useAdminConversations();
 
 // ── Data fetch ──────────────────────────────────────────────────────────────
 
@@ -29,19 +30,26 @@ const detail = ref<ConversationDetailVM | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
 
-async function fetchDetail() {
-  loading.value = true;
-  error.value = null;
-  try {
-    detail.value = await getConversationDetail(id.value);
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : '載入失敗';
-  } finally {
-    loading.value = false;
-  }
-}
+// async function fetchDetail() {
+//   loading.value = true;
+//   error.value = null;
+//   try {
+//     detail.value = await getConversationDetail(id.value);
+//   } catch (e) {
+//     error.value = e instanceof Error ? e.message : '載入失敗';
+//   } finally {
+//     loading.value = false;
+//   }
+// }
 
-onMounted(fetchDetail);
+// onMounted(fetchDetail);
+
+onMounted(async () => {
+  detail.value = await get(id.value);
+  loading.value = false;
+
+  console.log(detail.value);
+});
 
 // ── Feedback summary ────────────────────────────────────────────────────────
 
@@ -67,7 +75,7 @@ const feedbackSummary = computed(() =>
     </div>
 
     <!-- Error -->
-    <AppErrorState v-if="error" :message="error" @retry="fetchDetail" />
+    <AppErrorState v-if="error" :message="error" />
 
     <!-- Loading skeleton -->
     <div v-else-if="loading" class="space-y-4">
@@ -80,20 +88,20 @@ const feedbackSummary = computed(() =>
 
     <template v-else>
       <!-- Session metadata card -->
-      <UCard>
+      <UCard class="py-4">
         <template #header>
           <p class="text-sm font-medium text-gray-700">Session 資訊</p>
         </template>
         <dl class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 text-sm">
           <div>
             <dt class="text-gray-500 text-xs">Session ID</dt>
-            <dd class="font-mono text-gray-800 mt-0.5 truncate" :title="detail.sessionId">
+            <dd class="font-mono text-gray-800 mt-0.5" :title="detail.sessionId">
               {{ detail.sessionId }}
             </dd>
           </div>
           <div>
             <dt class="text-gray-500 text-xs">開始時間</dt>
-            <dd class="text-gray-800 mt-0.5">{{ formatDateTime(detail.startTime) }}</dd>
+            <dd class="text-gray-800 mt-0.5">{{ formatDateTime(detail.createdAt) }}</dd>
           </div>
           <div>
             <dt class="text-gray-500 text-xs">對話輪數</dt>
@@ -111,7 +119,7 @@ const feedbackSummary = computed(() =>
               <UBadge
                 :color="detail.leadSubmitted ? 'success' : 'neutral'"
                 variant="subtle"
-                size="sm"
+                size="md"
               >
                 {{ detail.leadSubmitted ? '已提交' : '未提交' }}
               </UBadge>
@@ -125,7 +133,7 @@ const feedbackSummary = computed(() =>
         <template #header>
           <p class="text-sm font-medium text-gray-700">對話內容</p>
         </template>
-        <div class="max-h-[600px] overflow-y-auto px-2">
+        <div class="max-h-[600px] overflow-y-auto px-2 py-4">
           <ConversationViewer :messages="detail.messages" />
         </div>
       </UCard>

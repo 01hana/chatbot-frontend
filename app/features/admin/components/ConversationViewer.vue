@@ -11,7 +11,7 @@
  */
 
 import { renderMarkdown } from '~/utils/markdown'
-import type { ChatMessageVM, ChatMessageType } from '~/types/chat'
+import type { ChatMessageVM, ChatMessageType, ChatMessageRole } from '~/types/chat'
 
 const { formatTimeShort } = useFormat()
 
@@ -21,8 +21,8 @@ const props = defineProps<{
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function isUserMessage(type: ChatMessageType): boolean {
-  return type === 'user'
+function isUserMessage(role: ChatMessageRole): boolean {
+  return role === 'user'
 }
 
 function isSystemEvent(type: ChatMessageType): boolean {
@@ -51,7 +51,7 @@ function auditEventKey(type: ChatMessageType): string | null {
       v-for="msg in messages"
       :key="msg.id"
       class="flex"
-      :class="isUserMessage(msg.type) ? 'justify-end' : 'justify-start'"
+      :class="isUserMessage(msg.role) ? 'justify-end' : 'justify-start'"
     >
       <!-- System / audit event row (full-width centered badge) -->
       <div
@@ -73,13 +73,13 @@ function auditEventKey(type: ChatMessageType): string | null {
 
       <!-- User bubble -->
       <div
-        v-else-if="isUserMessage(msg.type)"
+        v-else-if="isUserMessage(msg.role)"
         class="max-w-[70%] flex flex-col items-end gap-0.5"
       >
         <div class="bg-primary-500 text-white rounded-2xl rounded-tr-sm px-4 py-2 text-sm">
           {{ msg.content }}
         </div>
-        <span class="text-xs text-gray-400 px-1">{{ formatTimeShort(msg.timestamp) }}</span>
+        <!-- <span class="text-xs text-gray-400 px-1">{{ formatTimeShort(msg.timestamp) }}</span> -->
       </div>
 
       <!-- AI bubble -->
@@ -135,9 +135,9 @@ function auditEventKey(type: ChatMessageType): string | null {
             class="w-3 h-3"
             :class="msg.rating === 'up' ? 'text-green-500' : 'text-red-400'"
           />
-          <span class="text-xs text-gray-400">{{ formatTimeShort(msg.timestamp) }}</span>
+          <!-- <span class="text-xs text-gray-400">{{ formatTimeShort(msg.timestamp) }}</span> -->
         </div>
-        <span v-else class="text-xs text-gray-400 px-1">{{ formatTimeShort(msg.timestamp) }}</span>
+        <!-- <span v-else class="text-xs text-gray-400 px-1">{{ formatTimeShort(msg.timestamp) }}</span> -->
       </div>
     </div>
   </div>

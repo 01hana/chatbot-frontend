@@ -2,6 +2,7 @@ import type { InjectionKey } from 'vue';
 import type { VxePagerEvents } from 'vxe-pc-ui';
 import type { StoreGeneric } from 'pinia';
 import Base from './base';
+export * from './types';
 
 export class DtUtils extends Base {
   public static readonly key = Symbol('DtUtils') as InjectionKey<DtUtils & Base>;
@@ -110,9 +111,9 @@ export class DtUtils extends Base {
 
     const { field, order } = column;
 
-    if (!field || !order) return;
+    if (!field || (order !== 'asc' && order !== 'desc')) return;
 
-    this._params.sort = [field, order];
+    this._params.sort = [String(field), order];
 
     this.store.getTable(this.params.value);
   };

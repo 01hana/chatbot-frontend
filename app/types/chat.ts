@@ -31,6 +31,8 @@ export interface SseDonePayload {
 
 // ── Messages ────────────────────────────────────────────────
 
+export type ChatMessageRole = 'user' | 'assistant';
+
 /** Discriminated union of all message types rendered in the chat. */
 export type ChatMessageType =
   | 'user'
@@ -62,6 +64,7 @@ export interface ChatMessageVM {
   /** Unique identifier (UUID or server-assigned ID). */
   id: string;
   type: ChatMessageType;
+  role: ChatMessageRole;
   content: string;
   /** ISO-8601 timestamp. */
   timestamp: string;

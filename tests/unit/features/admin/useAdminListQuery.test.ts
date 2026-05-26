@@ -47,8 +47,8 @@ describe('useAdminListQuery — URL initialisation', () => {
   })
 
   it('reads sortBy and sortOrder from query string', () => {
-    const q = useAdminListQuery(makeQuery({ sortBy: 'startTime', sortOrder: 'asc' }))
-    expect(q.sortBy.value).toBe('startTime')
+    const q = useAdminListQuery(makeQuery({ sortBy: 'createdAt', sortOrder: 'asc' }))
+    expect(q.sortBy.value).toBe('createdAt')
     expect(q.sortOrder.value).toBe('asc')
   })
 
@@ -75,8 +75,8 @@ describe('useAdminListQuery — helpers', () => {
   it('onSort updates sortBy / sortOrder and resets page', () => {
     const q = useAdminListQuery(makeQuery())
     q.page.value = 3
-    q.onSort({ column: 'startTime', direction: 'asc' })
-    expect(q.sortBy.value).toBe('startTime')
+    q.onSort({ column: 'createdAt', direction: 'asc' })
+    expect(q.sortBy.value).toBe('createdAt')
     expect(q.sortOrder.value).toBe('asc')
     expect(q.page.value).toBe(1)
   })

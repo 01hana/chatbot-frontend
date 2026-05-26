@@ -24,7 +24,7 @@ export default defineAppConfig({
     },
     card: {
       slots: {
-        root: 'rounded-xl',
+        root: 'rounded-xl shadow-lg !ring-0',
         header: 'border-none',
         body: 'sm:py-0 w-full',
       },

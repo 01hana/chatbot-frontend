@@ -29,7 +29,7 @@
   "conversations": {
     "title": "Conversations",
     "sessionId": "Session ID",
-    "startTime": "Start Time",
+    "createdAt": "Start Time",
     "duration": "Duration",
     "messageCount": "Messages",
     "status": "Status",

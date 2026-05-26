@@ -9,7 +9,7 @@ const props = defineProps<{
 </script>
 
 <template>
-  <UBadge :color="getAdminStatusColor(props.status)" variant="subtle" size="sm">
+  <UBadge :color="getAdminStatusColor(props.status)" variant="subtle" size="lg">
     {{ getAdminStatusLabel(props.status) }}
   </UBadge>
 </template>
