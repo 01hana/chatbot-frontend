@@ -48,19 +48,19 @@ const { value, errorMessage: errorMessages } = useField<any>(
     }"
   >
     <template #label>
-      <div class="block text-[12px] uppercase tracking-widest text-gray-400 mb-2 font-bold">
+      <div class="block uppercase tracking-widest text-gray-500">
         <UIcon v-if="icon" :name="icon" class="w-4 h-4" />
-        <span v-if="!hideLabel" class="text-base">{{ label }}</span>
+        <span v-if="!hideLabel" class="text-sm">{{ label }}</span>
         <span v-if="isRequired" class="text-red-500">*</span>
       </div>
     </template>
 
-    <USelectMenu
+    <USelect
       v-if="fieldType === 'select'"
       v-model="value"
       value-key="value"
       :multiple
-      class="w-full"
+      class="w-fit"
       v-bind="$attrs"
       :items="$attrs.items as Record<string, string>[]"
     />

@@ -859,7 +859,7 @@
 
 ---
 
-- [ ] **T-049** 完整實作 `layouts/admin.vue`（含完整導覽列）
+- [X] **T-049** 完整實作 `layouts/admin.vue`（含完整導覽列）
   - **所屬 Phase**：Phase 3
   - **所屬 Workstream**：WS-E
   - **依賴**：T-010
@@ -878,7 +878,7 @@
 
 ---
 
-- [ ] **T-050** 建立後台共用元件庫
+- [X] **T-050** 建立後台共用元件庫
   - **所屬 Phase**：Phase 3
   - **所屬 Workstream**：WS-E
   - **依賴**：T-049、T-005
@@ -894,7 +894,7 @@
 
 ---
 
-- [ ] **T-051** 建立後台共用 API services（admin 目錄）
+- [X] **T-051** 建立後台共用 API services（admin 目錄）
   - **所屬 Phase**：Phase 3
   - **所屬 Workstream**：WS-E
   - **依賴**：T-004、T-005
@@ -909,7 +909,7 @@
 
 ---
 
-- [ ] **T-052** 建立後台 Dashboard 頁面
+- [X] **T-052** 建立後台 Dashboard 頁面
   - **所屬 Phase**：Phase 3
   - **所屬 Workstream**：WS-E
   - **依賴**：T-050、T-051
@@ -924,7 +924,7 @@
 
 ---
 
-- [ ] **T-053** 建立對話紀錄列表頁（`/admin/conversations`）
+- [X] **T-053** 建立對話紀錄列表頁（`/admin/conversations`）
   - **所屬 Phase**：Phase 3
   - **所屬 Workstream**：WS-E
   - **依賴**：T-050、T-051
@@ -941,7 +941,7 @@
 
 ---
 
-- [ ] **T-054** 建立 `ConversationViewer` 元件與對話詳情頁
+- [X] **T-054** 建立 `ConversationViewer` 元件與對話詳情頁
   - **所屬 Phase**：Phase 3
   - **所屬 Workstream**：WS-E
   - **依賴**：T-053、T-028
@@ -956,7 +956,7 @@
 
 ---
 
-- [ ] **T-055** 建立 Lead 管理列表與詳情頁
+- [x] **T-055** 建立 Lead 管理列表與詳情頁
   - **所屬 Phase**：Phase 3
   - **所屬 Workstream**：WS-E
   - **依賴**：T-050、T-051
@@ -968,7 +968,7 @@
 
 ---
 
-- [ ] **T-056** 建立 Ticket 管理列表與詳情頁
+- [x] **T-056** 建立 Ticket 管理列表與詳情頁
   - **所屬 Phase**：Phase 3
   - **所屬 Workstream**：WS-E
   - **依賴**：T-050、T-051

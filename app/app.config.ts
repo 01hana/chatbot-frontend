@@ -58,6 +58,11 @@ export default defineAppConfig({
         },
       },
     },
+    select: {
+      slots: {
+        content: 'min-w-fit',
+      },
+    },
     inputNumber: {
       slots: {
         increment: '',
@@ -123,6 +128,12 @@ export default defineAppConfig({
             root: 'bg-red-50 border border-red-200',
           },
         },
+      },
+    },
+    table: {
+      slots: {
+        root: 'w-full overflow-hidden rounded-md bg-default ring ring-inset ring-accented',
+        base: 'w-full',
       },
     },
   },

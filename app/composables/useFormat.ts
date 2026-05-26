@@ -7,6 +7,21 @@ export function useFormat() {
     return format(new Date(dateValue), 'yyyy-MM-dd HH:mm:ss');
   }
 
+  /** yyyy/MM/dd HH:mm — suitable for admin tables and detail pages. */
+  function formatDateTime(dateValue: string | Date): string {
+    return format(new Date(dateValue), 'yyyy/MM/dd HH:mm');
+  }
+
+  /** yyyy-MM-dd — date only. */
+  function formatDateOnly(dateValue: string | Date): string {
+    return format(new Date(dateValue), 'yyyy-MM-dd');
+  }
+
+  /** HH:mm — time only, for chat bubbles and compact displays. */
+  function formatTimeShort(dateValue: string | Date): string {
+    return format(new Date(dateValue), 'HH:mm');
+  }
+
   async function formatUrlToFile(url: string) {
     const res = await fetch(url);
     const blob = await res.blob();
@@ -16,7 +31,7 @@ export function useFormat() {
     });
   }
 
-  function toFormData(data: Record<string, any>) {
+  function toFormData(data: Record<string, unknown>) {
     const formData = new FormData();
 
     Object.entries(data).forEach(([key, value]) => {
@@ -28,7 +43,7 @@ export function useFormat() {
       }
 
       if (Array.isArray(value) && value.every(v => v instanceof File)) {
-        value.forEach(file => formData.append(`${key}[]`, file));
+        (value as File[]).forEach(file => formData.append(`${key}[]`, file));
         return;
       }
 
@@ -40,6 +55,9 @@ export function useFormat() {
 
   return {
     formatDate,
+    formatDateTime,
+    formatDateOnly,
+    formatTimeShort,
     formatUrlToFile,
     toFormData,
   };
