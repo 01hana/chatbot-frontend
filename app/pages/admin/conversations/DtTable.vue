@@ -25,7 +25,7 @@ function onRowClick(row: ConversationSummaryVM) {
       <template #default="{ row }">
         <UButton
           label="查看"
-          variant="subtle"
+          size="sm"
           icon="fluent:line-horizontal-4-search-20-regular"
           @click="onRowClick(row)"
         />
@@ -42,12 +42,12 @@ function onRowClick(row: ConversationSummaryVM) {
 
     <vxe-column min-width="150" field="lead" title="Lead" />
 
-    <vxe-column min-width="150" field="status" title="狀態" align="center">
+    <vxe-column min-width="150" field="status" title="狀態" align="center" :filters>
       <template #default="{ row }">
         <AppStatusBadge :status="row.status" />
       </template>
     </vxe-column>
-    ˝
+
     <vxe-column
       min-width="200"
       field="createdAt"

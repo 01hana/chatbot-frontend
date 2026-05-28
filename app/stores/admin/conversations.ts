@@ -41,6 +41,14 @@ export const useAdminConversations = defineStore('admin-conversations', () => {
     return res;
   }
 
+  async function exportCsv(params: DtParams): Promise<{ url: string }> {
+    const query = toConversationListParams(params);
+
+    const { data: res } = await ConversationService.export(query);
+
+    return res;
+  }
+
   // async function create(data: Record<string, any>) {
   //   return await ConversationService.create(data);
   // }
@@ -60,6 +68,7 @@ export const useAdminConversations = defineStore('admin-conversations', () => {
   return {
     getTable,
     get,
+    exportCsv,
     // create,
     // set,
     // remove,

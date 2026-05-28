@@ -33,5 +33,17 @@ export function useAdminNav() {
   const pageTitle = computed(() => currentNav.value?.title ?? '後台管理');
   const pageSubtitle = computed(() => currentNav.value?.subtitle ?? '');
 
-  return { adminNavItems, currentNav, pageTitle, pageSubtitle };
+  // Sidebar collapsed state (desktop only) — shared via useState
+  const isCollapsed = useState('admin-sidebar-collapsed', () => false);
+  function toggleCollapsed() {
+    isCollapsed.value = !isCollapsed.value;
+  }
+
+  // Mobile drawer open state — shared via useState
+  const isMobileOpen = useState('admin-sidebar-mobile-open', () => false);
+  function toggleMobileOpen() {
+    isMobileOpen.value = !isMobileOpen.value;
+  }
+
+  return { adminNavItems, currentNav, pageTitle, pageSubtitle, isCollapsed, toggleCollapsed, isMobileOpen, toggleMobileOpen };
 }

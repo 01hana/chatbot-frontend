@@ -33,6 +33,7 @@ export interface AdminListParams extends DateRangeFilter {
 export interface ConversationSummaryVM {
   sessionId: string;
   createdAt: string;
+  updatedAt: string;
   endTime?: string;
   /** Duration in seconds. */
   durationSeconds?: number;
@@ -44,6 +45,7 @@ export interface ConversationSummaryVM {
 /** Full conversation detail including all messages. */
 export interface ConversationDetailVM extends ConversationSummaryVM {
   messages: import('./chat').ChatMessageVM[];
+  feedbackSummary: FeedbackSummaryDTO;
 }
 
 export interface ConversationListParams extends AdminListParams {

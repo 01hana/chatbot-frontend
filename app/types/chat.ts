@@ -67,7 +67,7 @@ export interface ChatMessageVM {
   role: ChatMessageRole;
   content: string;
   /** ISO-8601 timestamp. */
-  timestamp: string;
+  createdAt: string;
   /** Only present on AI / system messages. */
   metadata?: AiMessageMeta;
   /**

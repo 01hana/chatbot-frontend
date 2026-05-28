@@ -8,7 +8,6 @@
  * - useAdminStatus     — via AppStatusBadge (no local STATUS_LABEL)
  */
 
-// import { getConversationDetail } from '~/services/api/admin/conversations';
 import type { ConversationDetailVM } from '~/types/admin';
 import ConversationViewer from '~/features/admin/components/ConversationViewer.vue';
 import AppStatusBadge from '~/features/admin/components/AppStatusBadge.vue';
@@ -54,7 +53,9 @@ onMounted(async () => {
 // ── Feedback summary ────────────────────────────────────────────────────────
 
 const feedbackSummary = computed(() =>
-  detail.value ? buildFeedbackSummary(detail.value.messages) : { up: 0, down: 0, reasons: [] },
+  detail.value
+    ? buildFeedbackSummary(detail.value.feedbackSummary)
+    : { up: 0, down: 0, reasons: [] },
 );
 </script>
 
@@ -92,7 +93,7 @@ const feedbackSummary = computed(() =>
         <template #header>
           <p class="text-sm font-medium text-gray-700">Session 資訊</p>
         </template>
-        <dl class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 text-sm">
+        <dl class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-4 text-sm">
           <div>
             <dt class="text-gray-500 text-xs">Session ID</dt>
             <dd class="font-mono text-gray-800 mt-0.5" :title="detail.sessionId">
@@ -100,13 +101,18 @@ const feedbackSummary = computed(() =>
             </dd>
           </div>
           <div>
+            <dt class="text-gray-500 text-xs">對話輪數</dt>
+            <dd class="text-gray-800 mt-0.5">{{ detail.messageCount }}</dd>
+          </div>
+          <div>
             <dt class="text-gray-500 text-xs">開始時間</dt>
             <dd class="text-gray-800 mt-0.5">{{ formatDateTime(detail.createdAt) }}</dd>
           </div>
           <div>
-            <dt class="text-gray-500 text-xs">對話輪數</dt>
-            <dd class="text-gray-800 mt-0.5">{{ detail.messageCount }}</dd>
+            <dt class="text-gray-500 text-xs">最後更新時間</dt>
+            <dd class="text-gray-800 mt-0.5">{{ formatDateTime(detail.updatedAt) }}</dd>
           </div>
+
           <div>
             <dt class="text-gray-500 text-xs">狀態</dt>
             <dd class="mt-0.5">
@@ -139,7 +145,7 @@ const feedbackSummary = computed(() =>
       </UCard>
 
       <!-- Feedback summary -->
-      <UCard v-if="detail.messages.some(m => m.rating)">
+      <UCard class="py-4">
         <template #header>
           <p class="text-sm font-medium text-gray-700">回饋摘要</p>
         </template>

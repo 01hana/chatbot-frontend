@@ -1,45 +1,57 @@
 /**
  * app/features/admin/composables/useFeedbackSummary.ts
  *
- * Computes a feedback summary (thumbs-up count, thumbs-down count,
- * and down-reason distribution) from a list of chat messages.
+ * Normalizes backend feedback summary into frontend view model.
  */
 
-import type { ChatMessageVM } from '~/types/chat'
-
 export interface FeedbackReason {
-  label: string
-  count: number
+  label: string;
+  count: number;
 }
 
+/**
+ * Backend response shape.
+ */
+export interface FeedbackSummaryDTO {
+  totalCount: number;
+  upCount: number;
+  downCount: number;
+  reasons: FeedbackReason[];
+}
+
+/**
+ * Frontend view model.
+ * Keep `up` / `down` for easier template usage.
+ */
 export interface FeedbackSummary {
-  up: number
-  down: number
-  reasons: FeedbackReason[]
+  total: number;
+  up: number;
+  down: number;
+  reasons: FeedbackReason[];
 }
 
-/** Messages may carry an optional `downReason` field not in the base type. */
-type MessageWithDownReason = ChatMessageVM & { downReason?: string }
+function createEmptyFeedbackSummary(): FeedbackSummary {
+  return {
+    total: 0,
+    up: 0,
+    down: 0,
+    reasons: [],
+  };
+}
 
 export function useFeedbackSummary() {
-  function buildFeedbackSummary(messages: ChatMessageVM[]): FeedbackSummary {
-    let up = 0
-    let down = 0
-    const reasonMap: Record<string, number> = {}
-
-    for (const msg of messages as MessageWithDownReason[]) {
-      if (msg.rating === 'up') {
-        up++
-      } else if (msg.rating === 'down') {
-        down++
-        const reason = msg.downReason ?? '未指定'
-        reasonMap[reason] = (reasonMap[reason] ?? 0) + 1
-      }
+  function buildFeedbackSummary(summary?: FeedbackSummaryDTO | null): FeedbackSummary {
+    if (!summary) {
+      return createEmptyFeedbackSummary();
     }
 
-    const reasons = Object.entries(reasonMap).map(([label, count]) => ({ label, count }))
-    return { up, down, reasons }
+    return {
+      total: summary.totalCount ?? 0,
+      up: summary.upCount ?? 0,
+      down: summary.downCount ?? 0,
+      reasons: summary.reasons ?? [],
+    };
   }
 
-  return { buildFeedbackSummary }
+  return { buildFeedbackSummary };
 }

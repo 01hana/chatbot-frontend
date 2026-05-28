@@ -13,7 +13,7 @@
 import { renderMarkdown } from '~/utils/markdown'
 import type { ChatMessageVM, ChatMessageType, ChatMessageRole } from '~/types/chat'
 
-const { formatTimeShort } = useFormat()
+const {  formatDateTime } = useFormat()
 
 const props = defineProps<{
   messages: ChatMessageVM[]
@@ -79,7 +79,7 @@ function auditEventKey(type: ChatMessageType): string | null {
         <div class="bg-primary-500 text-white rounded-2xl rounded-tr-sm px-4 py-2 text-sm">
           {{ msg.content }}
         </div>
-        <!-- <span class="text-xs text-gray-400 px-1">{{ formatTimeShort(msg.timestamp) }}</span> -->
+        <span class="text-xs text-gray-400 px-1">{{ formatDateTime(msg.createdAt) }}</span>
       </div>
 
       <!-- AI bubble -->
@@ -135,9 +135,9 @@ function auditEventKey(type: ChatMessageType): string | null {
             class="w-3 h-3"
             :class="msg.rating === 'up' ? 'text-green-500' : 'text-red-400'"
           />
-          <!-- <span class="text-xs text-gray-400">{{ formatTimeShort(msg.timestamp) }}</span> -->
+          <span class="text-xs text-gray-400">{{ formatDateTime(msg.createdAt) }}</span>
         </div>
-        <!-- <span v-else class="text-xs text-gray-400 px-1">{{ formatTimeShort(msg.timestamp) }}</span> -->
+        <span v-else class="text-xs text-gray-400 px-1">{{ formatDateTime(msg.createdAt) }}</span>
       </div>
     </div>
   </div>
