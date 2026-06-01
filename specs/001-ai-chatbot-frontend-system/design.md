@@ -5,6 +5,20 @@
 **Status**: Draft  
 **Based on**: spec.md（最新）
 
+---
+
+## 修訂記錄
+
+| 日期 | 版本 | 修訂內容 | 修訂原因 |
+|------|------|----------|----------|
+| 2026-03-30 | v0.1 | 建立前端系統設計初版，定義前台 Chat Widget、後台 Admin、API contract、SSE 串流、Widget Config、Feedback、Ticket、Dashboard 等主要設計方向。 | 將 spec.md 的產品需求轉換為可落地的前端技術設計文件。 |
+| 2026-05-29 | v0.2 | 補充後台資料管理頁面標準組件架構，正式定義 `vxe-table`、`DtUtils`、`TableData`、`DtTable`、`TableFilterBar`、`FilterBar`、domain Pinia store 與 API service 的責任分工。 | 原 Copilot 產出的 `UTable` / `useAdminTablePage` 架構不符合專案既有 table 公版，需改為統一使用 vxe-table 公版。 |
+| 2026-05-29 | v0.3 | 修正 `PageHeader.vue` 與 `DtHeader.vue` 的責任邊界：`PageHeader.vue` 負責 page-level header、非新增 / 非批次 CTA 與搜尋 toggle；新增、批次選取、批次操作等 table-level actions 改由 optional `DtHeader.vue` 負責。 | 避免後續實作時將新增 / 批次操作誤放到頁首區，維持 page-level header 與 table-level toolbar 的分層清楚。 |
+| 2026-05-29 | v0.4 | 補充 `UTable` 使用限制：`UTable` 僅適用於非資料管理、低互動、靜態展示型表格；後台高互動資料管理表格統一使用 `vxe-table` 公版。 | 避免 Copilot 後續再次產生 `UTable` / `@tanstack/vue-table` 作為後台資料管理 table 的標準實作。 |
+| 2026-05-29 | v0.5 | 補充第 6 章「產品能力描述與實作位置」說明，明確將匯出、搜尋 toggle、新增、批次操作、欄位篩選、row actions 分別歸屬到 `PageHeader.vue`、`TableFilterBar.vue`、`DtHeader.vue`、`vxe-column :filters`、`DtTable.vue`。 | 避免產品需求描述與實際元件分工混淆，確保後續 `plan.md` / `task.md` 可依照同一套架構拆解。 |
+
+---
+
 > **【拍板決策摘要】**
 >
 > 1. **SSE 為官方串流方案**：前台聊天主流程採 **`fetch + ReadableStream`** 接收 `text/event-stream`，不使用 `EventSource`，不考慮 WebSocket；`services/streaming.ts` 與 `useStreaming` 均以此實作
@@ -42,7 +56,7 @@
 
 ### 技術棧使用原則
 
-**Nuxt UI 優先**：所有通用 UI 需求優先查找 Nuxt UI 的對應元件（`UButton`、`UInput`、`UModal`、`UTable`、`UBadge` 等），確認無法滿足再考慮自訂。不重複實作已有的通用元件。
+**Nuxt UI 優先**：一般 UI 需求優先查找 Nuxt UI 的對應元件（`UButton`、`UInput`、`UModal`、`UBadge`、`UCard` 等）。`UTable` 僅適用於非資料管理、低互動、靜態展示型表格；後台高互動資料管理表格統一使用 vxe-table 公版（`DtUtils` + `TableData` + `DtTable`）。
 
 **Tailwind CSS 負責 layout 與局部樣式**：Tailwind utility class 用於 spacing、layout（flex / grid）、breakpoints、sticky / fixed 定位、狀態色（hover / disabled / focus）、局部視覺調整。避免在元件中散落大量自訂 scoped CSS。
 
@@ -540,6 +554,14 @@ Header 或訊息區提供「重新開始對話」入口（TBD：位置為 header
 
 後台為單一管理者使用的操作介面。本期**不設置登入驗證**，所有後台頁面均可直接存取，適合開發展示與快速迭代。後續若需加入登入保護，可獨立擴充，不影響前台設計。
 
+> **資料管理頁面實作位置說明**：本章描述各後台功能頁的產品能力；實際元件分工以 §7C「後台資料管理頁面標準組件架構」為準。
+>
+> - 頁面標題、頁面描述、匯出 CSV、重新整理、返回上一頁、搜尋 / 篩選 toggle 等 page-level 操作放在 `PageHeader.vue`
+> - 新增資料、批次選取、批次刪除、批次狀態更新、批次啟用 / 停用、inline edit mode toggle 等 table-level 操作放在 optional `DtHeader.vue`
+> - keyword、dateRange、sessionId、intentLabel 等自由輸入或區間搜尋條件放在 `TableFilterBar.vue`
+> - status、language、type、hasFeedback、hasConfidential、hasPromptInjection 等 enum / boolean / 固定選項欄位篩選優先使用 `vxe-column :filters`
+> - table 欄位、formatter、row actions 由 `DtTable.vue` 定義
+
 ### 6.1 Dashboard
 
 路由：`/admin/dashboard`（`/admin` 預設導向此頁）
@@ -766,8 +788,9 @@ Header 或訊息區提供「重新開始對話」入口（TBD：位置為 header
 
 | 元件名稱 | 說明 |
 |---------|------|
-| `AdminDataTable` | 通用資料表格（含排序、分頁） |
-| `AdminFilterBar` | 通用篩選列（含搜尋、下拉、日期） |
+| `TableData` / `DtUtils` | 後台高互動資料管理頁面標準 table 殼層 + table controller；`DtUtils` 管理 loading / data / pager / sort / vxe-column filters / advancedSearch；由 `TableData` 作為 vxe-table DOM 殼層；見 §7C |
+| `FilterBar` | 純 UI 篩選列元件（`app/features/admin/components/`）；接收 `FilterDef[]` + `modelValue`；emit `update:filters`；不知道 DtUtils 或 store |
+| `TableFilterBar` | 後台資料管理頁面搜尋橋接層（`app/components/`）；inject `DtUtils`；呼叫 `advancedSearchSubmit`；管理搜尋區塊展開 / 收合 |
 | `AdminStatCard` | Dashboard 統計卡片 |
 | `AdminLineChart` | 折線圖（基於 Nuxt Charts，用於趨勢報表） |
 | `AdminPieChart` | 圓餅圖（基於 Nuxt Charts，用於意圖分布） |
@@ -823,7 +846,7 @@ Header 或訊息區提供「重新開始對話」入口（TBD：位置為 header
 
 ## 7A. Nuxt UI 元件映射策略
 
-本節定義各 UI 區域優先使用哪些 Nuxt UI 元件，確保開發時有一致的元件選型依據，避免重複造輪子。
+本節定義各 UI 區域優先使用哪些 Nuxt UI 元件，確保開發時有一致的元件選型依據，避免重複造輪子。Nuxt UI 優先用於一般 UI 元件，例如 `UButton`、`UInput`、`UModal`、`UBadge`、`UCard`。`UTable` 僅適用於非資料管理、低互動、靜態展示型表格；**後台高互動資料管理表格統一使用 vxe-table 公版（透過 `DtUtils` + `TableData`）**，不使用 `UTable`。
 
 ### 7A.1 優先使用 Nuxt UI 原生元件的場景
 
@@ -837,7 +860,8 @@ Header 或訊息區提供「重新開始對話」入口（TBD：位置為 header
 | 卡片容器（LeadFormCard、HandoffStatusCard、統計卡片） | `UCard` |
 | 對話框 / 確認框 | `UModal` |
 | 側邊抽屜（知識庫版本歷史、意圖編輯） | `USlideover` |
-| 後台列表表格 | `UTable` |
+| 後台一般說明型表格（非資料管理） | `UTable` |
+| 後台高互動資料管理表格（含分頁 / 排序 / 篩選 / 進階搜尋） | **vxe-table**（透過 `DtUtils` + `TableData`）；`UTable` 不用於此場景 |
 | 分頁元件 | `UPagination` |
 | 狀態標籤（草稿 / 已發佈 / 高嚴重度） | `UBadge` |
 | AI badge、攔截標記 | `UBadge`（搭配 color + variant） |
@@ -858,8 +882,9 @@ Header 或訊息區提供「重新開始對話」入口（TBD：位置為 header
 | Domain 元件 | 說明 | 底層使用 |
 |------------|------|---------|
 | `AdminStatCard` | Dashboard 統計卡片（含標題、數字、趨勢箭頭） | `UCard` 包裝 |
-| `AdminFilterBar` | 後台篩選列（含搜尋、下拉、日期區間） | `UInput` + `USelect` + `UDatePicker` 組合 |
-| `AdminDataTable` | 後台通用資料表格（含排序、分頁、空狀態） | `UTable` + `UPagination` 包裝 |
+| `FilterBar` | 後台篩選列純 UI 元件（`app/features/admin/components/`）；接收 `FilterDef[]`；不知道 DtUtils | `UInput` + `USelect` + `UDatePicker` 組合 |
+| `TableFilterBar` | 後台資料管理搜尋橋接層；inject `DtUtils`；管理搜尋展開 / 收合 | `FilterBar` + `DtUtils.advancedSearchSubmit` |
+| `TableData` | vxe-table 公版殼層；資料管理表格的 DOM 容器；由 `DtUtils` 控制 | vxe-table |
 | `AppStatusBadge` | 業務狀態標籤（依狀態對應色彩語意） | `UBadge` 包裝，統一狀態色對應邏輯 |
 | `AppEmptyState` | 空狀態插圖 + 說明（列表無資料時） | 自訂，不使用通用元件 |
 | `AppErrorState` | 錯誤狀態 + 重試按鈕 | `UAlert` + `UButton` 組合 |
@@ -924,6 +949,177 @@ Tailwind 延伸色（如訊息氣泡的特定背景色）統一定義在 `tailwi
 
 ---
 
+## 7C. 後台資料管理頁面標準組件架構
+
+> 以 `/admin/conversations` 為 reference implementation，確立所有含 table / 智慧列表需求的 admin domain page 標準架構。`UTable` 與 `useAdminTablePage` 不作為後台資料管理列表的標準方案；高互動資料管理表格一律採用 **vxe-table（透過 `DtUtils` + `TableData`）**。
+
+### 7C.1 頁面標準結構
+
+```
+pages/admin/{domain}/
+├── index.vue          ← provide DtUtils + domain context；不直接管理 table state
+├── PageHeader.vue     ← page-level header；title / description / non-create CTA / filter toggle
+├── DtHeader.vue?      ← optional table toolbar；create / batch / row-selection actions
+├── DtTable.vue        ← vxe-column 欄位定義、filters、row actions
+└── [id].vue           ← 詳情頁（依 domain 需求建立）
+```
+
+**組件組成示意：**
+
+```
+index.vue
+  provide(DtUtils.key, new DtUtils(useAdminConversations()))
+  provide(useModalKey, useModal())    ← 視需求
+  └─ <PageHeader />
+  └─ <UCard>
+       └─ <DtTable />
+     </UCard>
+
+PageHeader.vue
+  └─ <AppPageHeader title="...">
+       <template #actions>
+         [page-level CTA：export CSV / refresh / back]
+         [FilterToggle — 由 TableFilterBar #header slot 注入]
+       </template>
+     </AppPageHeader>
+  └─ <TableFilterBar :filters="filterDefs">
+       <template #header>...</template>
+     </TableFilterBar>
+
+DtTable.vue
+  inject(DtUtils.key)
+  └─ <TableData>
+       <vxe-column field="..." />
+       <vxe-column field="status" :filters="statusFilters" />
+       <vxe-column title="操作">...row actions...</vxe-column>
+     </TableData>
+```
+
+### 7C.2 各組件責任
+
+#### index.vue
+
+**允許**：
+- `provide(DtUtils.key, new DtUtils(domainStore))`
+- `provide(useModalKey, useModal())`
+- 引入 `<PageHeader />`、`<UCard>`、`<DtTable />`
+
+**不應在 index.vue 內直接管理**：`rows`、`total`、`loading`、`page`、`sortBy`、`sortOrder`、`filters`、`fetchData`、`buildCurrentParams`。這些由 `DtUtils`、`TableFilterBar`、domain store、API service adapter 負責。
+
+#### PageHeader.vue
+
+**主要負責**：
+- 頁面標題
+- 頁面描述
+- 非新增 / 非批次操作的 CTA（page-level 操作）
+- 搜尋 / 篩選區塊 toggle button
+- 使用 `TableFilterBar` 的 `#header` scoped slot 將 `FilterToggle` 放到 `AppPageHeader #actions` 右側
+
+**適合放**：匯出 CSV、重新整理、返回上一頁、搜尋 toggle
+
+**不應放**：新增資料、批次選取、批次刪除、批次狀態更新、批次啟用 / 停用、inline edit mode toggle、其他依賴 table row selection 的操作
+
+**可以使用**：
+- 透過 `inject(DtUtils.key).params` 取得當前查詢條件（用於 export）
+- `useAdminDownload()`、`useAppToast()`
+
+**不應**：管理 table data fetching、row mapping、pagination、vxe-column filter、API params adapter。
+
+#### TableFilterBar.vue（通用，位於 `app/components/`）
+
+**可以**：
+- `inject(DtUtils.key)` 取得 `params` 與 `advancedSearchSubmit`
+- 讀取 `params.value.searches` 建立 `filterValues`
+- 呼叫 `advancedSearchSubmit(payload)` 更新搜尋條件
+- 管理搜尋區塊展開 / 收合狀態
+- **標準用法**：透過 `#header` scoped slot 將 `FilterToggle` 按鈕提供給 `PageHeader.vue` 使用；不要求每個 domain page 透過 `ref` / `defineExpose` 手動控制 toggle（`defineExpose` 可作為特殊需求的補充能力，不作為標準使用方式）
+- 處理 `keyword`、`dateRange`、特定 ID 等上方搜尋條件
+
+**條件分工**：固定 enum / boolean 欄位 → `vxe-column :filters`；keyword / dateRange / ID → `TableFilterBar`。
+
+**不應**：直接呼叫 domain API、管理 vxe-column filter、處理 domain store 以外的資料轉換。
+
+#### FilterBar.vue（純 UI，位於 `app/features/admin/components/`）
+
+純 UI 元件，**不知道 DtUtils、store、domain**：接收 `FilterDef[]` + `modelValue`，顯示 keyword / date-range / select 等輸入元件，emit `update:filters`。
+
+#### DtTable.vue（per-domain，位於 `app/pages/admin/{domain}/`）
+
+**負責**：
+- `inject(DtUtils.key)` 取得 table controller
+- 呼叫 `domainStore.getTable(params.value)` 初始化列表
+- 定義 vxe-column（含欄位 formatter、`:filters`、row actions）
+- 使用 `TableData` 作為 vxe-table 公版容器
+- 可設定預設排序（`:sort="['updatedAt', 'desc']"`）、actions 設定（`:actions="{ edit: false }"`）
+
+**不應**：管理 PageHeader actions、管理上方搜尋區塊、處理 API envelope 拆解。
+
+#### DtHeader.vue（per-domain，**optional**）
+
+`DtHeader.vue` 是資料表層級的操作列，僅在該 domain 資料管理頁需要新增、批次選取或批次操作時建立。若該頁沒有新增或批次操作需求，可以不建立 `DtHeader.vue`。
+
+**適合放**：
+
+- 新增資料
+- 批次選取
+- 批次刪除
+- 批次狀態更新
+- 批次啟用 / 停用
+- inline edit mode toggle
+- 其他 table-level actions（依賴 row selection 的操作）
+
+**不應放**：
+
+- 頁面標題
+- 頁面描述
+- 搜尋 / 篩選 toggle
+- 匯出 CSV
+- 重新整理
+- 返回上一頁
+- 不依賴 row selection 的 page-level CTA
+
+`DtHeader.vue` 的定位是 table-level toolbar；`PageHeader.vue` 的定位是 page-level header。
+
+#### TableData（通用 vxe-table 殼層）
+
+後台高互動資料管理頁面唯一的 table DOM 殼層（`app/libs/vxe-table/`）。`DtUtils` 負責注入 table ref、loading、data、pager、sort、filter 等完整控制。
+
+#### DtUtils（table controller）
+
+管理：`tableRef`、`loading`、`data`、`pager`、`sort`、`vxe-column filters`、`advancedSearch`、`pageChange`、`sortChange`、`filterChange`、`selection`。呼叫 `domainStore.getTable(params.value)` 並期待回傳 `{ data: T[], p: number, total: number }`。
+
+#### [id].vue（detail page）
+
+- 使用 domain store 的 `get(id)` action，管理 local state：`loading`、`error`、`detail`
+- 使用共用狀態元件：`AppErrorState`、`AppEmptyState`、loading skeleton
+- 使用 domain-specific viewer（如 `ConversationViewer`）
+- 使用 status / feedback / format helpers：`AppStatusBadge`、`useFormat()`、`useFeedbackSummary()`
+
+### 7C.3 Domain Store 作為 Domain Action Layer
+
+資料管理 table page 的 domain Pinia store **不只是一般 UI state store，而是 table controller（`DtUtils`）與 API service 之間的 domain action layer**。
+
+每個資料管理 domain store 必須提供：
+
+```ts
+getTable(params: DtParams): Promise<DtTableResult<T>>
+```
+
+依需求提供：`get(id)`、`exportCsv(params)`、`create(data)`、`set(id, data)`、`remove(data)`。
+
+**不應**：直接處理瀏覽器下載 DOM（由 `useAdminDownload()` 負責）、直接管理 table UI 元件或 vxe-column render。
+
+> 此與「一般 page-local 狀態不進 store」原則**並不衝突**：資料管理 domain store 的本質是 domain action layer，而非儲存 UI 狀態。
+
+### 7C.4 API Service 責任（`services/api/admin/{domain}.ts`）
+
+- 使用後端 API DTO 型別（`ConversationListParams`、`LeadListParams`、`TicketListParams` 等）
+- 呼叫 `/api/v1/admin/...`
+- 處理 API envelope（`{ code, data }`），對 store 回傳乾淨的 domain result
+- **不直接接收 `DtParams`**：DtParams → domain adapter → API params 的轉換在 domain store 內完成
+
+---
+
 ## 8. 狀態管理設計
 
 ### 8.1 設計原則
@@ -950,7 +1146,11 @@ Tailwind 延伸色（如訊息氣泡的特定背景色）統一定義在 `tailwi
 
 ### 8.3 後台 Store
 
-本期後台不設置登入驗證，**不需要 `useAdminAuthStore`**，無 auth token 管理邏輯。後台各頁面的 page-local 狀態（篩選條件、表單資料）直接在頁面元件的 `setup()` 中管理，無需進 store。
+本期後台不設置登入驗證，**不需要 `useAdminAuthStore`**，無 auth token 管理邏輯。
+
+後台**一般頁面**（表單頁、設定頁、Dashboard）的 page-local 狀態（篩選條件、表單資料）直接在頁面元件的 `setup()` 中管理，無需進 store。
+
+**資料管理頁面例外**（凡含 table / 智慧列表的 admin domain page）：採用 **domain Pinia store 作為 table controller（`DtUtils`）與 API service 之間的 domain action layer**。每個資料管理 domain store 必須提供 `getTable(params: DtParams): Promise<DtTableResult<T>>`，以及依需求提供的 `get(id)`、`exportCsv(params)` 等 domain action。此 domain store 的本質是 domain action layer，**而非儲存 UI 狀態**，與「一般 page-local 狀態不進 store」原則並不衝突。詳見 §7C。
 
 ### 8.4 共用 Store
 
@@ -962,11 +1162,11 @@ Tailwind 延伸色（如訊息氣泡的特定背景色）統一定義在 `tailwi
 ### 8.5 Page-Local 狀態（不進 Store）
 
 以下狀態在各頁面元件的 `setup()` 中以 `ref` / `reactive` 管理：
-- 後台列表頁的篩選條件
 - 後台表單頁的表單資料
 - Dashboard 圖表的時間範圍選擇
 - Modal 的開關狀態
-- 分頁頁碼
+
+> **注意**：後台**資料管理列表頁**（含 vxe-table 的 admin domain page）不在 page 內直接管理 table rows / loading / pagination / sort / filters，改由 `DtUtils` + domain Pinia store 負責。詳見 §7C。
 
 ### 8.6 localStorage / sessionStorage / Memory 使用策略
 
@@ -1073,11 +1273,15 @@ POST /api/v1/chat/sessions/:sessionToken/handoff
 
 ### 9.7 後台列表查詢模式
 
-後台所有列表頁採用統一查詢模式：
-- 篩選條件作為 URL query string（`?status=open&page=2`），支援分頁書籤
-- 篩選變更時重新呼叫 API，不做前端 filter
-- 分頁使用 offset-based pagination（`page` + `pageSize`，預設 20）
-- 排序由表格欄位 header 點擊觸發（`sortBy` + `sortOrder` 參數）
+後台**資料管理列表頁**（含 vxe-table 的 admin domain page）採用 `DtUtils` 作為 table controller，統一查詢模式如下：
+
+- **Table controller**：`DtUtils` 管理 pager / sort / vxe-column filters / advancedSearch，呼叫 `domainStore.getTable(params.value)`
+- **上方搜尋條件**（keyword / dateRange / 特定 ID）：由 `TableFilterBar` 透過 `advancedSearchSubmit(payload)` 更新至 `DtUtils.params.searches`
+- **欄位篩選**（固定 enum / boolean 欄位）：交給 `vxe-column :filters`，由 vxe-table 原生處理
+- **分頁**：offset-based pagination（`p` + `pageSize`，預設 20），由 `DtUtils` 管理
+- **排序**：`vxe-column` header 點擊觸發，由 `DtUtils.sortChange` 處理
+- **Domain Store Adapter**：domain store 負責將 `DtParams` 轉換為 domain-specific API params（如 `ConversationListParams`、`LeadListParams`），不在 page 或 DtUtils 內做此轉換
+- **API Service**：不直接接收 `DtParams`；接收 domain-specific params，呼叫 `/api/v1/admin/...`，回傳乾淨的 domain result
 
 ### 9.8 知識庫匯入流程
 

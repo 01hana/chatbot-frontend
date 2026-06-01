@@ -21,6 +21,9 @@
 > 8. **Lead Form 欄位**：`name` 必填、`email` 必填、`company` 選填、`phone` 選填、`message` 選填；`language` 由前端自動帶入當前語系（`zh-TW` / `en`），不需訪客填寫；欄位名稱為 `message`（非 `備註` / `notes` / `inquiry`）
 > 9. **不做 Email 通知**：本期不實作任何 Email 通知功能（Ticket 指派通知、Lead 提醒等均延後）
 > 10. **API 路徑統一 `/api/v1/...`**：`/api/v1/chat/sessions/:sessionToken/...`、`/api/v1/widget/config`、`/api/v1/admin/...`
+> 11. **後台資料管理 table 架構**：後台高互動資料管理 table 統一使用 `vxe-table + vxe-pc-ui`，透過 `DtUtils + TableData + DtTable` 實作；不使用 `UTable` / `AdminDataTable` / `AdminFilterBar` / `useAdminTablePage` 作為後台資料管理標準。
+> 12. **Conversations export 同步匯出**：對話紀錄匯出本期採同步匯出，`POST /api/v1/admin/conversations/export` 直接回傳 `{ url }`；前端使用 `domainStore.exportCsv(dt.params.value)` 呼叫，並透過 `useAdminDownload().downloadUrl(url, filename)` 觸發下載。本期不做 export job、jobId、export status API、前端輪詢下載連結或背景非同步產生檔案。
+> 13. **Widget 元件拆分**：`ChatWidget` 內嵌 Launcher FAB，不拆 `ChatLauncher`；`ChatPanel` 內部直接實作 Header / Info Bar / Disclaimer，不拆 `ChatHeader`、`ChatInfoBar`、`ChatDisclaimer`；`AiMessageItem` 內嵌 feedback，不建立獨立 `MessageFeedback`；保留 `ChatQuickReplies` 作為全域快捷提問按鈕列。
 
 ---
 
@@ -252,6 +255,85 @@
     - 確認 TypeScript 型別推導正確（無 `any` 型別警告）
     - 驗證通過後，驗證頁可保留作為開發參考，或刪除（依專案習慣決定）
   - **完成條件**：折線圖與圓餅圖均可在瀏覽器中正常渲染；無 console 錯誤；TypeScript 編譯通過；`nuxt-charts` 已正確列入 `nuxt.config.ts` modules
+
+---
+
+- [x] **T-015A** 確認 vxe-table / vxe-pc-ui 已完成安裝與初始化
+  - **所屬 Phase**：Phase 0
+  - **所屬 Workstream**：WS-A
+  - **依賴**：T-002
+  - **實作內容**：
+    - > **[既有公版 / 已完成]** 此任務對應的程式碼為既有 vxe-table 公版或後續重構時已完成，本任務保留作為新版後台資料管理 table 架構的追蹤與驗收紀錄。
+    - 確認 `vxe-table` 與 `vxe-pc-ui` 已安裝
+    - 確認 `app/plugins/vxe-table.client.ts` 已存在，並已完成全局註冊 vxe-table / vxe-pc-ui、必要 formatters 與共用設定
+    - 確認 Nuxt client 端可正常渲染（無 SSR / hydration error）
+  - **完成條件**：`vxe-table` 可在 Nuxt client 端正常渲染；無 SSR / hydration error；TypeScript 無錯誤
+
+---
+
+- [x] **T-015B** 確認 `libs/vxe-table` 共用型別與 controller（`DtUtils`）已存在
+  - **所屬 Phase**：Phase 0
+  - **所屬 Workstream**：WS-A
+  - **依賴**：T-015A
+  - **實作內容**：
+    - > **[既有公版 / 已完成]** 此任務對應的程式碼為既有 vxe-table 公版或後續重構時已完成，本任務保留作為新版後台資料管理 table 架構的追蹤與驗收紀錄。
+    - 確認 `app/libs/vxe-table/base.ts` 已存在
+    - 確認 `app/libs/vxe-table/index.ts` 已存在並匯出 `DtUtils`
+    - 確認 `app/libs/vxe-table/config.ts` 已存在
+    - 確認 `app/libs/vxe-table/types.ts` 已存在並定義共用型別：
+      - `DtSort = [field: string, order: 'asc' | 'desc'] | null`
+      - `DtParams { p?, length?, sort: DtSort, searches: Record<string,any>, filters: Record<string,any> }`
+      - `DtTableResult<T> { data: T[], p: number, total: number }`
+    - 確認 `DtUtils` 已完成 loading / data / pager / sort / filters / advancedSearchSubmit / selection 管理，並呼叫 `domainStore.getTable(params.value)`
+  - **完成條件**：`DtUtils` 可被 domain page provide / inject；`DtParams` / `DtTableResult` 可被 domain store import；TypeScript 無錯誤
+
+---
+
+- [x] **T-015C** 確認 `libs/vxe-table/adapters.ts` 已存在並可供 domain store 使用
+  - **所屬 Phase**：Phase 0
+  - **所屬 Workstream**：WS-A
+  - **依賴**：T-015B
+  - **實作內容**：
+    - > **[既有公版 / 已完成]** 此任務對應的程式碼為既有 vxe-table 公版或後續重構時已完成，本任務保留作為新版後台資料管理 table 架構的追蹤與驗收紀錄。
+    - 確認 `app/libs/vxe-table/adapters.ts` 已存在，並已提供共用 adapter helper：
+      - `toAdminListParams()`：將 `DtParams` 轉成通用 admin list params（page、pageSize、sort、searches、filters）
+      - `firstValue(val)`：取 array 中第一個值
+      - `boolValue(val)`：將篩選值轉成 boolean
+      - `cleanParams(params)`：清除 undefined / null / 空字串的 key
+  - **完成條件**：domain store 可 import helper 將 `DtParams` 轉成 API params；API service 不直接接收 `DtParams`；TypeScript 無錯誤
+
+---
+
+- [x] **T-015D** 確認 `TableData.vue` 已存在並可作為 vxe-table 公版 DOM shell
+  - **所屬 Phase**：Phase 0
+  - **所屬 Workstream**：WS-A
+  - **依賴**：T-015B
+  - **實作內容**：
+    - > **[既有公版 / 已完成]** 此任務對應的程式碼為既有 vxe-table 公版或後續重構時已完成，本任務保留作為新版後台資料管理 table 架構的追蹤與驗收紀錄。
+    - 確認 `app/components/TableData.vue` 已存在，並已作為 vxe-table 公版 DOM shell
+    - 確認已接收排序、actions、loading、data、pager 等必要 props / inject
+    - 確認已搭配 `DtUtils` 觸發 pageChange / sortChange / filterChange
+    - 確認已提供 `<slot>` 供 domain `DtTable.vue` 注入 `vxe-column`
+  - **完成條件**：可搭配 mock store 顯示 rows；pagination / sort / filter 可觸發 `store.getTable(dt.params.value)`
+
+---
+
+- [x] **T-015E** 確認 `TableFilterBar.vue` 與 `FilterBar.vue` 已存在並符合新版責任分工
+  - **所屬 Phase**：Phase 0
+  - **所屬 Workstream**：WS-A
+  - **依賴**：T-015B
+  - **實作內容**：
+    - > **[既有公版 / 已完成]** 此任務對應的程式碼為既有 vxe-table 公版或後續重構時已完成，本任務保留作為新版後台資料管理 table 架構的追蹤與驗收紀錄。
+    - 確認 `app/components/TableFilterBar.vue` 已存在，並已完成：
+      - inject `DtUtils`
+      - 管理搜尋區塊開合
+      - 透過 `#header` scoped slot 提供 `FilterToggle`
+      - 呼叫 `dt.advancedSearchSubmit(payload)`
+    - 確認 `app/features/admin/components/FilterBar.vue` 已存在，並符合：
+      - 純 UI filter form
+      - 不知道 `DtUtils`、store、API params
+      - emit `update:filters`
+  - **完成條件**：`TableFilterBar` 可透過 `FilterToggle` 控制開合；可將 keyword / dateRange 等搜尋條件送入 `DtUtils.advancedSearchSubmit()`；TypeScript 無錯誤
 
 ---
 
@@ -884,13 +966,42 @@
   - **依賴**：T-049、T-005
   - **實作內容**：
     - `AdminStatCard.vue`（`app/features/admin/components/`）：`UCard` 封裝，顯示數字、標題、可選連結
-    - `AdminDataTable.vue`：`UTable` + `UPagination` 封裝，接收 `columns`、`rows`、`total`、`page` props，emit `update:page`、`update:sort`
-    - `AdminFilterBar.vue`：篩選條件列，接收 filter 定義（欄位 label、type：select / date-range / keyword），emit `update:filters`
+    - `AdminLineChart.vue`（`app/features/admin/components/`）：Nuxt Charts 折線圖封裝
+    - `AdminPieChart.vue`（`app/features/admin/components/`）：Nuxt Charts 圓餅 / Donut 圖封裝
     - `AppStatusBadge.vue`：`UBadge` 封裝，依 `status` prop 對應語意色（active → green、inactive → gray、pending → yellow、error → red 等）
     - `AppEmptyState.vue`：空狀態插圖 + 說明文字 + 可選 CTA 按鈕
     - `AppErrorState.vue`：錯誤狀態 icon + 說明 + 重試按鈕
     - `AppModal.vue`：`UModal` 封裝，二次確認用途，接收 `title`、`description`、`confirmLabel`，emit `confirm`、`cancel`
-  - **完成條件**：七個元件可正常 import 使用；`AdminDataTable` 可顯示 mock 資料並分頁；`AppModal` 點擊確認 / 取消正確 emit
+    - > **⚠️ 後台資料管理 table 不使用 `AdminDataTable` / `AdminFilterBar` / `UTable`**：table 公版由 Phase 0 的 `TableData` / `DtUtils` / `TableFilterBar` / `FilterBar` 提供（T-015A ～ T-015E）。若過去已建立 `AdminDataTable.vue` / `AdminFilterBar.vue`，請參見 **T-050R** 進行重構。
+  - **完成條件**：上述七個共用元件可正常 import 使用；`AppModal` 點擊確認 / 取消正確 emit；`AppStatusBadge` 依 status 顯示正確語意色；`AdminDataTable.vue` / `AdminFilterBar.vue` 不再被後台資料管理列表頁引用
+
+---
+
+- [x] **T-050R** 驗收 Phase 3 後台資料管理頁已改用新版 table 架構
+  - **所屬 Phase**：Phase 3
+  - **所屬 Workstream**：WS-E
+  - **依賴**：T-015A ～ T-015E
+  - **實作內容**：
+    - 驗收 `/admin/conversations` 是否已作為後台資料管理頁 reference implementation
+    - 驗收 `/admin/conversations` 是否使用 `TableData + DtUtils + domain DtTable.vue`
+    - 驗收 `/admin/conversations/index.vue` 是否只做組裝與 `provide(DtUtils.key, new DtUtils(useAdminConversations()))`，不直接管理 rows / loading / total / pagination / sort / filters
+    - 驗收 `useAdminConversations()` 是否提供：
+      - `getTable(params: DtParams): Promise<DtTableResult<ConversationSummaryVM>>`
+      - `exportCsv(params: DtParams)`
+      - `get(id)`
+    - 驗收 conversations export 是否使用 `domainStore.exportCsv(dt.params.value)`，且前端下載交由 `useAdminDownload().downloadUrl(url, filename)`
+    - 驗收 Lead / Ticket 若已實作列表頁，是否也採用相同架構：
+      - `index.vue` provide `DtUtils.key`
+      - domain store `getTable(params: DtParams)`
+      - domain `DtTable.vue`
+      - `TableFilterBar`
+      - `vxe-column :filters`
+  - **完成條件**：
+    - `/admin/conversations` 已不使用 `AdminDataTable` / `AdminFilterBar` / `UTable` / `useAdminTablePage`
+    - `/admin/conversations` 已使用 `TableData + DtUtils + domain DtTable.vue`
+    - `useAdminConversations()` 已符合 `getTable(params: DtParams): Promise<DtTableResult<T>>` contract
+    - conversations export 已改為 `exportCsv(dt.params.value)` + `useAdminDownload().downloadUrl(url, filename)`
+    - Lead / Ticket 若目前已實作列表頁，需符合相同架構；若尚未實作，保留於各自任務中驗收，不由 T-050R 阻擋
 
 ---
 
@@ -905,6 +1016,7 @@
     - `leads.ts`：`listLeads(params)`、`getLeadDetail(id)`、`updateLead(id, data)` → `/api/v1/admin/leads/...`
     - `tickets.ts`：`listTickets(params)` → `GET /api/v1/admin/tickets`；`getTicketDetail(id)` → `GET /api/v1/admin/tickets/:id`；`updateTicketStatus(id, status)` → `PATCH /api/v1/admin/tickets/:id/status`；`addTicketNote(id, note)` → `POST /api/v1/admin/tickets/:id/notes`
     - 各 service 對應 mock fixtures 建立於 `tests/fixtures/adminFixtures.ts`
+    - > **架構說明**：各 service 函式接收後端 API DTO 參數（不直接接收 `DtParams`）；負責處理 API envelope `{ code, data }`；domain store 負責 `DtParams → API DTO` 轉換
   - **完成條件**：四個 service（`dashboard.ts`、`conversations.ts`、`leads.ts`、`tickets.ts`）可呼叫；mock fixtures 有對應型別的資料；TypeScript 無錯誤
 
 ---
@@ -924,20 +1036,52 @@
 
 ---
 
-- [X] **T-053** 建立對話紀錄列表頁（`/admin/conversations`）
+- [X] **T-053** ~~使用 `AdminDataTable` 建立對話紀錄列表頁~~ → 已完成舊架構，請參見 **T-053R** 重構
   - **所屬 Phase**：Phase 3
   - **所屬 Workstream**：WS-E
   - **依賴**：T-050、T-051
+  - > **[已完成，架構待重構]** 此任務已使用 `AdminDataTable` + `AdminFilterBar` 完成。請參見 **T-053R** 使用 `TableData + DtUtils + DtTable` 重構為後台資料管理 reference implementation。
+
+---
+
+- [x] **T-053R** 重構對話紀錄列表頁為後台資料管理 reference implementation（`/admin/conversations`）
+  - **所屬 Phase**：Phase 3
+  - **所屬 Workstream**：WS-E
+  - **依賴**：T-015A ～ T-015E、T-051
   - **實作內容**：
-    - 建立 `app/pages/admin/conversations/index.vue`
-    - 使用 `AdminDataTable` 顯示欄位：Session ID、開始時間、對話輪數、語系、狀態、是否有回饋
-    - 使用 `AdminFilterBar` 篩選：時間範圍、語系、狀態、是否含機密攔截、是否含 Prompt Injection
-    - 關鍵字搜尋（debounce 300ms）
-    - 分頁（每頁 20 筆）、可點擊欄位標題排序
-    - 篩選條件存 URL query string（支援分頁書籤）
-    - 匯出 CSV 按鈕（呼叫 `exportConversations()`，下載回傳 URL）
-    - 點擊列跳至 `/admin/conversations/:id`
-  - **完成條件**：列表可篩選、排序、分頁；關鍵字 debounce 300ms；URL query string 反映篩選狀態；匯出按鈕可觸發下載
+    - > **[手動完成 / reference implementation]** 本任務已由開發者手動重構完成，作為後續 Lead / Ticket / Knowledge / Audit / Feedback 等資料管理頁的新版 table 架構參考。
+    - 重構 `app/pages/admin/conversations/index.vue`：
+      - `provide(DtUtils.key, new DtUtils(useAdminConversations()))`
+      - `index.vue` 不直接管理 rows / total / loading / page / sort / filters
+    - 建立 `app/pages/admin/conversations/PageHeader.vue`：
+      - page-level header：title / description
+      - 匯出 CSV 頁面層 CTA：呼叫 `useAdminConversations().exportCsv(dt.params.value)`
+      - 使用 `TableFilterBar #header` scoped slot 注入 `FilterToggle`
+    - 建立 `app/pages/admin/conversations/DtTable.vue`：
+      - 使用 `TableData` + `vxe-column`
+      - 欄位：Session ID、開始時間、對話輪數、語系、狀態、是否有回饋
+      - status / language / hasFeedback / hasConfidential / hasPromptInjection 使用 `vxe-column :filters`
+      - row action：查看 → `/admin/conversations/:id`
+    - 建立 `app/pages/admin/conversations/TableFilterBar.vue`：
+      - 處理 keyword、dateRange、sessionId 等自由輸入 / 區間條件
+    - 建立 `app/features/admin/stores/useAdminConversations.ts` domain store：
+      - `getTable(params: DtParams): Promise<DtTableResult<ConversationSummaryVM>>`
+      - `exportCsv(params: DtParams)`：呼叫 `POST /api/v1/admin/conversations/export`，本期同步回傳 `{ url }`；使用 `useAdminDownload().downloadUrl(url, filename)` 觸發下載；不做 export job / polling
+      - `get(id)`
+      - 負責 `DtParams → ConversationListParams` adapter
+    - 更新 `services/api/admin/conversations.ts`：
+      - service 層處理 API envelope `{ code, data }`
+      - 不直接接收 `DtParams`
+    - 建立 `app/composables/useAdminDownload.ts`：提供 `downloadUrl(url, filename)` 觸發下載
+  - **完成條件**：
+    - `/admin/conversations` 成為 Phase 4 / Phase 5 所有資料管理列表頁的 reference implementation
+    - 不使用 `AdminDataTable` / `AdminFilterBar` / `UTable` / `useAdminTablePage`
+    - `index.vue` 不直接管理 rows / loading / total / pagination / sort / filters
+    - enum / boolean 欄位篩選使用 `vxe-column :filters`
+    - 搜尋條件透過 `TableFilterBar` → `DtUtils.advancedSearchSubmit()` 觸發
+    - 匯出 CSV 使用 `domainStore.exportCsv(dt.params.value)`，後端同步回傳 `{ url }`，`useAdminDownload().downloadUrl()` 觸發下載
+    - domain store `getTable()` 提供 `DtTableResult<ConversationSummaryVM>`
+    - service 層處理 API envelope，不直接接收 `DtParams`
 
 ---
 
@@ -946,7 +1090,7 @@
   - **所屬 Workstream**：WS-E
   - **依賴**：T-053、T-028
   - **實作內容**：
-    - 建立 `app/features/admin/components/ConversationViewer.vue`：模擬前台聊天氣泡樣式（共用訊息型元件的樣式基礎，去除 `MessageFeedback` 按鈕，只讀顯示）；攔截事件以 `AuditEventBadge` 標記
+    - 建立 `app/features/admin/components/ConversationViewer.vue`：模擬前台聊天氣泡樣式（共用訊息型元件的樣式基礎，去除 `AiMessageItem` 中的 feedback 按鈕（後台只讀檢視不顯示 feedback 區塊），只讀顯示）；攔截事件以 `AuditEventBadge` 標記
     - 建立 `AuditEventBadge.vue`（`app/features/admin/components/`）：事件類型（機密攔截 / Injection / 轉人工 / 低信心度）配色 badge
     - 建立 `app/pages/admin/conversations/[id].vue`：
       - Session 基本資訊（ID、時間、語系、輪數）
@@ -956,36 +1100,73 @@
 
 ---
 
-- [x] **T-055** 建立 Lead 管理列表與詳情頁
+- [x] **T-055** ~~使用 `AdminDataTable` 建立 Lead 管理列表頁~~ → 已完成舊架構，請參見 **T-055R** 重構
   - **所屬 Phase**：Phase 3
   - **所屬 Workstream**：WS-E
   - **依賴**：T-050、T-051
-  - **實作內容**：
-    - 建立 `app/pages/admin/leads/index.vue`：`AdminDataTable` 顯示姓名、公司、聯絡方式、詢問品項、建立時間、狀態；篩選：狀態、時間範圍；搜尋：姓名 / 公司關鍵字
-    - 建立 `app/pages/admin/leads/[id].vue`：完整留資資訊、關聯對話連結（可跳至對話詳情）、狀態切換下拉（`USelect`）、管理者備註欄位（`UTextarea`）、「儲存」按鈕
-    - 儲存後呼叫 `updateLead()` API，成功後顯示 toast
-  - **完成條件**：列表可篩選搜尋；詳情頁狀態下拉可更新；備註可儲存；操作後 toast 提示
+  - > **[已完成，架構待重構]** 此任務已使用 `AdminDataTable` 完成。請參見 **T-055R** 使用 `TableData + DtUtils + DtTable` 重構；詳情頁（`/admin/leads/:id`）不屬於資料管理 table page，不需套用 DtUtils，保持 page-local 狀態即可。
 
 ---
 
-- [x] **T-056** 建立 Ticket 管理列表與詳情頁
+- [x] **T-055R** 重構 Lead 管理列表頁為新版 table 架構
+  - **所屬 Phase**：Phase 3
+  - **所屬 Workstream**：WS-E
+  - **依賴**：T-015A ～ T-015E、T-053R
+  - **實作內容**：
+    - 重構 `app/pages/admin/leads/index.vue`：
+      - `provide(DtUtils.key, new DtUtils(useAdminLeads()))`
+      - 不直接管理 table state
+    - 建立 `app/pages/admin/leads/PageHeader.vue`：page-level header（title / description）
+    - 建立 `app/pages/admin/leads/DtTable.vue`：
+      - 使用 `TableData` + `vxe-column`
+      - 欄位：姓名、公司、聯絡方式、詢問品項、建立時間、狀態
+      - status 欄位使用 `vxe-column :filters`
+      - row action：查看 → `/admin/leads/:id`
+    - 使用共用 `app/components/TableFilterBar.vue`：
+      - 處理 keyword（姓名 / 公司）、dateRange
+    - 建立 `app/features/admin/stores/useAdminLeads.ts` domain store：
+      - `getTable(params: DtParams): Promise<DtTableResult<LeadSummaryVM>>`
+      - `get(id)`
+      - `setStatus(id, status)`
+      - 負責 `DtParams → LeadListParams` adapter
+    - `services/api/admin/leads.ts` 處理 API envelope，不直接接收 `DtParams`
+  - **完成條件**：Lead 列表頁不使用 `AdminDataTable` / `AdminFilterBar`；`TableData + DtUtils + DtTable` 架構正確；domain store 提供 `getTable()`；service 處理 API envelope
+
+---
+
+- [x] **T-056** ~~使用 `AdminDataTable` 建立 Ticket 管理列表頁~~ → 已完成舊架構，請參見 **T-056R** 重構
   - **所屬 Phase**：Phase 3
   - **所屬 Workstream**：WS-E
   - **依賴**：T-050、T-051
+  - > **[已完成，架構待重構]** 此任務已使用 `AdminDataTable` + `AdminFilterBar` 完成，`useTickets.ts` composable 為舊抽象。請參見 **T-056R** 使用 `TableData + DtUtils + DtTable` + domain store 重構；詳情頁（`/admin/tickets/:id`）不屬於資料管理 table page，保持 page-local 狀態即可。
+
+---
+
+- [x] **T-056R** 重構 Ticket 管理列表頁為新版 table 架構
+  - **所屬 Phase**：Phase 3
+  - **所屬 Workstream**：WS-E
+  - **依賴**：T-015A ～ T-015E、T-053R
   - **實作內容**：
-    - 建立 `app/features/admin/composables/useTickets.ts`：
-      - `tickets`（列表）、`ticket`（詳情）、`loading`、`error` state
-      - `fetchTickets(params)`、`fetchTicketDetail(id)`、`updateTicketStatus(id, status)` → `PATCH /api/v1/admin/tickets/:id/status`、`addTicketNote(id, note)` → `POST /api/v1/admin/tickets/:id/notes` 方法
-    - 建立 `app/pages/admin/tickets/index.vue`：
-      - `AdminDataTable` 顯示：Ticket ID、主旨、建立時間、狀態（`AppStatusBadge`，四態：`open` 藍 / `in_progress` 黃 / `resolved` 綠 / `closed` 灰）、優先級
-      - `AdminFilterBar` 篩選：狀態（四態全選項）、優先級、時間範圍
-      - 點擊列跳至 `/admin/tickets/:id`
-    - 建立 `app/pages/admin/tickets/[id].vue`：
-      - 問題描述、關聯對話連結（跳至對話詳情頁）
-      - 處理紀錄時間軸（每次狀態變更或備註以時間軸樣式顯示）
-      - 狀態變更下拉（`open → in_progress → resolved → closed` 四態）+ 備註輸入 + 「送出」按鈕
-      - 送出後呼叫 `updateTicketStatus()` / `addTicketNote()`，成功顯示 toast
-  - **完成條件**：Ticket 列表可篩選分頁，四態 badge 正確配色；詳情頁可更新狀態（四態）；備註可送出；處理紀錄時間軸正確顯示；API 呼叫路徑分離（`PATCH .../status` + `POST .../notes`）；API 失敗時顯示 `AppErrorState`
+    - 重構 `app/pages/admin/tickets/index.vue`：
+      - `provide(DtUtils.key, new DtUtils(useAdminTickets()))`
+      - 不直接管理 table state
+    - 建立 `app/pages/admin/tickets/PageHeader.vue`：page-level header
+    - 建立 `app/pages/admin/tickets/DtTable.vue`：
+      - 使用 `TableData` + `vxe-column`
+      - 欄位：Ticket ID、關聯 Session / Lead、問題摘要、建立時間、狀態（`AppStatusBadge`，四態：`open` 藍 / `in_progress` 黃 / `resolved` 綠 / `closed` 灰）、優先級
+      - status 欄位（四態全選項）、priority 欄位使用 `vxe-column :filters`
+      - row action：查看 → `/admin/tickets/:id`
+    - 使用共用 `app/components/TableFilterBar.vue`：
+      - 處理 keyword、dateRange
+    - 建立 `app/features/admin/stores/useAdminTickets.ts` domain store：
+      - `getTable(params: DtParams): Promise<DtTableResult<TicketSummaryVM>>`
+      - `get(id)`
+      - `updateStatus(id, status)`
+      - `createNote(id, note)`
+      - 負責 `DtParams → TicketListParams` adapter
+    - `app/features/admin/composables/useTickets.ts` 舊 composable 不再作為列表標準；詳情頁可保留使用
+    - `services/api/admin/tickets.ts` 處理 API envelope，不直接接收 `DtParams`
+  - **完成條件**：Ticket 列表頁不使用 `AdminDataTable` / `AdminFilterBar` / `useTickets.ts` 舊架構；`TableData + DtUtils + DtTable` 架構正確；domain store 提供 `getTable()`，四態 status 可篩選；service 處理 API envelope
 
 ---
 
@@ -1003,7 +1184,7 @@
     - E2E 旅程「對話紀錄查詢」：進入 `/admin/conversations` 列表 → 選擇時間範圍篩選 → 點擊 Session → 詳情顯示完整對話
     - E2E 旅程「Lead 狀態更新」：進入 Lead 列表 → 點擊 Lead → 修改狀態 → 儲存 → toast 提示 → 列表狀態更新
     - E2E 旅程「Ticket 狀態更新」：進入 Ticket 列表 → 點擊 Ticket → 更新狀態為「進行中（`in_progress`）」→ 新增備註 → 送出 → 時間軸新增紀錄；補充「更新狀態為 `resolved`」旅程驗證四態流轉
-  - **完成條件**：四個 E2E 旅程全數通過
+  - **完成條件**：四個 E2E 旅程全數通過；測試確認後台資料管理列表頁使用 `TableData + DtUtils + DtTable`，不測 `AdminDataTable` / `AdminFilterBar`；搜尋條件透過 `TableFilterBar`；匯出 CSV 使用 `domainStore.exportCsv(dt.params.value)`
 
 ---
 
@@ -1029,18 +1210,30 @@
 
 ---
 
-- [ ] **T-059** 建立知識庫列表頁與刪除確認流程
+- [ ] **T-059** 建立知識庫列表頁（`DtUtils + TableData + DtTable` 架構）與刪除確認流程
   - **所屬 Phase**：Phase 4
   - **所屬 Workstream**：WS-F
-  - **依賴**：T-050、T-058
+  - **依賴**：T-015A ～ T-015E、T-058、T-053R
   - **實作內容**：
-    - 建立 `app/pages/admin/knowledge/index.vue`
-    - `AdminDataTable` 顯示：標題、分類、狀態（草稿 / 已發佈 / 已停用，`AppStatusBadge`）、最後更新時間、操作（編輯 / 刪除）
-    - `AdminFilterBar` 篩選：分類、狀態；關鍵字搜尋（debounce）
-    - 刪除按鈕觸發 `AppModal` 二次確認 → 確認後呼叫 `deleteKnowledge()` → 成功後 toast + 列表重整
-    - 「新增知識庫」按鈕 → 跳至 `/admin/knowledge/new`
-    - 篩選條件存 URL query string
-  - **完成條件**：列表可篩選排序；刪除需二次確認；刪除成功後列表更新
+    - 建立 `app/pages/admin/knowledge/index.vue`：
+      - `provide(DtUtils.key, new DtUtils(useAdminKnowledge()))`
+      - 不直接管理 rows / loading / pagination / sort / filters
+    - 建立 `app/pages/admin/knowledge/PageHeader.vue`：page-level header
+    - 建立 `app/pages/admin/knowledge/DtHeader.vue`（table-level toolbar）：
+      - 「新增知識庫」按鈕 → 跳至 `/admin/knowledge/new`
+      - 「批次匯入」按鈕 → 開啟 `KnowledgeImportModal`（T-062）
+    - 建立 `app/pages/admin/knowledge/DtTable.vue`：
+      - 使用 `TableData` + `vxe-column`
+      - 欄位：標題、分類、狀態（草稿 / 已發佈 / 已停用，`AppStatusBadge`）、最後更新時間
+      - status 欄位使用 `vxe-column :filters`
+      - row action：編輯 → `/admin/knowledge/:id/edit`；刪除 → 觸發 `AppModal` 確認 → 呼叫 `deleteKnowledge()` → toast + 重整列表
+    - 建立 `app/pages/admin/knowledge/TableFilterBar.vue`：
+      - 處理 keyword（標題關鍵字）、分類
+    - 建立 `app/features/admin/stores/useAdminKnowledge.ts` domain store：
+      - `getTable(params: DtParams): Promise<DtTableResult<KnowledgeSummaryVM>>`
+      - `get(id)`、`create(data)`、`update(id, data)`、`delete(id)`
+      - 負責 `DtParams → KnowledgeListParams` adapter
+  - **完成條件**：列表可篩選排序；不使用 `AdminDataTable` / `AdminFilterBar`；`DtHeader` 包含新增與批次匯入 CTA；刪除需二次確認；刪除成功後列表更新；service 處理 API envelope
 
 ---
 
@@ -1089,13 +1282,23 @@
 
 ---
 
-- [ ] **T-063** 建立意圖 / 模板管理列表與側抽屜編輯
+- [ ] **T-063** 建立意圖 / 模板管理列表（`DtUtils + TableData + DtTable` 架構）與側抽屜編輯
   - **所屬 Phase**：Phase 4
   - **所屬 Workstream**：WS-F
-  - **依賴**：T-050、T-058
+  - **依賴**：T-015A ～ T-015E、T-058、T-053R
   - **實作內容**：
-    - 建立 `app/pages/admin/intents/index.vue`
-    - `AdminDataTable` 顯示：意圖名稱、觸發關鍵字（前 3 個 + tooltip 顯示全部）、優先級、啟用狀態（`USwitch`，即時呼叫 `toggleIntent()`）、操作（編輯 / 刪除）
+    - 建立 `app/pages/admin/intents/index.vue`：
+      - `provide(DtUtils.key, new DtUtils(useAdminIntents()))`
+      - 不直接管理 rows / loading / pagination
+    - 建立 `app/pages/admin/intents/DtHeader.vue`（table-level toolbar）：
+      - 「新增意圖」按鈕 → 開啟 `IntentEditorDrawer`
+    - 建立 `app/pages/admin/intents/DtTable.vue`：
+      - 使用 `TableData` + `vxe-column`
+      - 欄位：意圖名稱、觸發關鍵字（前 3 個 + tooltip 顯示全部）、優先級、啟用狀態（`USwitch`，即時呼叫 `toggleIntent()`）、操作（編輯 / 刪除）
+    - 建立 `app/features/admin/stores/useAdminIntents.ts` domain store：
+      - `getTable(params: DtParams): Promise<DtTableResult<IntentSummaryVM>>`
+      - `get(id)`、`create(data)`、`update(id, data)`、`delete(id)`、`toggle(id, enabled)`
+      - 負責 `DtParams → IntentListParams` adapter
     - 「新增意圖」+ 「編輯」均開啟 `USlideover`（`IntentEditorDrawer.vue`）：
       - 意圖名稱（必填）
       - 觸發關鍵字 tag-input（自製簡易 tag input，或引入 `@morev/vue-tags-input`，TBD）
@@ -1120,6 +1323,7 @@
       - 新增 / 刪除按鈕（刪除需確認）
       - 拖曳完成後 debounce 500ms 呼叫 `reorderQuickReplies(ids)` API
     - 右側預覽 `WidgetQuickRepliesPreview`（`app/features/admin/components/`）：pure UI，使用左側 list 的當前資料，依語系切換顯示，不呼叫 API
+  - > **注意**：快捷提問管理頁使用自訂拖曳排序元件 `QuickReplyDragList`，不屬於標準資料管理 table page，**不使用 `AdminDataTable` / `UTable` / `DtUtils`**。
   - **完成條件**：拖曳排序可執行；排序後 API 正確呼叫（傳 ID 陣列）；右側預覽即時反映左側資料
 
 ---
@@ -1129,6 +1333,7 @@
   - **所屬 Workstream**：WS-F
   - **依賴**：T-058、T-016 ～ T-021
   - **實作內容**：
+    - > **Widget 設定頁為設定表單 + 即時預覽，不屬於資料管理 table page，不需要套用 `DtUtils` / `TableData` / `DtTable`**。
     - 建立 `app/pages/admin/widget-settings/index.vue`
     - 設定表單（100% 寬）
     - 設定表單欄位：
@@ -1163,7 +1368,7 @@
 
 ## Phase 5 — 後台維運工具
 
-> **目標**：完成稽核事件、回饋紀錄、營運報表三個維運模組
+> **目標**：完成稽核事件、回饋紀錄兩個維運模組；**Reports / 營運報表本期不做，移至未來規劃**；`services/api/admin/reports.ts` 本期不建立
 
 ### WS-G 後台維運工具
 
@@ -1185,31 +1390,50 @@
 - [ ] **T-068** 建立稽核事件列表與詳情頁
   - **所屬 Phase**：Phase 5
   - **所屬 Workstream**：WS-G
-  - **依賴**：T-050、T-054、T-067
+  - **依賴**：T-015A ～ T-015E、T-050、T-054、T-067、T-053R
   - **實作內容**：
     - 建立 `app/pages/admin/audit/index.vue`：
-      - `AdminDataTable`：事件時間、事件類型（`AuditEventBadge`）、Session ID、嚴重程度（`AppStatusBadge`：高 → red、中 → yellow、低 → gray）
-      - `AdminFilterBar` 篩選：事件類型、時間範圍、嚴重程度
-      - 匯出 CSV 按鈕（呼叫 `exportAuditEvents()`）
+      - `provide(DtUtils.key, new DtUtils(useAdminAuditEvents()))`
+      - 不直接管理 rows / loading / pagination
+    - 建立 `app/pages/admin/audit/DtTable.vue`：
+      - 使用 `TableData` + `vxe-column`
+      - 欄位：事件時間、事件類型（`AuditEventBadge`）、Session ID、嚴重程度（`AppStatusBadge`：高 → red、中 → yellow、低 → gray）
+      - eventType 欄位、severity 欄位使用 `vxe-column :filters`
+    - 建立 `app/pages/admin/audit/TableFilterBar.vue`：處理 dateRange、keyword
+    - 建立 `app/pages/admin/audit/PageHeader.vue`：
+      - 匯出 CSV CTA：呼叫 `useAdminAuditEvents().exportCsv(dt.params.value)` → 同步回傳 `{ url }` → `useAdminDownload().downloadUrl()` 觸發下載
+    - 建立 `app/features/admin/stores/useAdminAuditEvents.ts` domain store：
+      - `getTable(params: DtParams): Promise<DtTableResult<AuditEventSummaryVM>>`
+      - `exportCsv(params: DtParams)`
+      - `get(id)`
+      - 負責 `DtParams → AuditListParams` adapter
     - 建立 `app/pages/admin/audit/[id].vue`：
       - 事件基本資訊（類型、時間、Session ID、嚴重程度）
       - 觸發上下文對話（`ConversationViewer` 子集，僅顯示觸發事件前後數則）
       - 系統判斷依據摘要（後端提供文字）
-  - **完成條件**：列表可依類型 / 嚴重程度篩選；匯出 CSV 可下載；詳情頁顯示上下文對話；嚴重程度配色正確
+  - **完成條件**：列表可依類型 / 嚴重程度篩選（`vxe-column :filters`）；不使用 `AdminDataTable` / `AdminFilterBar`；匯出 CSV 使用 `domainStore.exportCsv(dt.params.value)` + `useAdminDownload().downloadUrl()` 同步下載；詳情頁顯示上下文對話；嚴重程度配色正確
 
 ---
 
 - [ ] **T-069** 建立回饋紀錄列表頁
   - **所屬 Phase**：Phase 5
   - **所屬 Workstream**：WS-G
-  - **依賴**：T-050、T-067
+  - **依賴**：T-015A ～ T-015E、T-050、T-067、T-053R
   - **實作內容**：
-    - 建立 `app/pages/admin/feedback/index.vue`
-    - `AdminDataTable` 顯示：時間、Session ID（可點擊跳至對話詳情）、訊息摘要（前 50 字截斷）、回饋類型（讚 / 倒讚，`AppStatusBadge` 配色）、倒讚原因
-    - `AdminFilterBar` 篩選：回饋類型、時間範圍
+    - 建立 `app/pages/admin/feedback/index.vue`：
+      - `provide(DtUtils.key, new DtUtils(useAdminFeedback()))`
+      - 不直接管理 rows / loading / pagination
+    - 建立 `app/pages/admin/feedback/DtTable.vue`：
+      - 使用 `TableData` + `vxe-column`
+      - 欄位：時間、Session ID（可點擊跳至對話詳情）、訊息摘要（前 50 字截斷）、回饋類型（讚 / 倒讚，`AppStatusBadge` 配色）、倒讚原因
+      - 回饋類型欄位使用 `vxe-column :filters`
+    - 建立 `app/pages/admin/feedback/TableFilterBar.vue`：處理 dateRange
+    - 建立 `app/features/admin/stores/useAdminFeedback.ts` domain store：
+      - `getTable(params: DtParams): Promise<DtTableResult<FeedbackSummaryVM>>`
+      - 負責 `DtParams → FeedbackListParams` adapter
     - 點擊 Session ID 跳至 `/admin/conversations/:sessionId`
     - **注意**：前台 Feedback API `POST /api/v1/chat/sessions/:sessionToken/messages/:messageId/feedback` 已於 Phase 2 正式串接；後台此頁面顯示後端管理的歷史回饋紀錄（`GET /api/v1/admin/feedback`）
-  - **完成條件**：列表可依類型篩選；Session ID 連結正確跳轉；訊息截斷顯示正確
+  - **完成條件**：列表可依類型篩選（`vxe-column :filters`）；不使用 `AdminDataTable` / `AdminFilterBar`；Session ID 連結正確跳轉；訊息截斷顯示正確
 
 ---
 
@@ -1222,7 +1446,7 @@
     - 支援三個快捷選項：近 7 天、近 30 天、自訂日期區間
     - 自訂日期區間：顯示起始 / 結束日期選擇器
     - emit `update:dateRange` 事件（`{ start: string, end: string }`）
-    - 供報表頁與篩選 bar 使用
+    - 供 `TableFilterBar`（`FilterBar.vue` 內部）與其他需要日期區間篩選的頁面使用
   - **完成條件**：快捷選項切換正確；自訂日期區間可選擇；emit 事件格式正確
 
 ---
@@ -1295,7 +1519,7 @@
   - **實作內容**：
     - 所有表單欄位的 `<label>` 與 `<input>` 正確關聯（`for` / `id` 或 `aria-labelledby`）
     - `AppModal`（`UModal`）確認 focus trap 運作（開啟 Modal 時 focus 移至 Modal，關閉後 focus 返回觸發元素）
-    - `AdminDataTable` 加 `aria-label` 說明表格用途
+    - `TableData` / vxe-table 加 `aria-label` 說明表格用途；row action 按鈕補全 `aria-label`；`FilterToggle` 加 `aria-label`
     - 所有 icon-only 按鈕補全 `aria-label`
   - **完成條件**：後台表單 label 全部正確關聯；Modal focus trap 有效；`aria-label` 補全
 
@@ -1386,13 +1610,14 @@
 
 ---
 
-- [ ] **T-082** 補完元件測試（`ChatLauncher`、`ChatInputBar`、`AiStreamingItem`、`SystemInterceptedItem`）
+- [ ] **T-082** 補完元件測試（`ChatWidget Launcher 區塊`、`ChatInputBar`、`AiStreamingItem`、`SystemInterceptedItem`）
   - **所屬 Phase**：Phase 6
   - **所屬 Workstream**：WS-H
   - **依賴**：T-017、T-020、T-028
   - **實作內容**：
-    - `ChatLauncher` 測試（`tests/unit/features/chat/ChatLauncher.test.ts`）：
-      - `mode = 'normal'`、config `status: 'online'` → 狀態燈綠色
+    - `ChatWidget` Launcher 區塊測試（`tests/unit/features/chat/ChatWidget.launcher.test.ts`）：
+      - > **注意**：`ChatLauncher` 已合併進 `ChatWidget`（不再是獨立元件），此測試針對 `ChatWidget` 中的 Launcher FAB 行為
+      - `mode = 'normal'`、config `status: 'online'` → 狀態燈綠色（Launcher FAB 狀態燈）
       - `mode = 'normal'`、config `status: 'degraded'` → 狀態燈紅色
       - `mode = 'fallback'` → 狀態燈灰色，降級文案顯示
       - 點擊後 `useChatWidgetStore.setOpen` 被呼叫
@@ -1458,10 +1683,10 @@
 
 | 里程碑              | 對應任務完成   | 可驗證產出                                                                                                                       |
 | ------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| **M0** Phase 0 完成 | T-001 ～ T-015 | `npm run dev` 可啟動；主題設定完成；API client + types + stores 就緒；「進入後台」按鈕可用（導向 `/admin/dashboard`）；Nuxt Charts 折線圖與圓餅圖可正常渲染 |
+| **M0** Phase 0 完成 | T-001 ～ T-015、T-015A ～ T-015E | `npm run dev` 可啟動；主題設定完成；API client + types + stores 就緒；「進入後台」按鈕可用（導向 `/admin/dashboard`）；Nuxt Charts 折線圖與圓餅圖可正常渲染；vxe-table 公版基礎建設完成（`TableData`、`DtUtils`、`TableFilterBar`、`FilterBar`、adapter helpers） |
 | **M1** Phase 1 完成 | T-016 ～ T-034 | 前台 Widget 可互動 MVP；多輪對話（KB mock 回覆）；reset / rating / quick-reply 互動；session 恢復；降級模式；P0 單元測試 + E2E 通過 |
 | **M2** Phase 2 完成 | T-034B ～ T-048 | KB mock 切換為真實 `fetch + ReadableStream` SSE 串流；留資（name+email 必填，`company?` / `phone?` / `message?` 選填，`language?` 自動帶入語系）、轉人工（簡化靜態，`{ accepted, action, ... }` 回應）、Feedback API 正式串接（`POST .../messages/:messageId/feedback`，payload `{ value: 'up'|'down' }`，fire-and-forget）、語系切換、埋點；Phase 2 E2E 通過 |
-| **M3** Phase 3 完成 | T-049 ～ T-057 | 後台基礎頁面可用（Dashboard + 對話紀錄 + Lead + Ticket）；後台 E2E 通過（Dashboard 載入 + 對話查詢 + Lead + Ticket） |
+| **M3** Phase 3 完成 | T-049 ～ T-057、T-050R、T-053R、T-055R、T-056R | 後台基礎頁面可用（Dashboard + 對話紀錄 + Lead + Ticket）；`/admin/conversations` 為後台資料管理 reference implementation；後台資料管理列表頁使用 `TableData + DtUtils + DtTable`；後台 E2E 通過（Dashboard 載入 + 對話查詢 + Lead + Ticket） |
 | **M4** Phase 4 完成 | T-058 ～ T-066 | 後台內容管理完整（知識庫版本歷史 + 批次匯入；意圖側抽屜；快捷提問拖曳；Widget 即時預覽）；Phase 4 E2E 通過 |
 | **M5** Phase 5 完成 | T-067 ～ T-072 | 後台維運工具（稽核事件 + 回饋紀錄（`GET /api/v1/admin/feedback`）；**Reports 延後**）；Phase 5 E2E 通過（Reports 旅程延後） |
 | **M6** Phase 6 完成 | T-073 ～ T-085 | 全系統品質達標；所有測試通過；build 成功；plan.md DoD 全勾 |
@@ -1472,10 +1697,10 @@
 
 | Phase    | 任務數                           | 涵蓋 Workstream |
 | -------- | -------------------------------- | --------------- |
-| Phase 0  | T-001 ～ T-015（15 個）          | WS-A            |
+| Phase 0  | T-001 ～ T-015、T-015A ～ T-015E（20 個）  | WS-A            |
 | Phase 1  | T-016 ～ T-034（19 個）          | WS-B、WS-C      |
 | Phase 2  | T-034B、T-035 ～ T-048（15 個）  | WS-D            |
-| Phase 3  | T-049 ～ T-057（9 個）           | WS-E            |
+| Phase 3  | T-049 ～ T-057、T-050R、T-053R、T-055R、T-056R（13 個） | WS-E            |
 | Phase 4  | T-058 ～ T-066（9 個）           | WS-F            |
 | Phase 5  | T-067 ～ T-072（6 個）           | WS-G            |
 | Phase 6  | T-073 ～ T-085（13 個）          | WS-H            |

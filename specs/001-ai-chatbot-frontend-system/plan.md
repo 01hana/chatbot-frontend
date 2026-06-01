@@ -31,12 +31,12 @@
 
 ### 1.1 承接關係
 
-| 文件 | 角色 |
-|------|------|
-| `spec.md` | 定義「做什麼」：產品功能範圍、驗收條件、使用者需求 |
-| `design.md` | 定義「怎麼做」：元件切分、狀態設計、API 整合、技術架構 |
+| 文件                | 角色                                                         |
+| ------------------- | ------------------------------------------------------------ |
+| `spec.md`           | 定義「做什麼」：產品功能範圍、驗收條件、使用者需求           |
+| `design.md`         | 定義「怎麼做」：元件切分、狀態設計、API 整合、技術架構       |
 | `plan.md`（本文件） | 定義「何時做、順序與分工」：Phase 排序、工作流拆分、依賴管理 |
-| `task.md`（待生成） | 定義「每個可執行的工作單元」：具體可 check-off 的任務清單 |
+| `task.md`（待生成） | 定義「每個可執行的工作單元」：具體可 check-off 的任務清單    |
 
 ### 1.2 本期明確排除
 
@@ -56,16 +56,19 @@
 
 ### 2.1 技術棧固定
 
-| 類別 | 技術 |
-|------|------|
-| 框架 | Nuxt 4 |
-| UI 元件庫 | Nuxt UI v4（基於 Reka UI + Tailwind CSS） |
-| 樣式系統 | Tailwind CSS v4 |
-| 語言 | TypeScript |
-| 狀態管理 | Pinia |
-| 表單驗證 | vee-validate |
-| 串流 | SSE（`fetch + ReadableStream`，已排除 `EventSource` 與 WebSocket） |
-| 測試 | Vitest + Vue Test Utils + Playwright |
+| 類別             | 技術                                                                            |
+| ---------------- | ------------------------------------------------------------------------------- |
+| 框架             | Nuxt 4                                                                          |
+| UI 元件庫        | Nuxt UI v4（一般 UI 元件：`UButton`、`UInput`、`UModal`、`UBadge`、`UCard` 等） |
+| 後台資料管理表格 | vxe-table + vxe-pc-ui（透過 `DtUtils` + `TableData` + `DtTable`）               |
+| 樣式系統         | Tailwind CSS v4                                                                 |
+| 語言             | TypeScript                                                                      |
+| 狀態管理         | Pinia                                                                           |
+| 表單驗證         | vee-validate                                                                    |
+| 串流             | SSE（`fetch + ReadableStream`，已排除 `EventSource` 與 WebSocket）              |
+| 測試             | Vitest + Vue Test Utils + Playwright                                            |
+
+> `UTable` 僅適用於非資料管理、低互動、靜態展示型表格；後台高互動資料管理表格統一使用 vxe-table 公版，不使用 `UTable` / `AdminDataTable` / `useAdminTablePage` 作為標準方案。
 
 ### 2.2 完整功能範圍（本 plan 全覆蓋）
 
@@ -126,16 +129,35 @@ Phase 0（基礎建設）
 
 本計畫拆為以下 8 條工作流，各 Phase 中的任務會從對應工作流取出：
 
-| # | 工作流 | 說明 |
-|---|--------|------|
-| WS-A | 技術基礎建設 | Nuxt 設定、API client、types、plugins、主題設定 |
-| WS-B | 前台 Widget Shell | ChatWidget、ChatLauncher、ChatPanel 收合展開動畫、layout 骨架 |
-| WS-C | 前台聊天核心 | Session、訊息列表、串流回覆、狀態機、Message Renderer |
-| WS-D | 前台進階互動 | 留資表單、轉人工、回饋、降級、低信心度、語系切換 |
-| WS-E | 後台基礎 | Admin layout、共用元件、Dashboard、對話紀錄、Lead/Ticket |
-| WS-F | 後台內容管理 | 知識庫、意圖/模板、快捷提問、Widget 設定 |
-| WS-G | 後台維運工具 | 稽核事件、回饋紀錄、營運報表 |
-| WS-H | 品質與完整化 | i18n 英文、埋點、無障礙、效能、E2E 補全、RWD 細化 |
+| #    | 工作流            | 說明                                                                    |
+| ---- | ----------------- | ----------------------------------------------------------------------- |
+| WS-A | 技術基礎建設      | Nuxt 設定、API client、types、plugins、主題設定                         |
+| WS-B | 前台 Widget Shell | ChatWidget、ChatPanel、Launcher FAB 內嵌、收合展開動畫、layout 骨架     |
+| WS-C | 前台聊天核心      | Session、訊息列表、串流回覆、狀態機、Message Renderer                   |
+| WS-D | 前台進階互動      | 留資表單、轉人工、回饋、降級、低信心度、語系切換                        |
+| WS-E | 後台基礎          | Admin layout、後台資料管理 table 公版、Dashboard、對話紀錄、Lead/Ticket |
+| WS-F | 後台內容管理      | 知識庫、意圖/模板、快捷提問、Widget 設定                                |
+| WS-G | 後台維運工具      | 稽核事件、回饋紀錄、營運報表                                            |
+| WS-H | 品質與完整化      | i18n 英文、埋點、無障礙、效能、E2E 補全、RWD 細化                       |
+
+---
+
+### 後台資料管理頁面共用架構
+
+所有含 table / 智慧列表需求的 admin domain page，均依照 `design.md §7C` 實作：
+
+- `index.vue`：provide `DtUtils.key` 與 domain store，不直接管理 table state
+- `PageHeader.vue`：page-level header，負責 title / description / non-create CTA / filter toggle
+- `TableFilterBar.vue`：搜尋 / 篩選橋接層，處理 keyword、dateRange、sessionId、intentLabel 等自由輸入或區間搜尋條件
+- `FilterBar.vue`：純 UI filter form
+- `DtHeader.vue?`：optional table toolbar，僅當 domain 需要新增、批次選取、批次操作時建立
+- `DtTable.vue`：vxe-column 欄位定義、enum / boolean filters、row actions
+- `TableData`：vxe-table DOM shell
+- `DtUtils`：table controller，管理 loading / data / pager / sort / vxe-column filters / advancedSearch
+- domain Pinia store：提供 `getTable(params: DtParams): Promise<DtTableResult<T>>`
+- API service：使用後端 API DTO，不直接吃 `DtParams`
+
+Phase 3 的 `/admin/conversations` 會作為後續所有後台資料管理頁面的 reference implementation。
 
 ---
 
@@ -165,11 +187,52 @@ Phase 0（基礎建設）
 - Nuxt Charts 安裝與驗證（安裝 `nuxt-charts`，確認折線圖與圓餅圖可於 Nuxt 4 專案中正常渲染）
 - 後台「進入後台」入口按鈕（前台 `/` 頁面右上角低調 `UButton variant="ghost"`，`navigateTo('/admin/dashboard')`）
 
+**後台 vxe-table 公版基礎建設（WS-E 前置）**：
+
+- vxe-table / vxe-pc-ui 安裝與初始化
+- `plugins/vxe-table.client.ts`：全局註冊 vxe-table / vxe-pc-ui、formatters 與必要設定
+- `libs/vxe-table/base.ts`：table controller base
+- `libs/vxe-table/index.ts`：匯出 `DtUtils`
+- `libs/vxe-table/config.ts`：vxe-table 共用 config
+- `libs/vxe-table/types.ts`：定義 `DtSort`、`DtParams`、`DtTableResult`
+- `libs/vxe-table/adapters.ts`：定義 `toAdminListParams()`、`firstValue()`、`boolValue()`、`cleanParams()` 等共用 adapter helper
+- `components/TableData.vue`：vxe-table 公版 DOM shell
+- `components/TableFilterBar.vue`：注入 `DtUtils`，橋接 `FilterBar` 與 `advancedSearchSubmit`
+- `features/admin/components/FilterBar.vue`：純 UI filter form，不知道 `DtUtils` / store / API params
+
+**後台 table 共用型別 contract**（建立於 `libs/vxe-table/types.ts`）：
+
+```ts
+export type DtSort = [field: string, order: 'asc' | 'desc'] | null;
+
+export interface DtParams {
+  p?: number;
+  length?: number;
+  sort: DtSort;
+  searches: Record<string, any>;
+  filters: Record<string, any>;
+}
+
+export interface DtTableResult<T = any> {
+  data: T[];
+  p: number;
+  total: number;
+}
+```
+
+**Adapter 原則**：
+
+- `DtParams` 是前端 table layer 的格式，不直接送進 API service
+- 每個 domain store 需透過 adapter 將 `DtParams` 轉成後端 API 對應 params
+- API service 使用後端 DTO 型別，不直接吃 `DtParams`
+- 共用 adapter helper（`toAdminListParams()`、`firstValue()`、`boolValue()`、`cleanParams()` 等）統一放在 `libs/vxe-table/adapters.ts`，各 domain store 直接 import 使用
+
 **主要輸出**：可運作的 Nuxt 4 專案骨架、所有共用基礎設施建立完成、主題設定完成
 
 **依賴關係**：無前置依賴，本 Phase 是所有後續 Phase 的基礎
 
 **完成定義（DoD）**：
+
 - [ ] `npm run dev` 可正常啟動，`/` 與 `/admin/dashboard` 路由可存取
 - [ ] Nuxt UI 元件（`UButton`、`UInput`）可正常渲染
 - [ ] Nuxt Charts 可在 Nuxt 4 專案中渲染折線圖與圓餅圖（無 console 錯誤）
@@ -177,6 +240,12 @@ Phase 0（基礎建設）
 - [ ] API client 可呼叫，mock endpoint 可回傳資料
 - [ ] TypeScript 編譯無錯誤
 - [ ] i18n 基礎文案可顯示（繁中）
+- [ ] vxe-table / vxe-pc-ui 可在 Nuxt client 端正常渲染
+- [ ] `plugins/vxe-table.client.ts` 可正常註冊 vxe-table / vxe-pc-ui
+- [ ] `TableData` 可搭配 `DtUtils` 顯示 mock rows
+- [ ] `DtParams` / `DtTableResult` 共用型別可被 domain store 使用
+- [ ] `libs/vxe-table/adapters.ts` 已提供共用 adapter helper
+- [ ] `TableFilterBar` 可透過 `DtUtils.advancedSearchSubmit()` 觸發 mock `getTable`
 
 ---
 
@@ -187,14 +256,15 @@ Phase 0（基礎建設）
 **範圍**：
 
 **Widget Shell（WS-B）**：
-- `ChatWidget` 根元件（管理 isOpen 狀態）
-- `ChatLauncher`（桌機膠囊版、手機 FAB）
-- `ChatPanel`（展開態容器，桌機 panel、手機全螢幕）
+
+- `ChatWidget` 根元件：管理 Widget 收合 / 展開狀態，並內嵌 Launcher FAB / 桌機膠囊按鈕，不拆出獨立 `ChatLauncher`
+- `ChatPanel`：展開態聊天面板容器，桌機 panel、手機全螢幕；直接包含 Header、Info Bar、Disclaimer 的 HTML 結構，不拆出獨立 `ChatHeader`、`ChatInfoBar`、`ChatDisclaimer`
 - 展開 / 收合動畫（CSS transition）
-- Widget 布局五區：Header、Info Bar、Message Area、Quick Replies Bar、Input Bar + Disclaimer
+- Widget 布局五區：Header、Info Bar、Message Area、Quick Replies Bar、Input Bar + Disclaimer；其中 Header、Info Bar、Disclaimer 由 `ChatPanel` 內部直接實作，不拆成獨立元件
 - RWD 斷點邏輯（桌機 ≥ 1024px、平板 768–1023px、手機 < 768px）
 
 **聊天核心（WS-C）**：
+
 - `useChatSession` composable：session 建立、localStorage 讀寫（key: `chat_session_token`）、session 恢復流程（帶 `sessionToken` 呼叫 `GET /api/v1/chat/sessions/:sessionToken/history` → 過期清除重建）
 - `useChat` composable：訊息發送、訊息列表管理、快捷提問點擊
 - `useStreaming` composable：SSE 接收（`fetch + ReadableStream`）、token append、狀態機（idle→sending→streaming→completed／error／timeout／interrupted）、30 秒 timeout 計時器；取消以 `AbortController.abort()` 實現
@@ -205,29 +275,42 @@ Phase 0（基礎建設）
 - 重新開始對話（清除 session、重建）
 
 **Widget Config（WS-C）**：
+
 - `useWidgetConfig` composable：每次使用者**展開 Widget 時**重新呼叫 Widget Config API，不快取至 localStorage，確保後台修改文案後使用者下次展開即可看到最新設定
 - 若 API 失敗，fallback 至靜態 i18n 文案（`i18n/locales/zh-TW/common.json`）
 - `useWidgetConfigStore`：儲存 config、isOnline、isLoaded（僅作為本次展開期間的記憶體快取）
 - 降級模式觸發邏輯（config API 失敗 / `status: 'offline'` / `status: 'degraded'`）
 
 **元件清單**：
-- `ChatWidget`、`ChatPanel`、`ChatMessageArea`、`ChatInputBar`
-- `UserMessageItem`、`AiMessageItem`（含 Markdown 渲染）、`AiStreamingItem`（含打字游標動畫）
-- `SystemInterceptedItem`（機密攔截 / Prompt Injection，含鎖頭 / 盾牌 icon）
-- `SystemLowConfidenceItem`（低信心度提示條）
-- `SystemErrorItem`（錯誤 + 重試）、`SystemTimeoutItem`（timeout + 重試）
-- `SystemFallbackItem`（降級模式提示）
+
+- `ChatWidget`：管理 Widget 收合 / 展開狀態，內嵌 Launcher FAB / 桌機膠囊按鈕
+- `ChatPanel`：展開態聊天面板容器，直接包含 Header、Info Bar、Disclaimer 的 HTML 結構
+- `ChatMessageArea`
+- `ChatQuickReplies`：全域快捷提問按鈕列，資料來源為 Widget Config API
+- `ChatInputBar`
+- `UserMessageItem`
+- `AiMessageItem`（含 Markdown 渲染與內嵌 feedback 區塊）
+- `AiStreamingItem`
+- `SystemInterceptedItem`
+- `SystemLowConfidenceItem`
+- `SystemErrorItem`
+- `SystemTimeoutItem`
+- `SystemFallbackItem`
+
+本期不建立獨立 `ChatLauncher`、`ChatHeader`、`ChatInfoBar`、`ChatDisclaimer` 元件；這些區塊由 `ChatWidget` / `ChatPanel` 內部直接實作。
 
 **主要輸出**：可互動的前台 Widget MVP，多輪對話 + 串流回覆可驗證（搭配 mock）
 
 **依賴關係**：依賴 Phase 0 完成（API client、types、store 骨架、layout）
 
 **待確認項**：
+
 - Chat Session API 回應結構與 session 過期機制（401 或 404？）（→ 後端確認）
 
 > **已確認**：串流協議為 SSE；Widget Config API（`GET /api/v1/widget/config`）為強依賴；API 路徑統一 `/api/v1/...`
 
 **完成定義（DoD）**：
+
 - [ ] Widget 可從收合點擊展開，動畫流暢
 - [ ] 桌機 panel / 手機全螢幕布局正確
 - [ ] 可建立 session，歡迎訊息與快捷提問顯示
@@ -250,6 +333,7 @@ Phase 0（基礎建設）
 **範圍**：
 
 **留資表單（WS-D）**：
+
 - `LeadFormCard` 元件（inline 卡片，嵌入訊息流）
 - 表單欄位：姓名（必填）、Email（必填）、公司名稱（選填）、電話（選填）、備注 / 詢問訊息（message，選填）；`language` 欄位由前端自動帶入當前語系，不需訪客填寫
 - vee-validate 驗證規則（name 必填、email 必填且格式正確；company / phone / message 選填；**不使用 phoneOrEmail 自訂規則**）
@@ -258,17 +342,20 @@ Phase 0（基礎建設）
 - 同一 session 已提交後再次觸發顯示「已登記」提示，不重複渲染表單
 
 **轉人工（WS-D）**（**本期採用簡化版**）：
+
 - `HandoffStatusCard` 元件（inline 卡片，**本期只顯示「已轉交專人協助」靜態確認訊息**）
 - `useHandoff` composable：`POST /api/v1/chat/sessions/:sessionToken/handoff` → 後端建立 Lead → 前端顯示靜態訊息
 - **不實作** handoff status polling / SSE status event；多狀態流程（waiting / connected / unavailable）**本期不做，移至未來規劃**
 
 **滿意度回饋（WS-D）**（**本期正式串接 Feedback API**）：
+
 - `AiMessageItem` 內嵌 feedback 讚 / 倒讚按鈕（icon button，`UButton variant="ghost"`）
 - `useFeedback` composable：`submitFeedback(sessionToken, messageId, value, reason?)` → 呼叫 `POST /api/v1/chat/sessions/:sessionToken/messages/:messageId/feedback`，payload `{ value: 'up'|'down', reason? }`
 - 採 **fire-and-forget**：樂觀更新本地 `rating` 狀態，API 失敗記錄 console error，不影響主對話流
 - 點擊倒讚後可展開原因 chips（選填）
 
 **語系切換（WS-D）**：
+
 - Header 語系切換下拉（`UDropdownMenu`，選項：繁體中文 / English）
 - 切換後 i18n locale 更新，所有靜態文案即時更新
 - 語系偏好儲存至 `localStorage.chat_locale`，初始化時讀取
@@ -276,6 +363,7 @@ Phase 0（基礎建設）
 - 快捷提問文案依語系從 Widget Config 取對應語系版本
 
 **埋點基礎（WS-D / WS-H）**：
+
 - `utils/analytics.ts` 補完事件定義與發送邏輯：
   - Widget 開啟 / 收合
   - 快捷提問點擊（含文案）
@@ -291,11 +379,13 @@ Phase 0（基礎建設）
 **依賴關係**：依賴 Phase 1 完成（Widget Shell、聊天核心）
 
 **待確認項（TBD）**：
+
 - 埋點後端 API 端點規格
 
 > **已確認**：轉人工為簡化版（POST handoff → 靜態訊息，不做 polling）；Feedback API 本期正式串接（`POST /api/v1/chat/sessions/:sessionToken/messages/:messageId/feedback`，payload `{ value: 'up'|'down', reason? }`，fire-and-forget）；Lead Form 驗證：name + email 必填，company + phone + message 選填，language 自動帶入
 
 **完成定義（DoD）**：
+
 - [ ] 留資表單在訊息流中正確觸發並渲染
 - [ ] 表單驗證規則完整（name + email 必填；company / phone 選填）
 - [ ] 提交成功轉為確認訊息，同 session 再次觸發顯示「已登記」
@@ -314,12 +404,24 @@ Phase 0（基礎建設）
 **範圍**：
 
 **後台共用基礎（WS-E）**：
+
 - `layouts/admin.vue` 完整實作：左側導覽列（含各功能頁連結）、頂部 topbar、主內容區
 - 左側導覽列：Dashboard、對話紀錄、Lead、Ticket、意圖/模板、快捷提問、Widget 設定、稽核事件、回饋紀錄
 - 預設路由：`/admin` → redirect 至 `/admin/dashboard`
-- 共用元件：`AdminDataTable`（`UTable` + `UPagination` 封裝）、`AdminFilterBar`、`AppEmptyState`、`AppErrorState`、`AppStatusBadge`（`UBadge` 封裝）、`AppModal`（二次確認）
+- 後台資料管理 table 公版（依 `design.md §7C`，Phase 0 已完成安裝；本 Phase 首次落地為 domain page）：
+  - `TableData`：vxe-table 公版 DOM shell
+  - `DtUtils`：table controller，管理 loading / data / pager / sort / vxe-column filters / advancedSearch
+  - `TableFilterBar`：注入 `DtUtils`，橋接 `FilterBar` 與 `advancedSearchSubmit`
+  - `FilterBar`：純 UI filter form，不知道 `DtUtils` / store / API params
+  - domain `PageHeader.vue`：page-level header，title / description / non-create CTA / filter toggle
+  - optional domain `DtHeader.vue`：table-level toolbar，僅當 domain 需要新增 / 批次操作時建立
+  - domain `DtTable.vue`：vxe-column 欄位定義、enum / boolean filters、row actions
+  - `DtParams` / `DtTableResult`：table layer 格式，由 domain store adapter 轉成後端 API params
+  - `DtParams → DomainListParams` adapter pattern：每個 domain store 負責轉換，不外露給 page 或 DtUtils
+- 共用狀態元件：`AppEmptyState`、`AppErrorState`、`AppStatusBadge`（`UBadge` 封裝）、`AppModal`（二次確認）
 
 **Dashboard（WS-E）**：
+
 - 路由：`/admin/dashboard`（`/admin` 預設導向此頁）
 - 統計卡片列（`AdminStatCard`，5 個）：今日對話數、本月對話數、AI 自助解答率、待處理 Ticket 數、本月新增 Lead 數
 - 近 7 / 30 天對話量趨勢折線圖（`AdminLineChart`，tab 切換天數）
@@ -328,44 +430,105 @@ Phase 0（基礎建設）
 - `services/api/admin/dashboard.ts`（`GET /api/v1/admin/dashboard`）
 
 **對話紀錄查詢（WS-E）**：
-- 列表頁：Session ID、開始時間、對話輪數、語系、狀態、是否有回饋
-- 篩選：時間範圍（日期選擇器）、語系、狀態、是否含機密攔截、是否含 Prompt Injection
-- 關鍵字搜尋（debounce 300ms）
-- 分頁（每頁 20 筆）、排序
-- 匯出 CSV（`POST /api/v1/admin/conversations/export`，後端非同步，前端輪詢下載連結或直接下載）
-- 詳情頁：Session 基本資訊、對話訊息列表（`ConversationViewer`，模擬聊天氣泡樣式）、信心度 / 攔截事件標記、回饋摘要
-- `services/api/admin/conversations.ts`
+
+> `/admin/conversations` 為後台資料管理頁面的 **reference implementation**，後續 Phase 4 / Phase 5 所有列表頁均以此為標準範例。
+
+- 路由：`/admin/conversations`（列表）、`/admin/conversations/:id`（詳情）
+- `pages/admin/conversations/index.vue`：
+  - `provide(DtUtils.key, new DtUtils(useAdminConversations()))`
+  - 不直接管理 rows / total / loading / page / sort / filters
+- `PageHeader.vue`：
+  - 顯示頁面標題與描述
+  - 放置匯出 CSV 等 page-level CTA（`exportCsv(dt.params.value)`）
+  - 使用 `TableFilterBar` 的 `#header` scoped slot 注入 FilterToggle
+- `TableFilterBar.vue`：處理 keyword、dateRange、sessionId、intentLabel 等自由輸入 / 區間搜尋條件
+- `DtTable.vue`：
+  - 使用 `TableData` + `vxe-column`
+  - status / language / hasFeedback / hasConfidential / hasPromptInjection 等固定選項使用 `vxe-column :filters`
+  - row action：「查看」導向 `/admin/conversations/:id`
+- domain store `useAdminConversations()`：
+  - `getTable(params: DtParams): Promise<DtTableResult<ConversationSummaryVM>>`
+  - `exportCsv(params: DtParams)`：`POST /api/v1/admin/conversations/export`，本期同步回傳 `{ url }`；前端使用 `useAdminDownload().downloadUrl(url, filename)` 觸發下載。未來若資料量過大，再升級為非同步 export job。
+  - `get(id)`
+  - 負責 `DtParams → ConversationListParams` adapter，不外露給 page 或 DtUtils
+- `services/api/admin/conversations.ts`：
+  - `GET /api/v1/admin/conversations`
+  - `GET /api/v1/admin/conversations/:id`
+  - `POST /api/v1/admin/conversations/export`
+  - service 層處理 API envelope（`{ code, data }`），store 不直接處理
+- 詳情頁（`/admin/conversations/:id`）：Session 基本資訊、對話訊息列表（`ConversationViewer`，模擬聊天氣泡樣式）、信心度 / 攔截事件標記、回饋摘要
 
 **Lead 管理（WS-E）**：
-- 列表頁：姓名、公司、聯絡方式、詢問品項、建立時間、狀態
-- 篩選：狀態、時間範圍；搜尋：姓名 / 公司關鍵字
-- 詳情頁：完整留資資訊、關聯對話連結、狀態切換下拉、備註欄位（管理者內部備註）
-- `services/api/admin/leads.ts`
+
+- 路由：`/admin/leads`（列表）、`/admin/leads/:id`（詳情）
+- 使用資料管理頁面標準架構（同 `/admin/conversations` reference implementation）：
+  - `index.vue`：provide `DtUtils.key` + `useAdminLeads()`，不直接管理 table state
+  - `PageHeader.vue`：page-level header
+  - optional `DtHeader.vue`：若需要新增 / 批次操作才建立
+  - `DtTable.vue`：姓名、公司、聯絡方式、詢問品項、建立時間、狀態；row action 導向詳情頁
+  - `[id].vue`：完整留資資訊、關聯對話連結、狀態切換下拉、備註欄位（管理者內部備註）
+- `TableFilterBar`：處理 keyword（姓名 / 公司）、dateRange
+- `vxe-column :filters`：處理 status 等固定選項
+- domain store `useAdminLeads()`：
+  - `getTable(params: DtParams): Promise<DtTableResult<LeadSummaryVM>>`
+  - `get(id)`
+  - `setStatus(id, status)` 或對應更新 action
+  - 負責 `DtParams → LeadListParams` adapter
+- `services/api/admin/leads.ts`：使用後端 API DTO，不直接接收 `DtParams`；service 層處理 API envelope
 
 **Ticket 管理（WS-E）**：
-- 列表頁：Ticket ID、主旨、建立時間、狀態（開啟 / 進行中 / 已關閉）、優先級
-- 篩選：狀態、優先級、時間範圍
-- 詳情頁：問題描述、關聯對話連結、處理紀錄時間軸（每次狀態變更或備註）、狀態變更 + 備註輸入 + 送出按鈕
-- 狀態流：開啟 → 進行中 → 已關閉（不做 escalation）
-- `services/api/admin/tickets.ts`（`GET /api/v1/admin/tickets`、`GET /api/v1/admin/tickets/:id`、`PATCH /api/v1/admin/tickets/:id`）
 
-**主要輸出**：可用的後台管理骨架，Dashboard + 對話紀錄 + Lead + Ticket 頁面完整可操作
+- 路由：`/admin/tickets`（列表）、`/admin/tickets/:id`（詳情）
+- 使用資料管理頁面標準架構：
+  - `index.vue`：provide `DtUtils.key` + `useAdminTickets()`，不直接管理 table state
+  - `PageHeader.vue`：page-level header
+  - optional `DtHeader.vue`：若需要批次操作才建立
+  - `DtTable.vue`：Ticket ID、主旨、建立時間、狀態、優先級；row action 導向詳情頁
+  - `[id].vue`：問題描述、關聯對話連結、處理紀錄時間軸、狀態變更 + 備註輸入 + 送出按鈕
+- `TableFilterBar`：處理 keyword、dateRange
+- `vxe-column :filters`：處理 status（`open | in_progress | resolved | closed`）、priority 等固定選項
+- domain store `useAdminTickets()`：
+  - `getTable(params: DtParams): Promise<DtTableResult<TicketSummaryVM>>`
+  - `get(id)`
+  - `updateStatus(id, status)`
+  - `createNote(id, payload)`
+  - 負責 `DtParams → TicketListParams` adapter
+- 狀態流：`open → in_progress → resolved → closed`（四態，不做 escalation）
+- `services/api/admin/tickets.ts`：
+  - `GET /api/v1/admin/tickets`
+  - `GET /api/v1/admin/tickets/:id`
+  - `PATCH /api/v1/admin/tickets/:id/status`
+  - `POST /api/v1/admin/tickets/:id/notes`
+  - service 層處理 API envelope
 
-**依賴關係**：依賴 Phase 0（admin layout 骨架、shared types）；Phase 3 與 Phase 2 可部分並行（前後台互不依賴）
+**主要輸出**：可用的後台管理骨架，Dashboard + 對話紀錄 + Lead + Ticket 頁面完整可操作；`/admin/conversations` 作為後續所有後台資料管理頁面的 reference implementation
+
+**依賴關係**：依賴 Phase 0（admin layout 骨架、shared types、**vxe-table 公版基礎建設**）；Phase 3 與 Phase 2 可部分並行（前後台互不依賴）；`/admin/conversations` 完成後作為 Phase 4 / Phase 5 所有資料管理列表頁的 reference implementation
 
 **待確認項（TBD）**：
-- 對話紀錄匯出：後端同步返回 CSV 或非同步？
+
 - Lead 指派業務：本期後台顯示狀態即可，不整合 CRM
 - Dashboard API：`GET /api/v1/admin/dashboard` 回傳欄位定義
 
+> **已確認**：對話紀錄匯出本期採同步匯出，`POST /api/v1/admin/conversations/export` 直接回傳 `{ url }`，前端以 `useAdminDownload().downloadUrl(url, filename)` 觸發下載。本期不做 export job、jobId、export status API、前端輪詢下載連結或背景非同步產生檔案。
+
 **完成定義（DoD）**：
+
 - [ ] 後台 admin layout 正確（左側導覽列含 Dashboard / 對話紀錄 / Lead / Ticket / 意圖 / 快捷提問 / Widget 設定 / 稽核 / 回饋、topbar、內容區）
 - [ ] 預設路由 `/admin` 跳轉至 `/admin/dashboard`
 - [ ] Dashboard 統計卡片正確顯示，折線圖 / 圓餅圖可渲染
+- [ ] 後台資料管理頁不使用 `AdminDataTable`、`AdminFilterBar`、`UTable`、`useAdminTablePage`
+- [ ] 對話紀錄 / Lead / Ticket 列表頁均使用 `TableData` + `DtUtils` + domain `DtTable.vue`
+- [ ] 各列表頁的 `index.vue` 僅做組裝與 provide，不直接管理 rows / loading / total / pagination / sort / filters
+- [ ] 每個 table domain store 都提供 `getTable(params: DtParams): Promise<DtTableResult<T>>`
+- [ ] 搜尋條件透過 `TableFilterBar` → `DtUtils.advancedSearchSubmit()` 觸發
+- [ ] enum / boolean 欄位篩選使用 `vxe-column :filters`
+- [ ] 匯出 CSV 使用 domain store `exportCsv(dt.params.value)`，不依賴 `useAdminTablePage.buildCurrentParams()`
 - [ ] 對話紀錄列表可依條件篩選，分頁正確
 - [ ] 對話詳情頁以氣泡樣式顯示完整對話，攔截事件有標記
 - [ ] Lead 列表可篩選，詳情頁狀態可更新
 - [ ] Ticket 列表可篩選，詳情頁可更新狀態 + 新增備註
+- [ ] Ticket 狀態流為 `open | in_progress | resolved | closed`
 - [ ] 所有列表頁空狀態 / 錯誤狀態 / 維護狀態正確呈現
 
 ---
@@ -374,32 +537,69 @@ Phase 0（基礎建設）
 
 **目標**：完成後台四個核心內容管理模組，讓管理者可維護 AI 客服的知識庫、意圖、快捷提問與 Widget 設定。
 
+> 所有含 table / 智慧列表的 admin domain page，必須使用 `TableData` + `DtUtils` + `DtTable` 架構，延續 Phase 3 `/admin/conversations` reference implementation；新增 / 批次匯入 / 批次操作放在 optional `DtHeader.vue`；搜尋 / 日期區間放在 `TableFilterBar.vue`；enum / boolean 篩選放在 `vxe-column :filters`。若該頁不是 table 型資料管理頁（例如 Widget 設定表單），則不需要套用 `DtUtils`。
+
 **範圍**：
 
 **知識庫管理（WS-F）**：
-- 列表頁：標題、分類、狀態（草稿 / 已發佈 / 已停用）、最後更新時間、操作
-- 篩選：分類、狀態、關鍵字搜尋（debounce）
-- 刪除二次確認 Modal（`AppModal`）
-- 新增 / 編輯頁：標題（必填）、分類選擇（含新增分類入口）、狀態切換、內容編輯器（TBD：Markdown 編輯器 + 預覽切換）
-- 版本歷史：`USlideover` 側抽屜，列出歷次修改時間，可展開差異比對，可還原（還原需確認彈窗）
-- 批次匯入 Modal（`KnowledgeImportModal`）：格式說明 + 範本下載、上傳後顯示成功 / 失敗結果
-- `services/api/admin/knowledge.ts`（CRUD + 版本 API + 匯入 API）
+
+- 路由：`/admin/knowledge`、`/admin/knowledge/new`、`/admin/knowledge/:id`
+- 列表頁使用資料管理頁面標準架構：
+  - `index.vue`：provide `DtUtils.key` + `useAdminKnowledge()`，不直接管理 table state
+  - `PageHeader.vue`：放 page-level CTA（例如重新整理）；搜尋 toggle 由 `TableFilterBar #header` scoped slot 提供
+  - `DtHeader.vue`（optional）：放新增條目按鈕、批次匯入按鈕等 table-level actions
+  - `DtTable.vue`：標題、分類、狀態（草稿 / 已發佈 / 已停用）、最後更新時間、操作；row action：編輯、刪除（`AppModal` 二次確認）
+- `TableFilterBar`：處理 keyword、dateRange
+- `vxe-column :filters`：處理 category、status 等固定選項
+- 新增 / 編輯頁（`/admin/knowledge/new`、`/admin/knowledge/:id`）：標題（必填）、分類選擇（含新增分類入口）、狀態切換、內容編輯器（TBD：Markdown 編輯器 + 預覽切換）
+- 版本歷史：`USlideover` 側抽屜，列出歷次修改時間，可展開差異比對，可還原（還原需 `AppModal` 確認）
+- 批次匯入 Modal（`KnowledgeImportModal`）：格式說明 + 範本下載、上傳後顯示成功 / 失敗結果；入口放在 `DtHeader.vue`
+- domain store `useAdminKnowledge()`：
+  - `getTable(params: DtParams): Promise<DtTableResult<KnowledgeEntrySummaryVM>>`
+  - `get(id)`
+  - `remove(payload)`
+  - `batchImport(...)`（視需求）
+  - 負責 `DtParams → KnowledgeListParams` adapter
+- `services/api/admin/knowledge.ts`：CRUD + 版本 API + 匯入 API；service 層處理 API envelope
 
 **意圖 / 模板管理（WS-F）**：
-- 列表頁：意圖名稱、觸發關鍵字（前 3 個 + tooltip）、啟用狀態 toggle（`USwitch`）、操作
+
+- 路由：`/admin/intents`
+- 列表頁使用資料管理頁面標準架構：
+  - `index.vue`：provide `DtUtils.key` + `useAdminIntents()`，不直接管理 table state
+  - `PageHeader.vue`：page-level header
+  - `DtHeader.vue`（optional）：放新增意圖按鈕
+  - `DtTable.vue`：意圖名稱、觸發關鍵字（前 3 個 + tooltip）、啟用狀態（`USwitch` inline toggle，直接呼叫 PATCH API）、操作
+- `TableFilterBar.vue`：處理 keyword 搜尋
+- `vxe-column :filters`：處理啟用狀態、優先級等固定選項
 - 新增 / 編輯：以 `USlideover` 側抽屜形式（意圖名稱、觸發關鍵字 tag input、優先級、回覆模板內容）
-- 意圖預覽：輸入測試問句，呼叫 API 預覽匹配與回覆模板
-- `services/api/admin/intents.ts`
+- 意圖預覽：在 slideover 底部提供測試輸入框，呼叫 `POST /api/v1/admin/intents/preview`
+- domain store `useAdminIntents()`：
+  - `getTable(params: DtParams): Promise<DtTableResult<IntentSummaryVM>>`
+  - `get(id)`
+  - `create(data)`
+  - `set(id, data)`
+  - `remove(payload)`
+  - 負責 `DtParams → IntentListParams` adapter
+- `services/api/admin/intents.ts`：service 層處理 API envelope
 
 **快捷提問管理（WS-F）**：
+
+- 路由：`/admin/quick-replies`
+- 此頁以拖曳排序為主，可使用 domain-specific `QuickReplyDragList`，不強制套 `DtTable`
+- 若未來需要 table / 智慧列表能力，再依標準架構接入 `TableData` + `DtUtils` + `DtTable`
+- 新增按鈕屬於資料新增，放在 domain-specific list toolbar（若採 DtTable 架構則放 `DtHeader.vue`）
 - 頁面左右兩欄：左側編輯列表（拖曳排序 `QuickReplyDragList`）、右側即時預覽（顯示前台 Quick Replies Bar 外觀）
-- 拖曳排序（`@vueuse/core` 的 `useSortable` 或其他拖曳方案）
-- 每筆可展開編輯：繁中文案、英文文案、啟用狀態
-- 新增 / 刪除（刪除需確認）
-- 拖曳完成後立即呼叫排序更新 API
+- 拖曳排序（`@vueuse/core` 的 `useSortable` 或 `vue-draggable-plus`，TBD）
+- 每筆可展開編輯：繁中文案、英文文案、啟用狀態；新增 / 刪除（刪除需確認）
+- 拖曳完成後立即呼叫排序更新 API（傳送排序後的 ID 陣列）
 - `services/api/admin/quickReplies.ts`
+- **不使用** `AdminDataTable` / `UTable` 作為資料管理標準
 
 **Widget 設定管理（WS-F）**：
+
+- 路由：`/admin/widget-settings`
+- 此頁為設定表單 + 即時預覽，不屬於資料管理 table page，**不需要套用 `DtUtils` / `TableData` / `DtTable`**
 - 頁面左右兩欄：左側設定表單、右側 Widget 即時預覽（`WidgetSettingsPreview`）
 - 設定項目：CTA 文案（繁中 / 英文）、歡迎訊息（繁中 / 英文）、頁尾免責聲明（繁中 / 英文）、AI 標記文字、線上 / 離線 / 降級文案、聯絡捷徑（最多 3 組）
 - 修改任何欄位後右側預覽即時更新（純前端 local 預覽，不呼叫 API）
@@ -408,18 +608,21 @@ Phase 0（基礎建設）
 
 **主要輸出**：後台四個內容管理模組完整可操作，Widget 設定可即時預覽並儲存
 
-**依賴關係**：依賴 Phase 3（admin 共用元件、`AdminDataTable`、`AppModal`）；知識庫版本功能需後端版本 API 支援
+**依賴關係**：依賴 Phase 3（admin 共用元件、`AppModal`）；知識庫 / 意圖列表頁以 Phase 3 `/admin/conversations` 作為 reference implementation；知識庫版本功能需後端版本 API 支援
 
 **待確認項（TBD）**：
+
 - 知識庫編輯器：Markdown 編輯器選型（推薦 `@nuxtjs/mdc` 或 `CodeMirror`，TBD）
 - 批次匯入格式：CSV / JSON 欄位定義、單次上限筆數（需後端提供範本）
 - 快捷提問拖曳：排序 API 接受排序後的 ID 陣列
 
 **完成定義（DoD）**：
-- [ ] 知識庫列表、新增、編輯、刪除流程完整
-- [ ] 版本歷史可查詢，可還原至指定版本
+
+- [ ] 知識庫列表頁使用 `TableData` + `DtUtils` + `DtTable`，新增 / 批次匯入入口在 `DtHeader.vue`
+- [ ] 知識庫版本歷史可查詢，可還原至指定版本
 - [ ] 批次匯入 CSV / JSON，成功 / 失敗結果正確顯示
-- [ ] 意圖列表可啟用 / 停用，新增 / 編輯以側抽屜操作
+- [ ] 意圖列表頁使用 `TableData` + `DtUtils` + `DtTable`，啟用狀態可 inline toggle
+- [ ] 意圖新增 / 編輯以側抽屜操作，意圖預覽可測試
 - [ ] 快捷提問可拖曳排序，順序更新 API 正確呼叫
 - [ ] Widget 設定表單修改後右側預覽即時更新
 - [ ] 所有設定儲存後重新載入頁面資料一致
@@ -432,32 +635,56 @@ Phase 0（基礎建設）
 
 > **⚠️ 營運報表本期不做（deferred）**
 
+> 稽核事件與回饋紀錄屬於資料管理 / 查詢型列表頁，必須延續 Phase 3 `/admin/conversations` 的 reference implementation，使用 `TableData` + `DtUtils` + `DtTable`，不得重新引入 `AdminDataTable` / `UTable` / `useAdminTablePage`。
+
 **範圍**：
 
 **稽核事件（WS-G）**：
-- 列表頁：事件時間、事件類型（機密攔截 / Prompt Injection / 轉人工 / 低信心度）、Session ID、嚴重程度（高 / 中 / 低）
-- 篩選：事件類型、時間範圍、嚴重程度
-- 匯出 CSV
-- 詳情頁：事件基本資訊、觸發上下文對話（`ConversationViewer` 子集）、系統判斷依據摘要
+
+- 路由：`/admin/audit-events`、`/admin/audit-events/:id`
+- 使用資料管理頁面標準架構：
+  - `index.vue`：provide `DtUtils.key` + `useAdminAuditEvents()`，不直接管理 table state
+  - `PageHeader.vue`：放匯出 CSV 等 page-level CTA；搜尋 toggle 由 `TableFilterBar #header` scoped slot 提供
+  - `DtTable.vue`：事件時間、事件類型、Session ID、嚴重程度（`AuditEventBadge`）；row action 導向詳情頁
+  - `[id].vue`：事件基本資訊、觸發上下文對話（`ConversationViewer` 子集）、系統判斷依據摘要
+- `TableFilterBar.vue`：處理 keyword、dateRange
+- `vxe-column :filters`：處理 eventType（機密攔截 / Prompt Injection / 轉人工 / 低信心度）、severity（高 / 中 / 低）
+- domain store `useAdminAuditEvents()`：
+  - `getTable(params: DtParams): Promise<DtTableResult<AuditEventSummaryVM>>`
+  - `exportCsv(params: DtParams)`：store 透過 adapter 將 `DtParams` 轉成 `AuditEventListParams`，再呼叫 service export API。後端本期若提供 export API，採同步回傳 `{ url }`，前端使用 `useAdminDownload().downloadUrl(url, filename)` 觸發下載。本期不做 export job / polling。（API TBD）
+  - `get(id)`
+  - 負責 `DtParams → AuditEventListParams` adapter
+- `services/api/admin/audit.ts`：service 層處理 API envelope，不直接接收 `DtParams`
 - `AuditEventBadge` 元件（事件類型 + 嚴重程度配色）
-- `services/api/admin/audit.ts`
 
 **回饋紀錄（WS-G）**：
-- 列表頁：時間、Session ID、訊息摘要（前 50 字）、回饋類型（讚 / 倒讚 + 顏色標記）、倒讚原因
-- 篩選：回饋類型、時間範圍
-- 點擊 Session ID 跳至對話詳情頁
-- `services/api/admin/feedback.ts`（`GET /api/v1/admin/feedback`；前台 Feedback API 本期已正式串接，此處為後台查詢介面）
+
+- 路由：`/admin/feedback`
+- 使用資料管理頁面標準架構：
+  - `index.vue`：provide `DtUtils.key` + `useAdminFeedback()`，不直接管理 table state
+  - `PageHeader.vue`：page-level header
+  - `DtTable.vue`：時間、Session ID、訊息摘要（前 50 字）、回饋類型（讚 / 倒讚 + 顏色標記）、倒讚原因；點擊 Session ID 導向對話詳情頁
+- `TableFilterBar.vue`：處理 keyword、dateRange
+- `vxe-column :filters`：處理 feedback value（up / down）
+- 無獨立詳情頁，需查看完整訊息時導向 `/admin/conversations/:id`
+- domain store `useAdminFeedback()`：
+  - `getTable(params: DtParams): Promise<DtTableResult<FeedbackSummaryVM>>`
+  - 負責 `DtParams → FeedbackListParams` adapter
+- `services/api/admin/feedback.ts`（`GET /api/v1/admin/feedback`）；前台 Feedback API 本期已正式串接，此處為後台查詢介面；service 層處理 API envelope
 
 > **⚠️ 營運報表（Reports）本期不做，移至未來規劃**：`services/api/admin/reports.ts` 本期不建立
 
 **主要輸出**：稽核事件 + 回饋紀錄維運模組完整可查詢
 
-**依賴關係**：依賴 Phase 3 共用元件（`AdminDataTable`、`AdminFilterBar`）
+**依賴關係**：依賴 Phase 3（admin 共用元件、`AppModal`）；稽核事件與回饋紀錄列表頁以 Phase 3 `/admin/conversations` 作為 reference implementation
 
 **完成定義（DoD）**：
-- [ ] 稽核事件列表可依類型 / 嚴重程度篩選，詳情頁顯示上下文
-- [ ] 稽核事件匯出 CSV 可下載
-- [ ] 回饋紀錄列表可依類型篩選，可跳至對話詳情
+
+- [ ] 稽核事件列表頁使用 `TableData` + `DtUtils` + `DtTable`
+- [ ] 稽核事件可依類型 / 嚴重程度篩選（`vxe-column :filters`），詳情頁顯示上下文
+- [ ] 稽核事件匯出 CSV 可下載，使用 domain store `exportCsv(dt.params.value)`
+- [ ] 回饋紀錄列表頁使用 `TableData` + `DtUtils` + `DtTable`
+- [ ] 回饋紀錄可依回饋類型篩選，可跳至對話詳情
 
 ---
 
@@ -468,25 +695,29 @@ Phase 0（基礎建設）
 **範圍（WS-H）**：
 
 **RWD 細化**：
+
 - 前台 Widget 三個斷點（桌機 / 平板 / 手機）像素精修
 - 手機版全螢幕展開 + 底部 Input Bar sticky 固定
 - 平板版 panel 寬度（340px）
 - 後台 admin layout 在 1024–1279px 寬度下左側導覽列收合行為（TBD）
 
 **無障礙（Accessibility）**：
+
 - 前台 Widget：`role="dialog"`（聊天面板）、`role="log"`（訊息列表）、`aria-live` 通知新訊息
 - 所有 icon button `aria-label` 補全
 - 鍵盤操作：Tab 導覽、Enter 送出、Escape 收合 Widget
 - 色彩對比審核（4.5:1 最低標準）
-- 後台：表單 label/input 綁定、Modal focus trap、`UTable` aria-label
+- 後台：表單 label/input 綁定、Modal focus trap、`TableData` / vxe-table aria-label、row action aria-label、FilterToggle aria-label、鍵盤操作檢查
 
 **效能優化**：
+
 - 前台 Widget 以 `defineAsyncComponent` 懶加載
 - Widget 初始 bundle 目標審核（≤ 100KB gzipped）
 - 報表圖表元件懶加載確認
 - Nuxt `<Suspense>` + skeleton 在後台列表頁確認實作
 
 **i18n 第三語系預留**：
+
 - 確認 locale key 結構完整（zh-TW / en 均已定義的 key，第三語系可直接新增 JSON 檔案）
 - 不填充實際翻譯，僅確認 fallback 機制正常
 
@@ -495,6 +726,7 @@ Phase 0（基礎建設）
 **依賴關係**：依賴所有前置 Phase 完成（需要功能完整後才能做全面品質審核）
 
 **完成定義（DoD）**：
+
 - [ ] 前台 Widget 在 Chrome / Safari / Firefox 最新版 + iOS Safari 14+ + Android Chrome 90+ 正常顯示
 - [ ] 三個斷點 RWD 布局符合設計規範
 - [ ] 前台 Widget 鍵盤完全可操作
@@ -511,13 +743,19 @@ Phase 0（基礎建設）
 **目的**：提供 Widget 的物理外殼與動畫，管理收合 / 展開狀態，不含業務邏輯。
 
 **關鍵設計**：
+
 - 以 `position: fixed; bottom: 24px; right: 24px; z-index: 9999` 掛載
-- Launcher 與 ChatPanel 以同一個根元件（`ChatWidget`）控制 `isOpen` toggle
+- Launcher FAB / 桌機膠囊按鈕與 `ChatPanel` 由同一個根元件 `ChatWidget` 控制 `isOpen` toggle；Launcher 不拆成獨立 `ChatLauncher`
 - 展開動畫：桌機 panel 右側滑入，手機 full-screen slide-up
 - `useChatWidgetStore.isOpen` 驅動 Launcher 隱藏 / Panel 顯示
 - 手機版展開時對 `<body>` 加 `overflow: hidden`，收合時還原
 
-**元件**：`ChatWidget`、`ChatLauncher`、`ChatPanel`、`ChatHeader`、`ChatInfoBar`、`ChatInputBar`、`ChatDisclaimer`
+**元件**：`ChatWidget`、`ChatPanel`、`ChatMessageArea`、`ChatQuickReplies`、`ChatInputBar`
+
+- `ChatWidget`：管理 Widget 收合 / 展開狀態，Launcher FAB / 桌機膠囊按鈕直接內嵌於此元件，不拆出 `ChatLauncher`
+- `ChatPanel`：展開態聊天面板容器，直接包含 Header、Info Bar、Disclaimer 的 HTML 結構，不拆出 `ChatHeader`、`ChatInfoBar`、`ChatDisclaimer`
+- `ChatMessageArea`：訊息列表容器
+- `ChatInputBar`：輸入列與送出行為
 
 ---
 
@@ -526,13 +764,14 @@ Phase 0（基礎建設）
 **目的**：管理 session 生命週期與完整訊息列表，提供 type-driven 的訊息渲染框架。
 
 **關鍵設計**：
+
 - `useChatSession`：建立 session → 存 localStorage → 恢復 session（帶 token 呼叫歷史 API）→ 過期清除重建
 - `useChatSessionStore`：持有 messages 陣列、sessionToken、sessionStatus、各 domain 狀態
 - Message Renderer：`ChatMessageArea` 依每則訊息的 `type` 欄位渲染對應元件，無巨大 `v-if` 堆疊
 - 訊息 VM type（`ChatMessageVM`）含：`id`、`type`、`content`、`timestamp`、`metadata`（含信心度、攔截標記等）
 - 新訊息追加後自動 scroll to bottom（`nextTick` + `scrollIntoView` 或 `scrollTop`）
 
-**元件**：所有訊息型元件（`UserMessageItem`、`AiMessageItem`、`AiStreamingItem`、所有 `System*Item`、`MessageFeedback`）
+**元件**：所有訊息型元件（`UserMessageItem`、`AiMessageItem`、`AiStreamingItem`、所有 `System*Item`）；`AiMessageItem` 內嵌 feedback 讚 / 倒讚按鈕（不建立獨立 `MessageFeedback` 元件）
 
 ---
 
@@ -541,6 +780,7 @@ Phase 0（基礎建設）
 **目的**：以有限狀態機管理 AI 回覆的完整生命週期，確保任何情況都有明確 UI 回饋。
 
 **關鍵設計**：
+
 - `useStreaming`：持有 `streamingState`（idle / sending / streaming / completed / error / timeout / interrupted / cancelled）
 - 狀態轉換由訊息列表 + streaming state 共同驅動 UI 渲染
 - 30 秒 timeout timer 在 `sending` 時啟動，收到第一個 token 時清除
@@ -555,16 +795,19 @@ Phase 0（基礎建設）
 **目的**：三個前台進階互動，各有獨立的 composable 管理狀態，不污染主聊天流程。
 
 **Lead Form（`useLeadForm`）**：
+
 - 持有表單資料、驗證狀態、提交狀態（idle / submitting / submitted / error）
 - 提交後設 `leadFormState.submitted = true`，儲存至 `useChatSessionStore`，阻止重複提交
 - `LeadFormCard` 從 composable 取狀態，純 UI 展示
 
 **Handoff（`useHandoff`）**（**本期簡化版**）：
+
 - 持有 `handoffState`（idle → requesting → transferred）
 - 發送 `POST /api/v1/chat/sessions/:sessionToken/handoff` → 後端回傳 `{ accepted, action, leadId?, ticketId?, message }` → 前端顯示「已轉交專人協助」靜態確認訊息
 - **不實作 polling**；多狀態（waiting / connected / unavailable）本期不做
 
 **Feedback（`useFeedback`）**（**本期正式串接 Feedback API**）：
+
 - `submitFeedback(sessionToken, messageId, value, reason?)` → `POST /api/v1/chat/sessions/:sessionToken/messages/:messageId/feedback`
 - payload：`{ value: 'up'|'down', reason? }`；field 名稱為 `value`（非 `type`）
 - fire-and-forget：樂觀更新 `ChatMessageVM.feedbackValue`，API 失敗記錄 console error，不中斷對話流
@@ -576,6 +819,7 @@ Phase 0（基礎建設）
 **目的**：Widget 文案、快捷提問、聯絡捷徑等設定的載入、管理與 i18n 整合。
 
 **關鍵設計**：
+
 - `useWidgetConfig`：使用者**每次展開 Widget 時**呼叫 `GET /api/v1/widget/config`，不快取至 localStorage，確保後台修改文案後使用者下次展開即可看到最新設定；將結果存入 `useWidgetConfigStore` 作為本次展開期間的記憶體快取
 - Config API 失敗或 `status: 'offline'` 或 `status: 'degraded'` → 觸發降級模式
 - 動態文案覆蓋：Widget Config 的文案覆蓋靜態 i18n（用 `computed` 優先取 config，fallback 取 i18n）
@@ -589,6 +833,7 @@ Phase 0（基礎建設）
 **目的**：後台首頁，提供管理者一目了然的系統狀態概覽。
 
 **關鍵設計**：
+
 - 5 個 `AdminStatCard`（`UCard` 封裝，含數字、標題、連結）
 - `AdminLineChart` / `AdminPieChart`：以 **Nuxt Charts** 實作
 - 最新 5 筆稽核事件 inline 列表（可點擊跳至詳情）
@@ -601,10 +846,11 @@ Phase 0（基礎建設）
 **目的**：最複雜的後台模組，涵蓋 CRUD、版本歷史、批次匯入。
 
 **關鍵設計**：
-- 列表頁以 `AdminDataTable` 顯示，篩選條件存 URL query string（支援分頁書籤）
+
+- 列表頁使用 `TableData` + `DtUtils` + `DtTable`（`index.vue` + `PageHeader.vue` + optional `DtHeader.vue` + `DtTable.vue`）；篩選條件可同步至 URL query string 以支援頁面書籤；但 table state 仍由 `DtUtils.params` 管理，若需 URL query sync，應透過 route sync helper 或 domain adapter 與 `DtUtils` 串接，不回到 page-local 自行管理 rows / loading / pagination / filters
 - 編輯頁：Markdown 編輯器（TBD 選型）+ 預覽切換（`@nuxtjs/mdc` 或 `CodeMirror`）
 - 版本歷史：`USlideover` 側抽屜，列出版本列表，點開可查看該版本 diff（TBD：diff 格式由後端提供或前端計算）
-- 還原操作：`AppModal` 二次確認後呼叫 `POST /api/admin/knowledge/:id/restore/:versionId`
+- 還原操作：`AppModal` 二次確認後呼叫 `POST /api/v1/admin/knowledge/:id/restore/:versionId`
 - 批次匯入：`KnowledgeImportModal` 處理 multipart/form-data 上傳，解析後端回傳的 `{ success, failed, errors }` 結果
 
 ---
@@ -614,10 +860,11 @@ Phase 0（基礎建設）
 **目的**：提供管理者查詢、篩選、查看完整對話的工具，同時支援 CSV 匯出。
 
 **關鍵設計**：
-- 篩選條件存 URL query string，支援頁面書籤
-- `ConversationViewer`：後台詳情頁使用，模擬前台聊天氣泡樣式（共用訊息型元件的樣式，但去除 Feedback 按鈕）
+
+- 篩選條件可同步至 URL query string 以支援頁面書籤；但 table state 仍由 `DtUtils.params` 管理，若需 URL query sync，應透過 route sync helper 或 domain adapter 與 `DtUtils` 串接，不回到 page-local 自行管理 rows / loading / pagination / filters
+- `ConversationViewer`：後台詳情頁使用，模擬前台聊天氣泡樣式（共用訊息型元件的樣式，但去除 feedback 按鈕）
 - 攔截事件在訊息氣泡上以 `AuditEventBadge` 標記
-- 匯出：呼叫匯出 API，後端返回下載 URL，前端 `window.location.href` 觸發下載（同步）或輪詢（非同步，TBD）
+- 匯出：由 page-level CTA 觸發，呼叫 domain store 的 `exportCsv(dt.params.value)`；store 透過 adapter 將 `DtParams` 轉成 domain API params，再呼叫 service export API。後端本期採同步匯出，`POST /api/v1/admin/conversations/export` 直接回傳 `{ url }`；下載行為交由 `useAdminDownload().downloadUrl(url, filename)` 處理。本期不做 export job、jobId、export status API、前端輪詢下載連結或背景非同步產生檔案。未來若資料量過大，再升級為非同步 export job。
 
 ---
 
@@ -626,6 +873,7 @@ Phase 0（基礎建設）
 **目的**：Lead 輕量列表管理（狀態更新為主）；Ticket 支援完整狀態流（`open → in_progress → resolved → closed` 四態）。
 
 **關鍵設計**：
+
 - Lead 詳情：狀態下拉（`USelect`）+ 備註（`UTextarea`）+ 儲存，關聯對話連結
 - Ticket 詳情：問題描述、關聯對話連結、處理紀錄時間軸（每次狀態變更或備註）、狀態變更（`PATCH /api/v1/admin/tickets/:id/status`）+ 備註新增（`POST /api/v1/admin/tickets/:id/notes`）+ 送出按鈕
 - 狀態四態 badge：`open`（藍）/ `in_progress`（黃）/ `resolved`（綠）/ `closed`（灰）
@@ -638,10 +886,11 @@ Phase 0（基礎建設）
 **目的**：讓管理者定義 AI 意圖與回覆模板，支援測試預覽。
 
 **關鍵設計**：
+
 - 列表頁 `USwitch` 即時切換啟用狀態（直接呼叫 PATCH API）
 - 新增 / 編輯以 `USlideover` 形式，避免跳頁
 - 觸發關鍵字使用 tag-input 元件（Nuxt UI 目前無內建，需自製或使用第三方）
-- 意圖預覽：在 slideover 底部提供測試輸入框，呼叫 `POST /api/admin/intents/preview`
+- 意圖預覽：在 slideover 底部提供測試輸入框，呼叫 `POST /api/v1/admin/intents/preview`
 
 ---
 
@@ -650,6 +899,7 @@ Phase 0（基礎建設）
 **目的**：拖曳排序的快捷提問管理，並同步預覽前台效果。
 
 **關鍵設計**：
+
 - 拖曳排序使用 `@vueuse/integrations/useSortable` 或 `vue-draggable-plus`（TBD）
 - 拖曳結束後 debounce 500ms 後呼叫排序 API（傳送 ID 陣列）
 - 右側預覽面板：`WidgetSettingsPreview` 的快捷提問部分，pure UI，不呼叫 API
@@ -661,7 +911,8 @@ Phase 0（基礎建設）
 **目的**：即時預覽 Widget 設定變更，降低管理者出錯風險。
 
 **關鍵設計**：
-- 右側 `WidgetSettingsPreview` 為縮小版 Chat Panel，直接使用前台元件（`ChatLauncher`、`ChatPanel`），傳入 local 設定資料
+
+- 右側 `WidgetSettingsPreview` 為縮小版 Chat Panel，直接使用前台元件（`ChatWidget`、`ChatPanel`），傳入 local 設定資料
 - 設定表單任何欄位變更 → `computed widgetPreviewConfig` 更新 → 預覽 reactive 更新
 - 「儲存設定」按鈕：提交成功後顯示 toast；失敗顯示欄位 inline 錯誤
 
@@ -674,6 +925,7 @@ Phase 0（基礎建設）
 > **⚠️ 營運報表本期不做（deferred）**，移至未來規劃。
 
 **關鍵設計**：
+
 - 稽核事件嚴重程度以 `AppStatusBadge` 配色（高 → red、中 → yellow、低 → gray）
 - 時間範圍 picker：`AppDateRangePicker` 封裝 `UDatePicker`，切換後重新 fetch 資料
 - 匯出 CSV：按鈕附 loading 狀態
@@ -719,6 +971,7 @@ i18n/locales/
 ### 7.2 app.config.ts — Nuxt UI 主題設定
 
 於 `app/app.config.ts` 統一設定品牌色 token：
+
 - 主色（primary）：震南品牌色（待設計稿確認色票）
 - 語意色：success、warning、error
 - 聊天氣泡背景色延伸至 `tailwind.config.ts` 的 `theme.extend.colors`（如 `chat-user-bubble`、`chat-ai-bubble`、`intercept-warning`）
@@ -737,34 +990,34 @@ i18n/locales/
 
 Phase 0 需先定義以下 VM types 骨架（後期依 API 契約補充）：
 
-| Type | 說明 |
-|------|------|
-| `ChatMessageVM` | 前台訊息（type、content、timestamp、metadata） |
-| `WidgetConfigVM` | Widget 設定（文案、捷徑、快捷提問、status） |
-| `ChatSessionVM` | Session（token、status、locale） |
-| `LeadFormData` | 留資表單資料（name + email 必填，company + phone + message 選填，language 自動帶入） |
-| `KnowledgeEntryVM` | 知識庫條目（列表 + 編輯） |
-| `ConversationSummaryVM` | 對話列表項目 |
-| `ConversationDetailVM` | 對話詳情 |
-| `LeadVM` | Lead |
-| `TicketSummaryVM` | Ticket 列表項目 |
-| `TicketDetailVM` | Ticket 詳情（含處理紀錄時間軸） |
-| `IntentVM` | 意圖定義 |
-| `QuickReplyVM` | 快捷提問 |
-| `AuditEventVM` | 稽核事件 |
-| `FeedbackVM` | 回饋紀錄（後台查詢用） |
-| `DashboardStatsVM` | Dashboard 統計資料（本期正式使用） |
-| ~~`ReportDataVM`~~ | ~~報表資料~~ **（Reports 本期延後，型別暫不定義）** |
+| Type                    | 說明                                                                                 |
+| ----------------------- | ------------------------------------------------------------------------------------ |
+| `ChatMessageVM`         | 前台訊息（type、content、timestamp、metadata）                                       |
+| `WidgetConfigVM`        | Widget 設定（文案、捷徑、快捷提問、status）                                          |
+| `ChatSessionVM`         | Session（token、status、locale）                                                     |
+| `LeadFormData`          | 留資表單資料（name + email 必填，company + phone + message 選填，language 自動帶入） |
+| `KnowledgeEntryVM`      | 知識庫條目（列表 + 編輯）                                                            |
+| `ConversationSummaryVM` | 對話列表項目                                                                         |
+| `ConversationDetailVM`  | 對話詳情                                                                             |
+| `LeadVM`                | Lead                                                                                 |
+| `TicketSummaryVM`       | Ticket 列表項目                                                                      |
+| `TicketDetailVM`        | Ticket 詳情（含處理紀錄時間軸）                                                      |
+| `IntentVM`              | 意圖定義                                                                             |
+| `QuickReplyVM`          | 快捷提問                                                                             |
+| `AuditEventVM`          | 稽核事件                                                                             |
+| `FeedbackVM`            | 回饋紀錄（後台查詢用）                                                               |
+| `DashboardStatsVM`      | Dashboard 統計資料（本期正式使用）                                                   |
+| ~~`ReportDataVM`~~      | ~~報表資料~~ **（Reports 本期延後，型別暫不定義）**                                  |
 
 ### 7.5 Pinia Stores
 
-| Store | 用途 |
-|-------|------|
-| `useChatWidgetStore` | isOpen、mode（normal/fallback）、locale |
-| `useChatSessionStore` | sessionToken、sessionStatus、messages、streamingState、handoffState、leadFormState、quickRepliesVisible |
-| `useWidgetConfigStore` | config、isLoaded、isOnline |
+| Store                  | 用途                                                                                                    |
+| ---------------------- | ------------------------------------------------------------------------------------------------------- |
+| `useChatWidgetStore`   | isOpen、mode（normal/fallback）、locale                                                                 |
+| `useChatSessionStore`  | sessionToken、sessionStatus、messages、streamingState、handoffState、leadFormState、quickRepliesVisible |
+| `useWidgetConfigStore` | config、isLoaded、isOnline                                                                              |
 
-後台無需 store，所有 page-local 狀態在 `setup()` 中管理。
+後台一般頁面（非資料管理列表）的 page-local 狀態在 `setup()` 中管理，無需建立 Pinia store。資料管理列表頁（如 `/admin/conversations`、`/admin/leads` 等）例外：需建立對應的 domain Pinia store（提供 `getTable()`、`exportCsv()` 等方法），由 `DtUtils` 呼叫，以符合公版架構。
 
 ### 7.6 Nuxt UI 設定確認
 
@@ -793,31 +1046,31 @@ Phase 0 需先定義以下 VM types 骨架（後期依 API 契約補充）：
 
 ### 8.1 外部依賴項
 
-| # | 依賴項 | 影響模組 | 狀態 |
-|---|--------|---------|------|
-| D1 | 後端串流協議（SSE or WebSocket） | `useStreaming`、`services/streaming.ts` | **已確認：`fetch + ReadableStream`（SSE），非 `EventSource`，非 WebSocket** |
-| D2 | Widget Config API 回應結構 | `useWidgetConfig`、降級觸發邏輯 | **已確認：強依賴，`GET /api/v1/widget/config`；所有文案欄位為 `Record<string, string>` 多語系物件** |
-| D3 | Chat Session API 結構與過期機制 | `useChatSession`，Session 恢復流程 | TBD，Phase 1 前需確認 |
-| D4 | Lead / Handoff / Feedback / Ticket API 結構 | `useLeadForm`、`useHandoff`、`useFeedback`、`useTickets` | **已確認：Handoff `POST /api/v1/chat/sessions/:sessionToken/handoff`；Lead `POST /api/v1/chat/sessions/:sessionToken/lead`（`message?` 欄位）；Feedback `POST .../messages/:messageId/feedback`（payload `{ value: 'up'\|'down', reason? }`）；Ticket `PATCH .../status` + `POST .../notes`** |
-| D5 | 知識庫版本 diff API 格式 | `KnowledgeEditor` 版本歷史展示 | TBD，Phase 4 前需確認 |
-| D6 | 批次匯入 CSV / JSON 欄位定義與上限 | `KnowledgeImportModal` | TBD，Phase 4 前需確認 |
-| D7 | Dashboard API 資料結構 | Dashboard 統計卡片 + 圖表 | TBD，Phase 3 前需確認 `GET /api/v1/admin/dashboard` 欄位定義 |
-| D8 | 報表 API 資料粒度（日 / 週 / 月） | `AdminLineChart`、`AdminPieChart` | **Reports 本期 deferred，D8 不適用** |
-| D9 | 滿意度倒讚原因：chips 選項內容 | `AiMessageItem` UI | TBD，Phase 2 前需確認 chips 選項（`useFeedback` 已串接 API）|
-| D10 | 埋點後端 API 端點規格 | `utils/analytics.ts` | TBD，Phase 2 前需確認 |
-| D11 | 轉人工狀態更新：polling 或 SSE event | `useHandoff` 實作 | **已確認：本期不做 polling，靜態訊息** |
-| D12 | Widget 設計稿色票與字型 | `app.config.ts` 主題設定 | TBD，Phase 0 前需取得 |
+| #   | 依賴項                                      | 影響模組                                                 | 狀態                                                                                                                                                                                                                                                                                          |
+| --- | ------------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | 後端串流協議（SSE or WebSocket）            | `useStreaming`、`services/streaming.ts`                  | **已確認：`fetch + ReadableStream`（SSE），非 `EventSource`，非 WebSocket**                                                                                                                                                                                                                   |
+| D2  | Widget Config API 回應結構                  | `useWidgetConfig`、降級觸發邏輯                          | **已確認：強依賴，`GET /api/v1/widget/config`；所有文案欄位為 `Record<string, string>` 多語系物件**                                                                                                                                                                                           |
+| D3  | Chat Session API 結構與過期機制             | `useChatSession`，Session 恢復流程                       | TBD，Phase 1 前需確認                                                                                                                                                                                                                                                                         |
+| D4  | Lead / Handoff / Feedback / Ticket API 結構 | `useLeadForm`、`useHandoff`、`useFeedback`、`useTickets` | **已確認：Handoff `POST /api/v1/chat/sessions/:sessionToken/handoff`；Lead `POST /api/v1/chat/sessions/:sessionToken/lead`（`message?` 欄位）；Feedback `POST .../messages/:messageId/feedback`（payload `{ value: 'up'\|'down', reason? }`）；Ticket `PATCH .../status` + `POST .../notes`** |
+| D5  | 知識庫版本 diff API 格式                    | `KnowledgeEditor` 版本歷史展示                           | TBD，Phase 4 前需確認                                                                                                                                                                                                                                                                         |
+| D6  | 批次匯入 CSV / JSON 欄位定義與上限          | `KnowledgeImportModal`                                   | TBD，Phase 4 前需確認                                                                                                                                                                                                                                                                         |
+| D7  | Dashboard API 資料結構                      | Dashboard 統計卡片 + 圖表                                | TBD，Phase 3 前需確認 `GET /api/v1/admin/dashboard` 欄位定義                                                                                                                                                                                                                                  |
+| D8  | 報表 API 資料粒度（日 / 週 / 月）           | `AdminLineChart`、`AdminPieChart`                        | **Reports 本期 deferred，D8 不適用**                                                                                                                                                                                                                                                          |
+| D9  | 滿意度倒讚原因：chips 選項內容              | `AiMessageItem` UI                                       | TBD，Phase 2 前需確認 chips 選項（`useFeedback` 已串接 API）                                                                                                                                                                                                                                  |
+| D10 | 埋點後端 API 端點規格                       | `utils/analytics.ts`                                     | TBD，Phase 2 前需確認                                                                                                                                                                                                                                                                         |
+| D11 | 轉人工狀態更新：polling 或 SSE event        | `useHandoff` 實作                                        | **已確認：本期不做 polling，靜態訊息**                                                                                                                                                                                                                                                        |
+| D12 | Widget 設計稿色票與字型                     | `app.config.ts` 主題設定                                 | TBD，Phase 0 前需取得                                                                                                                                                                                                                                                                         |
 
 ### 8.2 技術風險
 
-| # | 風險 | 影響 | 緩解策略 |
-|---|------|------|---------|
-| ~~R1~~ | ~~後端改為 WebSocket 而非 SSE~~ | ~~`useStreaming` 需大改~~ | **已確認採用 SSE，R1 resolved** |
-| R2 | Widget Config API 失敗 → 無法初始化 | Widget 完全無法使用 | 靜態 i18n fallback + 降級模式，確保最低可用 |
-| R3 | Markdown 編輯器選型影響知識庫實作 | Phase 4 延期 | Phase 4 初期先用 `UTextarea` 純文字模式，Markdown editor 視選型確認後再替換 |
-| R4 | Nuxt Charts 與 Nuxt 4 / Nuxt UI 整合相容性 | 報表頁或 Dashboard 圖表渲染異常 | Phase 0 安裝後立即建立最小驗證頁，確認折線圖與圓餅圖可正常渲染；圖表元件以 `defineAsyncComponent` 懶加載，隔離潛在相容問題 |
-| R5 | Session token 並發問題（多 Tab 同時操作） | 串流訊息衝突 | 同一 localStorage session token，多 Tab 實際上共用，設計上接受此行為，後期可考慮 BroadcastChannel 通知 |
-| R6 | 後台 API 尚未就緒，前端無法驗證 | 各 Phase 阻塞 | 全面 mock 策略（MSW 或 Nuxt devtools），讓前端可獨立開發驗證 |
+| #      | 風險                                       | 影響                            | 緩解策略                                                                                                                   |
+| ------ | ------------------------------------------ | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| ~~R1~~ | ~~後端改為 WebSocket 而非 SSE~~            | ~~`useStreaming` 需大改~~       | **已確認採用 SSE，R1 resolved**                                                                                            |
+| R2     | Widget Config API 失敗 → 無法初始化        | Widget 完全無法使用             | 靜態 i18n fallback + 降級模式，確保最低可用                                                                                |
+| R3     | Markdown 編輯器選型影響知識庫實作          | Phase 4 延期                    | Phase 4 初期先用 `UTextarea` 純文字模式，Markdown editor 視選型確認後再替換                                                |
+| R4     | Nuxt Charts 與 Nuxt 4 / Nuxt UI 整合相容性 | 報表頁或 Dashboard 圖表渲染異常 | Phase 0 安裝後立即建立最小驗證頁，確認折線圖與圓餅圖可正常渲染；圖表元件以 `defineAsyncComponent` 懶加載，隔離潛在相容問題 |
+| R5     | Session token 並發問題（多 Tab 同時操作）  | 串流訊息衝突                    | 同一 localStorage session token，多 Tab 實際上共用，設計上接受此行為，後期可考慮 BroadcastChannel 通知                     |
+| R6     | 後台 API 尚未就緒，前端無法驗證            | 各 Phase 阻塞                   | 全面 mock 策略（MSW 或 Nuxt devtools），讓前端可獨立開發驗證                                                               |
 
 ---
 
@@ -832,61 +1085,62 @@ Phase 0 需先定義以下 VM types 骨架（後期依 API 契約補充）：
 
 ### 9.2 單元測試（Vitest，P0 優先）
 
-| 模組 | 測試重點 | Priority |
-|------|---------|---------|
-| `useStreaming` | 串流狀態機各狀態轉換（idle→sending→streaming→completed/error/timeout/interrupted）| P0 |
-| `useChatSession` | session 建立、恢復、過期清除、重建 | P0 |
-| `useLeadForm` | 表單驗證規則（name 必填、email 必填且格式正確、company / phone 選填、重複提交保護） | P0 |
-| `useHandoff` | handoffState 流轉 | P1 |
-| `useFeedback` | fire-and-forget 邏輯、回饋狀態切換 | P1 |
-| `useWidgetConfig` | Config 載入、fallback 至靜態文案、降級觸發 | P0 |
-| `utils/format.ts` | `formatDateTime`：固定 `HH:mm` 24 小時格式（三種輸入格式）；`truncateText`：字數截斷邊界 | P0 |
-| `utils/markdown.ts` | Markdown 渲染輸出（粗體、條列、連結）| P1 |
+| 模組                | 測試重點                                                                                 | Priority |
+| ------------------- | ---------------------------------------------------------------------------------------- | -------- |
+| `useStreaming`      | 串流狀態機各狀態轉換（idle→sending→streaming→completed/error/timeout/interrupted）       | P0       |
+| `useChatSession`    | session 建立、恢復、過期清除、重建                                                       | P0       |
+| `useLeadForm`       | 表單驗證規則（name 必填、email 必填且格式正確、company / phone 選填、重複提交保護）      | P0       |
+| `useHandoff`        | handoffState 流轉                                                                        | P1       |
+| `useFeedback`       | fire-and-forget 邏輯、回饋狀態切換                                                       | P1       |
+| `useWidgetConfig`   | Config 載入、fallback 至靜態文案、降級觸發                                               | P0       |
+| `utils/format.ts`   | `formatDateTime`：固定 `HH:mm` 24 小時格式（三種輸入格式）；`truncateText`：字數截斷邊界 | P0       |
+| `utils/markdown.ts` | Markdown 渲染輸出（粗體、條列、連結）                                                    | P1       |
 
 ### 9.3 元件測試（Vitest + Vue Test Utils，P1）
 
-| 元件 | 測試重點 |
-|------|---------|
-| `ChatLauncher` | 狀態燈顏色（`online` 綠 / `degraded` 紅 / `offline` 灰）、降級文案、點擊展開 |
-| `ChatInputBar` | 字數限制（500）、Enter 送出、送出中鎖定（disabled）、取消按鈕 |
-| `AiStreamingItem` | token append 動畫、打字游標顯示 |
-| `SystemInterceptedItem` | 機密 vs Injection 不同文案 / icon |
-| `LeadFormCard` | 表單驗證 UI 反饋、提交狀態、已提交狀態顯示 |
-| `HandoffStatusCard` | 本期只顯示靜態「已轉交專人協助」確認訊息，無多狀態 |
-| `MessageFeedback`（或 `AiMessageItem` 內嵌） | 讚 / 倒讚點擊、fire-and-forget API 呼叫、已回饋後可切換、API 失敗不影響 UI |
-| `AppStatusBadge` | 各狀態對應色彩語意正確 |
+| 元件                          | 測試重點                                                                     |
+| ----------------------------- | ---------------------------------------------------------------------------- |
+| `ChatWidget`（Launcher 區塊） | 狀態燈顏色（`online` 綠 / `degraded` 紅 / `offline` 灰）、降級文案、點擊展開 |
+| `ChatInputBar`                | 字數限制（500）、Enter 送出、送出中鎖定（disabled）、取消按鈕                |
+| `AiStreamingItem`             | token append 動畫、打字游標顯示                                              |
+| `SystemInterceptedItem`       | 機密 vs Injection 不同文案 / icon                                            |
+| `LeadFormCard`                | 表單驗證 UI 反饋、提交狀態、已提交狀態顯示                                   |
+| `HandoffStatusCard`           | 本期只顯示靜態「已轉交專人協助」確認訊息，無多狀態                           |
+| `AiMessageItem` feedback 區塊 | 讚 / 倒讚點擊、fire-and-forget API 呼叫、已回饋後可切換、API 失敗不影響 UI   |
+| `AppStatusBadge`              | 各狀態對應色彩語意正確                                                       |
 
 ### 9.4 E2E 核心旅程（Playwright）
 
 **前台 P0 旅程**（Phase 1 完成後建立）：
 
-| 旅程 | 測試步驟 |
-|------|---------|
-| 開啟 Widget 並完成首次問答 | 點擊 Launcher → 展開 Panel → 看到歡迎訊息 → 送出訊息 → AI 串流回覆完成 |
-| 快捷提問點擊流程 | 展開 Widget → 點擊「產品查詢」→ 訊息送出 → AI 回覆顯示 → 快捷提問列收起 |
-| Session 恢復 | 完成一次對話 → 重整頁面 → 展開 Widget → 歷史訊息顯示 |
-| 降級模式 | Mock AI 服務不可用 → 展開 Widget → fallback 提示顯示 → 聯絡捷徑可點擊 |
+| 旅程                       | 測試步驟                                                                |
+| -------------------------- | ----------------------------------------------------------------------- |
+| 開啟 Widget 並完成首次問答 | 點擊 Launcher → 展開 Panel → 看到歡迎訊息 → 送出訊息 → AI 串流回覆完成  |
+| 快捷提問點擊流程           | 展開 Widget → 點擊「產品查詢」→ 訊息送出 → AI 回覆顯示 → 快捷提問列收起 |
+| Session 恢復               | 完成一次對話 → 重整頁面 → 展開 Widget → 歷史訊息顯示                    |
+| 降級模式                   | Mock AI 服務不可用 → 展開 Widget → fallback 提示顯示 → 聯絡捷徑可點擊   |
 
 **前台 P1 旅程**（Phase 2 完成後建立）：
 
-| 旅程 | 測試步驟 |
-|------|---------|
-| 留資表單完整流程 | AI 觸發留資 → 填寫表單 → 送出成功 → 確認訊息 → 再次觸發顯示「已登記」|
-| 重新開始對話 | 點擊重置 → 對話清空 → 歡迎訊息重新出現 |
-| 語系切換 | 切換至 English → 所有文案更新 → 快捷提問文案更新 |
+| 旅程             | 測試步驟                                                              |
+| ---------------- | --------------------------------------------------------------------- |
+| 留資表單完整流程 | AI 觸發留資 → 填寫表單 → 送出成功 → 確認訊息 → 再次觸發顯示「已登記」 |
+| 重新開始對話     | 點擊重置 → 對話清空 → 歡迎訊息重新出現                                |
+| 語系切換         | 切換至 English → 所有文案更新 → 快捷提問文案更新                      |
 
 **後台 P1 旅程**（Phase 3 完成後建立）：
 
-| 旅程 | 測試步驟 |
-|------|---------|
-| 知識庫新增 / 編輯 | 進入知識庫列表 → 點擊新增 → 填寫內容 → 儲存 → 列表出現新條目 |
-| 知識庫版本還原 | 編輯已有條目 → 修改儲存 → 進入版本歷史 → 選擇舊版本還原 → 內容恢復 |
-| 對話紀錄查詢 | 進入對話紀錄 → 篩選時間範圍 → 點擊 Session → 詳情顯示完整對話 |
-| Lead 狀態更新 | 進入 Lead 列表 → 點擊 Lead → 修改狀態 → 儲存 → 列表狀態更新 |
+| 旅程              | 測試步驟                                                           |
+| ----------------- | ------------------------------------------------------------------ |
+| 知識庫新增 / 編輯 | 進入知識庫列表 → 點擊新增 → 填寫內容 → 儲存 → 列表出現新條目       |
+| 知識庫版本還原    | 編輯已有條目 → 修改儲存 → 進入版本歷史 → 選擇舊版本還原 → 內容恢復 |
+| 對話紀錄查詢      | 進入對話紀錄 → 篩選時間範圍 → 點擊 Session → 詳情顯示完整對話      |
+| Lead 狀態更新     | 進入 Lead 列表 → 點擊 Lead → 修改狀態 → 儲存 → 列表狀態更新        |
 
 ### 9.5 可延後的測試
 
 以下測試優先度較低，可在 Phase 6 補全：
+
 - 後台報表圖表渲染正確性（E2E 截圖比對）
 - 多語系文案全覆蓋快照測試
 - 完整 RWD 三個 viewport 快照比對
@@ -897,15 +1151,15 @@ Phase 0 需先定義以下 VM types 骨架（後期依 API 契約補充）：
 
 ## 10. 產出物規劃
 
-| Phase | 主要產出物 |
-|-------|----------|
-| Phase 0 | Nuxt 4 專案骨架、API client、共用 types、主題設定、i18n 基礎、前台「進入後台」入口按鈕（→ `/admin/dashboard`） |
-| Phase 1 | 前台 Widget 可互動 MVP（收合展開、多輪對話、SSE 串流回覆、快捷提問、攔截提示、Session 恢復、降級模式） |
-| Phase 2 | 前台留資表單（name+email 必填，`company?` / `phone?` / `message?` 選填，`language?` 自動帶入語系）、轉人工（簡化版靜態訊息）、滿意度回饋（`POST /api/v1/chat/sessions/:sessionToken/messages/:messageId/feedback`，payload `{ value: 'up'|'down', reason? }` 正式串接）、語系切換（繁中 / 英文）、埋點基礎 |
-| Phase 3 | 後台 admin layout（預設 `/admin/dashboard`）、Dashboard、對話紀錄查詢（含詳情）、Lead 管理、Ticket 管理（四態：`open | in_progress | resolved | closed`，`PATCH .../status` + `POST .../notes`） |
-| Phase 4 | 知識庫管理（含版本歷史、批次匯入）、意圖 / 模板管理、快捷提問管理（含拖曳）、Widget 設定（含即時預覽） |
-| Phase 5 | 稽核事件查詢（含詳情）、回饋紀錄（`GET /api/v1/admin/feedback`） |
-| Phase 6 | RWD 精修、無障礙完善、效能優化、i18n 第三語系接口確認、E2E 補全 |
+| Phase   | 主要產出物                                                                                                                                                                                                                                |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | -------- | ---------------------------------------------- |
+| Phase 0 | Nuxt 4 專案骨架、API client、共用 types、主題設定、i18n 基礎、前台「進入後台」入口按鈕（→ `/admin/dashboard`）                                                                                                                            |
+| Phase 1 | 前台 Widget 可互動 MVP（收合展開、多輪對話、SSE 串流回覆、快捷提問、攔截提示、Session 恢復、降級模式）                                                                                                                                    |
+| Phase 2 | 前台留資表單（name+email 必填，`company?` / `phone?` / `message?` 選填，`language?` 自動帶入語系）、轉人工（簡化版靜態訊息）、滿意度回饋（`POST /api/v1/chat/sessions/:sessionToken/messages/:messageId/feedback`，payload `{ value: 'up' | 'down', reason? }` 正式串接）、語系切換（繁中 / 英文）、埋點基礎 |
+| Phase 3 | 後台 admin layout（預設 `/admin/dashboard`）、Dashboard、對話紀錄查詢（含詳情）、Lead 管理、Ticket 管理（四態：`open                                                                                                                      | in_progress                                                      | resolved | closed`，`PATCH .../status`+`POST .../notes`） |
+| Phase 4 | 知識庫管理（含版本歷史、批次匯入）、意圖 / 模板管理、快捷提問管理（含拖曳）、Widget 設定（含即時預覽）                                                                                                                                    |
+| Phase 5 | 稽核事件查詢（含詳情）、回饋紀錄（`GET /api/v1/admin/feedback`）                                                                                                                                                                          |
+| Phase 6 | RWD 精修、無障礙完善、效能優化、i18n 第三語系接口確認、E2E 補全                                                                                                                                                                           |
 
 ---
 
@@ -961,4 +1215,4 @@ Phase 0 需先定義以下 VM types 骨架（後期依 API 契約補充）：
 
 ---
 
-*本 `plan.md` 覆蓋 `spec.md` 的完整功能範圍，Phase 標示為實作優先順序而非範圍縮減。後續 `task.md` 應依本文件的 Phase 順序、各模組描述及 DoD 生成可執行的工作單元，無需再詢問範圍邊界。*
+_本 `plan.md` 覆蓋 `spec.md` 的完整功能範圍，Phase 標示為實作優先順序而非範圍縮減。後續 `task.md` 應依本文件的 Phase 順序、各模組描述及 DoD 生成可執行的工作單元，無需再詢問範圍邊界。_
