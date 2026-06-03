@@ -164,7 +164,7 @@ Phase 3 的 `/admin/conversations` 會作為後續所有後台資料管理頁面
 本專案以 `app/services/index.ts` 的 `httpRequest` 作為唯一 HTTP client 公版。所有 `services/api/**` 檔案需 import：
 
 ```ts
-import httpRequest from '@/services/index'
+import httpRequest from '@/services/index';
 ```
 
 不得新增或使用：
@@ -213,6 +213,11 @@ DtUtils.params
 - Pinia 初始化，store 骨架（`useChatWidgetStore`、`useChatSessionStore`、`useWidgetConfigStore`）
 - Nuxt UI plugin 確認可用，`useToast()` 可運作
 - vee-validate plugin 設定
+- 表單公版確認：
+  - `plugins/vee-validate.client.ts`
+  - `composables/useAppForm.ts`
+  - `components/FormField.vue`
+  - `components/FileUpload.vue`
 - i18n 基礎（`zh-TW/common.json`、`en/common.json`，預留 locale key 結構）
 - `layouts/default.vue`（極簡前台 layout）、`layouts/admin.vue`（後台 layout 骨架）
 - `error.vue`（404 / 500 全域錯誤頁）
@@ -221,6 +226,25 @@ DtUtils.params
 - `utils/analytics.ts`（事件追蹤骨架，send to backend API）
 - Nuxt Charts 安裝與驗證（安裝 `nuxt-charts`，確認折線圖與圓餅圖可於 Nuxt 4 專案中正常渲染）
 - 後台「進入後台」入口按鈕（前台 `/` 頁面右上角低調 `UButton variant="ghost"`，`navigateTo('/admin/dashboard')`）
+
+### 表單公版原則
+
+所有新增 / 編輯 / 匯入類表單，優先使用：
+
+- `UForm`
+- `useForm`
+- `useAppForm`
+- `FormField`
+- `FileUpload`
+
+使用規則：
+
+- create mode 可使用 `useForm` initial values 或空表單
+- edit mode 取得 API 初始資料後，使用 `useAppForm(updateFields, setFieldValue).formUpdate(data)` 批次回填
+- 不在 page 或 form component 中逐欄手動 `setFieldValue`
+- 一般欄位使用 `FormField`
+- 檔案欄位使用 `FileUpload`
+- page 只負責呼叫 store action、toast、loading、router navigation，不重複寫欄位驗證
 
 **後台 vxe-table 公版基礎建設（WS-E 前置）**：
 
@@ -586,7 +610,8 @@ export interface DtTableResult<T = any> {
   - `DtTable.vue`：標題、分類、狀態（草稿 / 已發佈 / 已停用）、最後更新時間、操作；row action：編輯、刪除（`AppModal` 二次確認）
 - `TableFilterBar`：處理 keyword、dateRange
 - `vxe-column :filters`：處理 category、status 等固定選項
-- 新增 / 編輯頁（`/admin/knowledge/new`、`/admin/knowledge/:id`）：標題（必填）、分類選擇（含新增分類入口）、狀態切換、內容編輯器（TBD：Markdown 編輯器 + 預覽切換）
+- 新增 / 編輯頁（`/admin/knowledge/new`、`/admin/knowledge/:id`）：標題（必填）、分類選擇（含新增分類入口）、狀態切換、內容編輯器（TBD：Markdown 編輯器 + 預覽切換），一般欄位透過 `FormField` 呈現
+- 本頁表單需遵守表單公版原則，使用 `useForm + useAppForm + FormField`；若後續有檔案欄位或匯入流程，統一使用 `FileUpload`。
 - 版本歷史：`USlideover` 側抽屜，列出歷次修改時間，可展開差異比對，可還原（還原需 `AppModal` 確認）
 - 批次匯入 Modal（`KnowledgeImportModal`）：格式說明 + 範本下載、上傳後顯示成功 / 失敗結果；入口放在 `DtHeader.vue`
 - domain store `useAdminKnowledge()`：
@@ -607,7 +632,8 @@ export interface DtTableResult<T = any> {
   - `DtTable.vue`：意圖名稱、觸發關鍵字（前 3 個 + tooltip）、啟用狀態（`USwitch` inline toggle，直接呼叫 PATCH API）、操作
 - `TableFilterBar.vue`：處理 keyword 搜尋
 - `vxe-column :filters`：處理啟用狀態、優先級等固定選項
-- 新增 / 編輯：以 `USlideover` 側抽屜形式（意圖名稱、觸發關鍵字 tag input、優先級、回覆模板內容）
+- 新增 / 編輯：以 `USlideover` 側抽屜形式（意圖名稱、觸發關鍵字 tag input、優先級、回覆模板內容），一般欄位透過 `FormField` 呈現
+- 本頁表單需遵守表單公版原則，使用 `useForm + useAppForm + FormField`；檔案匯入使用 `FileUpload`
 - 意圖預覽：在 slideover 底部提供測試輸入框，呼叫 `POST /api/v1/admin/intents/preview`
 - domain store `useAdminIntents()`：
   - `getTable(params: DtParams): Promise<DtTableResult<IntentSummaryVM>>`
@@ -636,7 +662,8 @@ export interface DtTableResult<T = any> {
 - 路由：`/admin/widget-settings`
 - 此頁為設定表單 + 即時預覽，不屬於資料管理 table page，**不需要套用 `DtUtils` / `TableData` / `DtTable`**
 - 頁面左右兩欄：左側設定表單、右側 Widget 即時預覽（`WidgetSettingsPreview`）
-- 設定項目：CTA 文案（繁中 / 英文）、歡迎訊息（繁中 / 英文）、頁尾免責聲明（繁中 / 英文）、AI 標記文字、線上 / 離線 / 降級文案、聯絡捷徑（最多 3 組）
+- 設定項目：CTA 文案（繁中 / 英文）、歡迎訊息（繁中 / 英文）、頁尾免責聲明（繁中 / 英文）、AI 標記文字、線上 / 離線 / 降級文案、聯絡捷徑（最多 3 組），一般欄位透過 `FormField` 呈現
+- 本頁表單需遵守表單公版原則，使用 `useForm + useAppForm + FormField`；檔案匯入使用 `FileUpload`
 - 修改任何欄位後右側預覽即時更新（純前端 local 預覽，不呼叫 API）
 - 確認後「儲存設定」送出 `PUT /api/v1/admin/widget-settings`
 - `services/api/admin/widgetSettings.ts`
@@ -883,10 +910,10 @@ export interface DtTableResult<T = any> {
 **關鍵設計**：
 
 - 列表頁使用 `TableData` + `DtUtils` + `DtTable`（`index.vue` + `PageHeader.vue` + optional `DtHeader.vue` + `DtTable.vue`）；篩選條件可同步至 URL query string 以支援頁面書籤；但 table state 仍由 `DtUtils.params` 管理，若需 URL query sync，應透過 route sync helper 或 domain adapter 與 `DtUtils` 串接，不回到 page-local 自行管理 rows / loading / pagination / filters
-- 編輯頁：Markdown 編輯器（TBD 選型）+ 預覽切換（`@nuxtjs/mdc` 或 `CodeMirror`）
+- 編輯頁：Markdown 編輯器（TBD 選型）+ 預覽切換（`@nuxtjs/mdc` 或 `CodeMirror`）；表單欄位遵守表單公版原則，透過 `FormField` 呈現
 - 版本歷史：`USlideover` 側抽屜，列出版本列表，點開可查看該版本 diff（TBD：diff 格式由後端提供或前端計算）
 - 還原操作：`AppModal` 二次確認後呼叫 `POST /api/v1/admin/knowledge/:id/restore/:versionId`
-- 批次匯入：`KnowledgeImportModal` 處理 multipart/form-data 上傳，解析後端回傳的 `{ success, failed, errors }` 結果
+- 批次匯入：`KnowledgeImportModal` 使用 `FileUpload` 處理 multipart/form-data 上傳，解析後端回傳的 `{ success, failed, errors }` 結果
 
 ---
 
@@ -923,7 +950,7 @@ export interface DtTableResult<T = any> {
 **關鍵設計**：
 
 - 列表頁 `USwitch` 即時切換啟用狀態（直接呼叫 PATCH API）
-- 新增 / 編輯以 `USlideover` 形式，避免跳頁
+- 新增 / 編輯以 `USlideover` 形式，避免跳頁；表單欄位遵守表單公版原則，透過 `FormField` 呈現
 - 觸發關鍵字使用 tag-input 元件（Nuxt UI 目前無內建，需自製或使用第三方）
 - 意圖預覽：在 slideover 底部提供測試輸入框，呼叫 `POST /api/v1/admin/intents/preview`
 
@@ -948,7 +975,7 @@ export interface DtTableResult<T = any> {
 **關鍵設計**：
 
 - 右側 `WidgetSettingsPreview` 為縮小版 Chat Panel，直接使用前台元件（`ChatWidget`、`ChatPanel`），傳入 local 設定資料
-- 設定表單任何欄位變更 → `computed widgetPreviewConfig` 更新 → 預覽 reactive 更新
+- 設定表單任何欄位變更 → `computed widgetPreviewConfig` 更新 → 預覽 reactive 更新；表單欄位遵守表單公版原則，透過 `FormField` 呈現
 - 「儲存設定」按鈕：提交成功後顯示 toast；失敗顯示欄位 inline 錯誤
 
 ---

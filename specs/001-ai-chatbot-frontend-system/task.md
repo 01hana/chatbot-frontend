@@ -141,10 +141,17 @@
   - 以前端既有封裝的 Nuxt UI 表單元件為主，不直接依賴 vee-validate 的 `<Form>`、`<Field>`、`<ErrorMessage>` 作為主要畫面組件
   - 確認 `@nuxt/ui` 的 `UForm` 可與既有 `app/components/FormField` 封裝元件整合使用
   - 確認表單元件可接收驗證錯誤訊息、顯示欄位錯誤狀態，並支援後續 Lead Form 等表單場景重用
+  - 確認 `app/composables/useAppForm.ts` 可搭配 vee-validate 的 `setFieldValue` 批次回填 API 初始資料
+  - 確認 `app/components/FormField.vue` 作為一般欄位公版
+  - 確認 `app/components/FileUpload.vue` 作為檔案欄位公版
+  - 後續 domain form 預設使用 `UForm + useForm + useAppForm + FormField`；檔案欄位使用 `FileUpload`
   - **完成條件**：
     - 在測試元件中，使用 `UForm` 搭配既有封裝的 `FormField` 元件可正確顯示驗證錯誤訊息
     - `name`（必填）、`email`（必填，格式驗證）規則可在各表單中自行定義；無需 `phoneOrEmail` 自訂規則
     - 不需要直接使用 vee-validate 的 `<Form>`、`<Field>`、`<ErrorMessage>` 也能完成表單驗證整合
+    - edit mode 可透過 `useAppForm().formUpdate(data)` 批次回填資料，不需要逐欄手動 `setFieldValue`
+    - 一般欄位可透過 `FormField` 顯示驗證錯誤
+    - 檔案欄位可透過 `FileUpload` 整合表單狀態
 
 ---
 
@@ -1261,21 +1268,25 @@
 
 ---
 
-- [ ] **T-060** 建立知識庫新增 / 編輯頁（含編輯器）
+- [x] **T-060** 建立知識庫新增 / 編輯頁（含編輯器）
   - **所屬 Phase**：Phase 4
   - **所屬 Workstream**：WS-F
   - **依賴**：T-059
   - **實作內容**：
     - 建立 `app/pages/admin/knowledge/new.vue` 與 `app/pages/admin/knowledge/[id]/edit.vue`（共用同一 `KnowledgeEditorForm` 元件）
-    - 欄位：標題（必填，`UInput`）、分類選擇（`USelect`，含「新增分類」入口）、狀態切換（`USelect`：草稿 / 已發佈 / 已停用）
-    - 內容編輯區：Phase 4 先使用 `UTextarea` 純文字模式（Markdown 編輯器選型 TBD，後期替換為 `CodeMirror` 或 `@nuxtjs/mdc`）
+    - 欄位：標題（必填，透過 `FormField` input）、分類選擇（透過 `FormField` select，含「新增分類」入口）、狀態切換（透過 `FormField` select：草稿 / 已發佈 / 已停用）
+    - 內容編輯區：Phase 4 先使用 `FormField` textarea 純文字模式（Markdown 編輯器選型 TBD，後期替換為 `CodeMirror` 或 `@nuxtjs/mdc`）
+    - `KnowledgeEditorForm.vue` 必須使用 `useForm + useAppForm + FormField`
+    - 一般欄位不得大量手寫 `UFormField + UInput / USelect / UTextarea`
+    - edit mode 取得資料後，使用 `useAppForm(updateFields, setFieldValue).formUpdate(data)` 批次回填
+    - `new.vue` / `[id]/edit.vue` 不重複做欄位驗證，只負責 create / update / loading / toast / router navigation
     - 「儲存」按鈕：新增頁呼叫 `createKnowledge()`，編輯頁呼叫 `updateKnowledge()`；成功後 toast + 跳回列表
     - 表單驗證：標題必填
   - **完成條件**：新增頁可建立條目並跳回列表；編輯頁載入現有資料可修改；標題驗證有效
 
 ---
 
-- [ ] **T-061** 建立知識庫版本歷史 `USlideover` 與還原流程
+- [x] **T-061** 建立知識庫版本歷史 `USlideover` 與還原流程
   - **所屬 Phase**：Phase 4
   - **所屬 Workstream**：WS-F
   - **依賴**：T-060
@@ -1289,7 +1300,7 @@
 
 ---
 
-- [ ] **T-062** 建立 `KnowledgeImportModal`（批次匯入 CSV / JSON）
+- [x] **T-062** 建立 `KnowledgeImportModal`（批次匯入 CSV / JSON）
   - **所屬 Phase**：Phase 4
   - **所屬 Workstream**：WS-F
   - **依賴**：T-059
@@ -1298,9 +1309,13 @@
     - Modal 內容：
       - 支援格式說明（CSV / JSON，欄位說明文字，TBD 後端定義）
       - 範本下載連結（CSV 範本、JSON 範本）
-      - 檔案上傳區（`<input type="file">`，限 `.csv` / `.json`）
+      - 檔案上傳區使用既有 `FileUpload.vue`（限 `.csv` / `.json`）
       - 上傳中 loading 狀態
       - 上傳後顯示結果：成功筆數、失敗筆數、失敗原因列表（對應後端 `{ success, failed, errors }`）
+    - `KnowledgeImportModal.vue` 必須使用 `useForm + FileUpload`
+    - 檔案欄位不得使用原生 `<input type="file">` 作為主要方案
+    - `FileUpload.vue` 為既有檔案上傳欄位公版
+    - submit 時仍需檢查副檔名 `.csv` / `.json`
     - 上傳使用 `multipart/form-data`，呼叫 `importKnowledge(formData)`
   - **完成條件**：Modal 可開啟；上傳 CSV / JSON 檔案後顯示結果；失敗原因正確列出
 
@@ -1326,9 +1341,12 @@
     - 「新增意圖」+ 「編輯」均開啟 `USlideover`（`IntentEditorDrawer.vue`）：
       - 意圖名稱（必填）
       - 觸發關鍵字 tag-input（自製簡易 tag input，或引入 `@morev/vue-tags-input`，TBD）
-      - 優先級（`USelect`）
-      - 回覆模板內容（`UTextarea`）
+      - 優先級（透過 `FormField` select）
+      - 回覆模板內容（透過 `FormField` textarea）
       - 測試預覽：輸入框 + 「預覽」按鈕 → 呼叫 `previewIntent()` → 顯示匹配意圖名稱與回覆模板
+    - `IntentEditorDrawer.vue` 必須使用 `useForm + useAppForm + FormField`
+    - edit mode 使用 `useAppForm().formUpdate(data)` 批次回填
+    - 不逐欄手動 `setFieldValue`
     - 刪除需 `AppModal` 確認
   - **完成條件**：`USwitch` 即時切換啟用狀態；側抽屜新增 / 編輯功能完整；測試預覽正確顯示結果
 
@@ -1361,12 +1379,15 @@
     - 建立 `app/pages/admin/widget-settings/index.vue`
     - 設定表單（100% 寬）
     - 設定表單欄位：
-      - CTA 文案（繁中 / 英文 `UInput`）
-      - 歡迎訊息（繁中 / 英文 `UTextarea`）
-      - 頁尾免責聲明（繁中 / 英文 `UTextarea`）
-      - AI 標記文字（`UInput`）
-      - 線上 / 離線 / 降級文案（各一個 `UInput`）
+      - CTA 文案（繁中 / 英文，透過 `FormField` input）
+      - 歡迎訊息（繁中 / 英文，透過 `FormField` textarea）
+      - 頁尾免責聲明（繁中 / 英文，透過 `FormField` textarea）
+      - AI 標記文字（透過 `FormField` input）
+      - 線上 / 離線 / 降級文案（各一個，透過 `FormField` input）
       - 聯絡捷徑（最多 3 組，每組：名稱 + URL，可新增 / 刪除）
+    - `WidgetSettingsForm.vue` 必須使用 `useForm + useAppForm + FormField`
+    - API 初始設定載入後，以 `formUpdate(data)` 批次回填
+    - 不逐欄手動 `setFieldValue`
     - 「儲存設定」按鈕 → 呼叫 `updateWidgetSettings()` → 成功 toast；失敗顯示 inline 錯誤
   - **完成條件**：儲存成功 toast；重新整理後設定值正確（重載 API 資料）
 

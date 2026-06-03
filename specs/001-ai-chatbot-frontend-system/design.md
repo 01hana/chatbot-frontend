@@ -66,6 +66,21 @@
 
 **圖表層選用 Nuxt Charts**：本專案採用 Nuxt 4 + Nuxt UI + Tailwind CSS，圖表層選擇 Nuxt Charts，以降低整合成本並維持 Nuxt 生態一致性。後台所有折線圖（`AdminLineChart`）與圓餅圖（`AdminPieChart`）均以 Nuxt Charts 的對應元件實作，不引入 Chart.js、vue-chartjs 或 echarts。
 
+### 表單實作標準
+
+本專案表單統一使用 vee-validate 搭配既有表單公版：
+
+- `UForm` 作為表單容器
+- `useForm()` 負責 validationSchema、handleSubmit、resetForm、setFieldValue
+- `useAppForm()` 負責 API 初始資料批次回填，避免 edit mode 一個欄位一個欄位手動 setFieldValue
+- `FormField.vue` 作為一般欄位公版，負責 input、select、textarea、number、switch 等欄位型態
+- `FileUpload.vue` 作為檔案上傳欄位公版
+- domain form 不直接使用 vee-validate 的 `<Form>`、`<Field>`、`<ErrorMessage>` 作為主要畫面元件
+- domain form 不大量手寫 `UFormField + UInput / USelect / UTextarea`
+- 表單頁負責 loading、saving、toast、router navigation；欄位驗證與欄位 UI 由表單公版承接
+
+`FormModal.vue` 可作為 `useForm + useAppForm + FormField + FileUpload` 的參考實作。
+
 ---
 
 ## 1. 設計目標與範圍
@@ -856,7 +871,8 @@ Header 或訊息區提供「重新開始對話」入口（TBD：位置為 header
 | 單行文字輸入（後台表單、搜尋框） | `UInput` |
 | 多行文字輸入（聊天輸入框、知識庫編輯輔助） | `UTextarea` |
 | 下拉選單（篩選、狀態切換、分類選擇） | `USelect` |
-| 表單欄位包裝（label + error 訊息） | `UFormField` |
+| 表單欄位包裝（label + error 訊息） | domain form 預設使用 `FormField`；`UFormField` 僅作為低階 Nuxt UI primitive |
+| 檔案上傳欄位 | `FileUpload` |
 | 卡片容器（LeadFormCard、HandoffStatusCard、統計卡片） | `UCard` |
 | 對話框 / 確認框 | `UModal` |
 | 側邊抽屜（知識庫版本歷史、意圖編輯） | `USlideover` |
