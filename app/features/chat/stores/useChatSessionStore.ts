@@ -45,8 +45,8 @@ export const useChatSessionStore = defineStore('chatSession', () => {
     handoffState.value = state;
   }
 
-  function setLeadFormSubmitted(submittedAt?: string) {
-    leadFormState.value = { submitted: true, submittedAt };
+  function setLeadFormSubmitted(createdAt?: string) {
+    leadFormState.value = { submitted: true, createdAt };
   }
 
   function setQuickRepliesVisible(visible: boolean) {

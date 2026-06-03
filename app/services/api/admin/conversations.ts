@@ -15,19 +15,32 @@ import type {
 import type { PaginatedResponse, ApiResponse } from '~/types/api';
 
 class ConversationService {
-  public getTable(params: ConversationListParams) {
-    return httpRequest.get<ApiResponse<PaginatedResponse<ConversationSummaryVM>>>(
+  public async getTable(
+    params: ConversationListParams,
+  ): Promise<PaginatedResponse<ConversationSummaryVM>> {
+    const res = await httpRequest.get<ApiResponse<PaginatedResponse<ConversationSummaryVM>>>(
       'admin/conversations',
       params,
     );
+
+    return res.data;
   }
 
-  public get(id: number | string) {
-    return httpRequest.get<ApiResponse<ConversationDetailVM>>(`admin/conversations/${id}`);
+  public async get(id: number | string): Promise<ConversationDetailVM> {
+    const res = await httpRequest.get<ApiResponse<ConversationDetailVM>>(
+      `admin/conversations/${id}`,
+    );
+
+    return res.data;
   }
 
-  public export(params: ConversationListParams) {
-    return httpRequest.post<ApiResponse<{ url: string }>>('admin/conversations/export', params);
+  public async export(params: ConversationListParams): Promise<{ url: string }> {
+    const res = await httpRequest.post<ApiResponse<{ url: string }>>(
+      'admin/conversations/export',
+      params,
+    );
+
+    return res.data;
   }
 }
 

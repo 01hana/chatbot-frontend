@@ -41,7 +41,7 @@
     "company": "Company",
     "contact": "Contact",
     "inquiry": "Inquiry",
-    "submittedAt": "Submitted At",
+    "createdAt": "Submitted At",
     "export": "Export CSV"
   },
   "tickets": {

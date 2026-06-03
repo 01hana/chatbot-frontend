@@ -4,6 +4,7 @@
 
 /** Standard single-resource API response envelope. */
 export interface ApiResponse<T> {
+  code?: number | string;
   data: T;
   message?: string;
   success: boolean;

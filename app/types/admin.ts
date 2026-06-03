@@ -70,8 +70,10 @@ export interface LeadVM {
   status?: LeadStatus;
   /** Locale tag e.g. 'zh-TW' | 'en'. */
   language?: string;
-  submittedAt: string;
+  createdAt: string;
 }
+
+export type LeadSummaryVM = LeadVM;
 
 export interface LeadListParams extends AdminListParams {
   status?: LeadStatus;
@@ -120,6 +122,8 @@ export interface TicketVM {
   timeline?: TicketTimelineEvent[];
 }
 
+export type TicketSummaryVM = TicketVM;
+
 export interface TicketListParams extends AdminListParams {
   status?: TicketStatus;
   priority?: TicketPriority;
@@ -127,15 +131,57 @@ export interface TicketListParams extends AdminListParams {
 
 // ── Knowledge Base ───────────────────────────────────────────
 
+export type KnowledgeStatus = 'draft' | 'published' | 'disabled';
+
 /** A single knowledge base entry (Q&A pair). */
 export interface KnowledgeEntryVM {
   id: string;
-  question: string;
-  answer: string;
-  category?: string;
-  status: 'active' | 'inactive';
-  version: number;
+  title: string;
+  category: string;
+  status: KnowledgeStatus;
+  content: string;
   updatedAt: string;
+  currentRevision: number;
+}
+
+export type KnowledgeEntrySummaryVM = Pick<
+  KnowledgeEntryVM,
+  'id' | 'title' | 'category' | 'status' | 'updatedAt' | 'currentRevision'
+>;
+
+export type KnowledgeSummaryVM = KnowledgeEntrySummaryVM;
+
+export interface KnowledgeRevisionVM {
+  revisionId: string;
+  entryId: string;
+  revisionNumber: number;
+  content: string;
+  updatedAt: string;
+  note?: string;
+  diff?: string;
+}
+
+export interface KnowledgeListParams extends AdminListParams {
+  category?: string;
+  status?: KnowledgeStatus;
+}
+
+export interface KnowledgeCreatePayload {
+  title: string;
+  category: string;
+  status?: KnowledgeStatus;
+  content: string;
+}
+
+export type KnowledgeUpdatePayload = Partial<KnowledgeCreatePayload>;
+
+export interface KnowledgeImportResult {
+  success: number;
+  failed: number;
+  errors?: {
+    row?: number;
+    message: string;
+  }[];
 }
 
 // ── Intents ──────────────────────────────────────────────────
@@ -152,6 +198,26 @@ export interface IntentVM {
   sortOrder: number;
 }
 
+export interface IntentListParams extends AdminListParams {
+  status?: IntentVM['status'];
+}
+
+export interface IntentCreatePayload {
+  name: string;
+  examples?: string[];
+  keywords?: string[];
+  status?: IntentVM['status'];
+  sortOrder?: number;
+}
+
+export type IntentUpdatePayload = Partial<IntentCreatePayload>;
+
+export interface IntentPreviewResult {
+  matched: boolean;
+  intent?: IntentVM;
+  confidence?: number;
+}
+
 // ── Quick Replies ────────────────────────────────────────────
 
 /** Admin-managed quick reply chip shown in the chat widget. */
@@ -161,6 +227,18 @@ export interface QuickReplyVM {
   sortOrder: number;
   status: 'active' | 'inactive';
 }
+
+export interface QuickReplyCreatePayload {
+  label: QuickReplyVM['label'];
+  sortOrder?: number;
+  status?: QuickReplyVM['status'];
+}
+
+export type QuickReplyUpdatePayload = Partial<QuickReplyCreatePayload>;
+
+export type WidgetSettingsVM = import('./chat').WidgetConfigVM;
+
+export type WidgetSettingsUpdatePayload = Partial<WidgetSettingsVM>;
 
 // ── Audit Events ────────────────────────────────────────────
 
@@ -182,7 +260,7 @@ export interface FeedbackVM {
   messageId: string;
   type: 'up' | 'down';
   reason?: string;
-  submittedAt: string;
+  createdAt: string;
 }
 
 // ── Dashboard ────────────────────────────────────────────────

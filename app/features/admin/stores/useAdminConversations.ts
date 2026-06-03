@@ -26,7 +26,7 @@ export const useAdminConversations = defineStore('admin-conversations', () => {
 
   async function getTable(params: DtParams): Promise<DtTableResult<ConversationSummaryVM>> {
     const query = toConversationListParams(params);
-    const { data: res } = await ConversationService.getTable(query);
+    const res = await ConversationService.getTable(query);
 
     return {
       data: res.data,
@@ -36,17 +36,13 @@ export const useAdminConversations = defineStore('admin-conversations', () => {
   }
 
   async function get(id: string) {
-    const { data: res } = await ConversationService.get(id);
-
-    return res;
+    return await ConversationService.get(id);
   }
 
   async function exportCsv(params: DtParams): Promise<{ url: string }> {
     const query = toConversationListParams(params);
 
-    const { data: res } = await ConversationService.export(query);
-
-    return res;
+    return await ConversationService.export(query);
   }
 
   // async function create(data: Record<string, any>) {

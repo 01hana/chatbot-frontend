@@ -1,52 +1,49 @@
 /**
  * Admin Leads API Service (T-051)
  *
- * GET   /admin/leads       → PaginatedResponse<LeadVM>
- * GET   /admin/leads/:id   → LeadVM
- * PATCH /admin/leads/:id   → LeadVM
+ * GET   /admin/leads            → PaginatedResponse<LeadVM>
+ * GET   /admin/leads/:id        → LeadVM
+ * PATCH /admin/leads/:id/status → LeadVM
+ * PATCH /admin/leads/:id        → LeadVM
  */
 
-import { createAdminClient } from './client';
-import type { LeadVM, LeadListParams, LeadUpdatePayload } from '~/types/admin';
-import type { PaginatedResponse, ApiResponse } from '~/types/api';
+import httpRequest from '@/services/index';
+import type { LeadListParams, LeadStatus, LeadUpdatePayload, LeadVM } from '~/types/admin';
+import type { ApiResponse, PaginatedResponse } from '~/types/api';
 
-/**
- * List leads with optional filters.
- * GET /admin/leads
- */
+class LeadService {
+  public async listLeads(params?: LeadListParams): Promise<PaginatedResponse<LeadVM>> {
+    const res = await httpRequest.get<ApiResponse<PaginatedResponse<LeadVM>>>(
+      'admin/leads',
+      params,
+    );
 
-export async function listLeads(params?: LeadListParams): Promise<PaginatedResponse<LeadVM>> {
-  const client = createAdminClient();
+    return res.data;
+  }
 
-  const res = await client<ApiResponse<PaginatedResponse<LeadVM>>>('admin/leads', {
-    method: 'GET',
-    query: params,
-  });
+  public async getLead(id: string | number): Promise<LeadVM> {
+    const res = await httpRequest.get<ApiResponse<LeadVM>>(`admin/leads/${id}`);
 
-  return res.data;
+    return res.data;
+  }
+
+  public async getLeadDetail(id: string | number): Promise<LeadVM> {
+    return await this.getLead(id);
+  }
+
+  public async updateLeadStatus(id: string | number, status: LeadStatus): Promise<LeadVM> {
+    const res = await httpRequest.patch<ApiResponse<LeadVM>>(`admin/leads/${id}/status`, {
+      status,
+    });
+
+    return res.data;
+  }
+
+  public async updateLead(id: string | number, data: LeadUpdatePayload): Promise<LeadVM> {
+    const res = await httpRequest.patch<ApiResponse<LeadVM>>(`admin/leads/${id}`, data);
+
+    return res.data;
+  }
 }
 
-/**
- * Fetch the detail of a single lead record.
- * GET /admin/leads/:id
- */
-export async function getLeadDetail(id: string): Promise<LeadVM> {
-  const client = createAdminClient();
-  const res = await client<ApiResponse<LeadVM>>(`admin/leads/${id}`, {
-    method: 'GET',
-  });
-  return res.data;
-}
-
-/**
- * Partially update a lead (status, note, etc.).
- * PATCH /admin/leads/:id
- */
-export async function updateLead(id: string, data: LeadUpdatePayload): Promise<LeadVM> {
-  const client = createAdminClient();
-  const res = await client<ApiResponse<LeadVM>>(`admin/leads/${id}`, {
-    method: 'PATCH',
-    body: data,
-  });
-  return res.data;
-}
+export default new LeadService();

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FilterDef, FilterValues } from '~/features/admin/components/AdminFilterBar.vue';
+import type { FilterDef, FilterValues } from '~/components/FilterBar.vue';
 
 interface Props {
   filters: FilterDef[];
@@ -19,7 +19,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const { params, advancedSearchSubmit } = inject(DtUtils.key) as InstanceType<typeof DtUtils>;
 
-const showFilters = ref(true);
+const showFilters = ref(false);
 
 if (!params || !advancedSearchSubmit) {
   throw new Error('DtFilterBar requires DtUtils provider');
@@ -62,7 +62,7 @@ const FilterToggle = defineComponent({
   setup() {
     return () =>
       h(resolveComponent('UButton'), {
-        icon: showFilters.value ? 'i-lucide-sliders-horizontal' : 'i-lucide-search-x',
+        icon: showFilters.value ? 'i-lucide-search-x' : 'i-lucide-sliders-horizontal',
         variant: 'outline',
         class: ' shadow-xs transition-all duration-200  hover:shadow-md active:scale-95',
         onClick: toggleFilters,
@@ -72,22 +72,24 @@ const FilterToggle = defineComponent({
 </script>
 
 <template>
-  <UCollapsible
-    class="w-full space-y-4"
-    :ui="{
-      content:
-        'overflow-hidden data-[state=open]:animate-[collapsible-down_260ms_cubic-bezier(0.22,1,0.36,1)] data-[state=closed]:animate-[collapsible-up_220ms_ease-in]',
-    }"
-  >
+  <div :class="showFilters ? 'w-full space-y-4' : 'w-full'">
     <slot name="header" :open="showFilters" :toggle="toggleFilters" :FilterToggle="FilterToggle" />
 
-    <template #content>
-      <FilterBar
-        class="w-full rounded-xl my-4"
-        :filters="filters"
-        :model-value="filterValues"
-        @update:filters="onFiltersUpdate"
-      />
-    </template>
-  </UCollapsible>
+    <UCollapsible
+      v-model:open="showFilters"
+      :ui="{
+        content:
+          'overflow-hidden data-[state=open]:animate-[collapsible-down_260ms_cubic-bezier(0.22,1,0.36,1)] data-[state=closed]:animate-[collapsible-up_220ms_ease-in]',
+      }"
+    >
+      <template #content>
+        <FilterBar
+          class="w-full rounded-xl my-4"
+          :filters="filters"
+          :model-value="filterValues"
+          @update:filters="onFiltersUpdate"
+        />
+      </template>
+    </UCollapsible>
+  </div>
 </template>

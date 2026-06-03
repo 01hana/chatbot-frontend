@@ -41,7 +41,7 @@
     "company": "公司",
     "contact": "聯絡方式",
     "inquiry": "詢問品項",
-    "submittedAt": "送出時間",
+    "createdAt": "送出時間",
     "export": "匯出 CSV"
   },
   "tickets": {

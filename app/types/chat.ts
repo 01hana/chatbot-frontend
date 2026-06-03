@@ -161,7 +161,7 @@ export interface HandoffResponse {
 /** Tracking state for whether the lead form has been submitted this session. */
 export interface LeadFormState {
   submitted: boolean;
-  submittedAt?: string;
+  createdAt?: string;
 }
 
 // ── Feedback ────────────────────────────────────────────────

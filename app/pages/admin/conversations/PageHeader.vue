@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AppPageHeader from '~/features/admin/components/AppPageHeader.vue';
-import type { FilterDef } from '~/features/admin/components/AdminFilterBar.vue';
+import type { FilterDef } from '~/components/FilterBar.vue';
 
 const { params } = inject(DtUtils.key) as InstanceType<typeof DtUtils>;
 

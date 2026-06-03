@@ -7,6 +7,7 @@ const { sort, pageConfig } = defineProps<{
   sort: [string, 'asc' | 'desc'];
   pageConfig?: {};
   actions?: {
+    view?: boolean;
     edit?: boolean;
     remove?: boolean;
   };
@@ -41,6 +42,8 @@ const {
 
 const VxeTableRef = useTemplateRef<VxeTableInstance>('VxeTable');
 const sortConfig = ref({});
+const route = useRoute();
+const router = useRouter();
 
 const isRecordOverflowLength = computed(() =>
   pager.total && pager.length ? pager.total > pager.length : false,
@@ -73,6 +76,14 @@ async function onRemove() {
 
   setDeleteConfirm(false);
 }
+
+function onView(row: Record<string, any>) {
+  if (!row.id) return;
+
+  const basePath = route.path.replace(/\/$/, '');
+
+  router.push(`${basePath}/${row.id}`);
+}
 </script>
 
 <template>
@@ -103,7 +114,7 @@ async function onRemove() {
       />
 
       <vxe-column
-        v-if="actions?.edit || actions?.remove"
+        v-if="actions?.view || actions?.edit || actions?.remove"
         min-width="80"
         width="100"
         field="actions"
@@ -115,14 +126,22 @@ async function onRemove() {
           <slot name="actions" :row :setDeleteConfirm>
             <div class="d-flex justify-end flex-wrap gap-1">
               <UButton
-                v-show="actions.edit"
+                v-if="actions.view"
+                label="查看"
+                size="sm"
+                icon="fluent:line-horizontal-4-search-20-regular"
+                @click="onView(row)"
+              />
+
+              <UButton
+                v-if="actions.edit"
                 icon="fluent:edit-line-horizontal-3-24-regular"
                 variant="ghost"
                 @click="setModal(row.id)"
               />
 
               <UButton
-                v-show="actions.remove"
+                v-if="actions.remove"
                 icon="fluent:delete-24-regular"
                 variant="ghost"
                 color="error"

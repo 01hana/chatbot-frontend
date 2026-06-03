@@ -127,7 +127,7 @@ async function handleSave() {
           </div>
           <div>
             <dt class="text-gray-500 text-xs">建立時間</dt>
-            <dd class="text-gray-800 mt-0.5">{{ formatDateTime(lead.submittedAt) }}</dd>
+            <dd class="text-gray-800 mt-0.5">{{ formatDateTime(lead.createdAt) }}</dd>
           </div>
           <div v-if="lead.sessionId">
             <dt class="text-gray-500 text-xs">關聯對話</dt>

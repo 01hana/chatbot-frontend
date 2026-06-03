@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { ConversationSummaryVM } from '~/types/admin';
 import AppStatusBadge from '~/features/admin/components/AppStatusBadge.vue';
 
 const { params, filters } = inject(DtUtils.key) as InstanceType<typeof DtUtils>;
@@ -8,30 +7,14 @@ const { t } = useI18n();
 const { t: tv } = usePageI18n();
 
 const { getTable } = useAdminConversations();
-const router = useRouter();
 
 onMounted(() => {
   getTable(params.value);
 });
-
-function onRowClick(row: ConversationSummaryVM) {
-  router.push(`/admin/conversations/${row.id}`);
-}
 </script>
 
 <template>
-  <TableData :sort="['updatedAt', 'desc']" :actions="{ edit: false, remove: false }">
-    <vxe-column min-width="150" field="actions" title="" align="center">
-      <template #default="{ row }">
-        <UButton
-          label="查看"
-          size="sm"
-          icon="fluent:line-horizontal-4-search-20-regular"
-          @click="onRowClick(row)"
-        />
-      </template>
-    </vxe-column>
-
+  <TableData :sort="['updatedAt', 'desc']" :actions="{ view: true, edit: false, remove: false }">
     <vxe-column min-width="200" field="sessionId" title="Session ID">
       <template #default="{ row }">
         <div>{{ row.sessionId }}</div>
