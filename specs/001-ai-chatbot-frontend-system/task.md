@@ -87,18 +87,20 @@
 
 ---
 
-- [x] **T-004** 建立 API Client（`services/api/client.ts`）
+- [x] **T-004** 確認 `app/services/index.ts` 作為專案統一 HTTP client 公版
   - **所屬 Phase**：Phase 0
   - **所屬 Workstream**：WS-A
   - **依賴**：T-002
   - **實作內容**：
-    - 封裝 `$fetch` 為 `createApiClient()`，設定 `baseURL` 從 `runtimeConfig.public.apiBase` 讀取
+    - 確認 `app/services/index.ts` 作為專案統一 HTTP client 公版，封裝 `$fetch`、baseURL、headers、GET params / 非 GET body、錯誤處理與 get/post/put/patch/delete 方法
+    - 確認 `services/api/**` 可使用 `import httpRequest from '@/services/index'`
+    - 確認 domain service 不需自行建立 `$fetch` client
     - 前台 chat 請求：sessionToken 透過 path parameter 傳入（`/api/v1/chat/sessions/:sessionToken/...`），**不附加 `X-Session-Token` header** 作為正式 contract（header 為內部實作細節）
-    - 後台 admin 請求：本期直接發送，不附加 Authorization header
+    - 後台 admin domain service 不手動處理 Authorization；若共用 `httpRequest` 內部有既有 header 行為，屬於全域 HTTP client 實作細節
     - 全域 5xx 錯誤 interceptor：呼叫 `useToast()` 顯示錯誤 toast
     - 一般請求 15 秒 timeout（串流請求另行處理）
     - 在 `tests/fixtures/` 建立 mock client helper，供測試使用
-  - **完成條件**：呼叫 mock endpoint 可回傳資料；5xx 錯誤時顯示 toast；TypeScript 編譯無錯誤
+  - **完成條件**：`httpRequest` 可由 `services/api/**` import 使用；所有 domain service 不需自行建立 `$fetch` client。
 
 ---
 
@@ -1017,6 +1019,16 @@
     - `tickets.ts`：`listTickets(params)` → `GET /api/v1/admin/tickets`；`getTicketDetail(id)` → `GET /api/v1/admin/tickets/:id`；`updateTicketStatus(id, status)` → `PATCH /api/v1/admin/tickets/:id/status`；`addTicketNote(id, note)` → `POST /api/v1/admin/tickets/:id/notes`
     - 各 service 對應 mock fixtures 建立於 `tests/fixtures/adminFixtures.ts`
     - > **架構說明**：各 service 函式接收後端 API DTO 參數（不直接接收 `DtParams`）；負責處理 API envelope `{ code, data }`；domain store 負責 `DtParams → API DTO` 轉換
+    - 所有 `services/api/admin/**` 必須遵守既有 service 公版：
+      - import `httpRequest` from `@/services/index`
+      - 以 `services/api/admin/conversations.ts` 為 reference implementation
+      - 不使用 `createAdminClient()`
+      - 不使用 `createApiClient()`
+      - 不建立新的 `$fetch` client
+      - API path 使用相對於 baseURL 的路徑，例如 `admin/knowledge`
+      - service 層處理 `ApiResponse<T>` envelope
+      - service 對外回傳 `res.data`
+      - service 不直接接收 `DtParams`
   - **完成條件**：四個 service（`dashboard.ts`、`conversations.ts`、`leads.ts`、`tickets.ts`）可呼叫；mock fixtures 有對應型別的資料；TypeScript 無錯誤
 
 ---
@@ -1072,6 +1084,7 @@
     - 更新 `services/api/admin/conversations.ts`：
       - service 層處理 API envelope `{ code, data }`
       - 不直接接收 `DtParams`
+      - 遵守 T-051 既有 service 公版：import `httpRequest` from `@/services/index`，以相對 path 呼叫 API，不使用 `createAdminClient()` / `createApiClient()`
     - 建立 `app/composables/useAdminDownload.ts`：提供 `downloadUrl(url, filename)` 觸發下載
   - **完成條件**：
     - `/admin/conversations` 成為 Phase 4 / Phase 5 所有資料管理列表頁的 reference implementation
@@ -1129,7 +1142,7 @@
       - `get(id)`
       - `setStatus(id, status)`
       - 負責 `DtParams → LeadListParams` adapter
-    - `services/api/admin/leads.ts` 處理 API envelope，不直接接收 `DtParams`
+    - `services/api/admin/leads.ts` 處理 API envelope，不直接接收 `DtParams`，並遵守 T-051 既有 service 公版（`httpRequest` / 相對 path / 不使用 `createAdminClient()` 或 `createApiClient()`）
   - **完成條件**：Lead 列表頁不使用 `AdminDataTable` / `AdminFilterBar`；`TableData + DtUtils + DtTable` 架構正確；domain store 提供 `getTable()`；service 處理 API envelope
 
 ---
@@ -1165,7 +1178,7 @@
       - `createNote(id, note)`
       - 負責 `DtParams → TicketListParams` adapter
     - `app/features/admin/composables/useTickets.ts` 舊 composable 不再作為列表標準；詳情頁可保留使用
-    - `services/api/admin/tickets.ts` 處理 API envelope，不直接接收 `DtParams`
+    - `services/api/admin/tickets.ts` 處理 API envelope，不直接接收 `DtParams`，並遵守 T-051 既有 service 公版（`httpRequest` / 相對 path / 不使用 `createAdminClient()` 或 `createApiClient()`）
   - **完成條件**：Ticket 列表頁不使用 `AdminDataTable` / `AdminFilterBar` / `useTickets.ts` 舊架構；`TableData + DtUtils + DtTable` 架構正確；domain store 提供 `getTable()`，四態 status 可篩選；service 處理 API envelope
 
 ---
@@ -1196,7 +1209,7 @@
 
 ---
 
-- [ ] **T-058** 建立後台內容管理 API services
+- [x] **T-058** 建立後台內容管理 API services
   - **所屬 Phase**：Phase 4
   - **所屬 Workstream**：WS-F
   - **依賴**：T-051
@@ -1206,11 +1219,21 @@
     - `app/services/api/admin/quickReplies.ts`：`listQuickReplies()`、`updateQuickReply(id, data)`、`reorderQuickReplies(ids: string[])`、`deleteQuickReply(id)`、`createQuickReply(data)`
     - `app/services/api/admin/widgetSettings.ts`：`getWidgetSettings()`、`updateWidgetSettings(data)`
     - 補充對應 mock fixtures
-  - **完成條件**：四個 service 可呼叫；TypeScript 型別正確；mock fixtures 完整
+    - 所有 `services/api/admin/**` 必須遵守既有 service 公版：
+      - import `httpRequest` from `@/services/index`
+      - 以 `services/api/admin/conversations.ts` 為 reference implementation
+      - 不使用 `createAdminClient()`
+      - 不使用 `createApiClient()`
+      - 不建立新的 `$fetch` client
+      - API path 使用相對於 baseURL 的路徑，例如 `admin/knowledge`
+      - service 層處理 `ApiResponse<T>` envelope
+      - service 對外回傳 `res.data`
+      - service 不直接接收 `DtParams`
+  - **完成條件**：四個 service 可呼叫；TypeScript 型別正確；mock fixtures 完整；四個 content-management service 均使用 `httpRequest`，不得使用 `createAdminClient()`；呼叫風格需與 `services/api/admin/conversations.ts` 一致。
 
 ---
 
-- [ ] **T-059** 建立知識庫列表頁（`DtUtils + TableData + DtTable` 架構）與刪除確認流程
+- [x] **T-059** 建立知識庫列表頁（`DtUtils + TableData + DtTable` 架構）與刪除確認流程
   - **所屬 Phase**：Phase 4
   - **所屬 Workstream**：WS-F
   - **依賴**：T-015A ～ T-015E、T-058、T-053R
@@ -1221,17 +1244,18 @@
     - 建立 `app/pages/admin/knowledge/PageHeader.vue`：page-level header
     - 建立 `app/pages/admin/knowledge/DtHeader.vue`（table-level toolbar）：
       - 「新增知識庫」按鈕 → 跳至 `/admin/knowledge/new`
-      - 「批次匯入」按鈕 → 開啟 `KnowledgeImportModal`（T-062）
+      - 「批次匯入」按鈕 → 本批先保留 disabled placeholder，正式 Modal 於 T-062 實作
     - 建立 `app/pages/admin/knowledge/DtTable.vue`：
       - 使用 `TableData` + `vxe-column`
       - 欄位：標題、分類、狀態（草稿 / 已發佈 / 已停用，`AppStatusBadge`）、最後更新時間
-      - status 欄位使用 `vxe-column :filters`
+      - category / status 欄位使用 `vxe-column :filters`
       - row action：編輯 → `/admin/knowledge/:id/edit`；刪除 → 觸發 `AppModal` 確認 → 呼叫 `deleteKnowledge()` → toast + 重整列表
-    - 建立 `app/pages/admin/knowledge/TableFilterBar.vue`：
-      - 處理 keyword（標題關鍵字）、分類
+    - 使用共用 `app/components/TableFilterBar.vue`：
+      - 處理 keyword（標題關鍵字）、dateRange
     - 建立 `app/features/admin/stores/useAdminKnowledge.ts` domain store：
-      - `getTable(params: DtParams): Promise<DtTableResult<KnowledgeSummaryVM>>`
-      - `get(id)`、`create(data)`、`update(id, data)`、`delete(id)`
+      - `getTable(params: DtParams): Promise<DtTableResult<KnowledgeEntrySummaryVM>>`
+      - `get(id)`、`create(data)`、`update(id, data)`、`remove(id | payload)`
+      - `getVersionHistory(id)`、`restoreVersion(id, versionId)`、`importKnowledge(formData)`
       - 負責 `DtParams → KnowledgeListParams` adapter
   - **完成條件**：列表可篩選排序；不使用 `AdminDataTable` / `AdminFilterBar`；`DtHeader` 包含新增與批次匯入 CTA；刪除需二次確認；刪除成功後列表更新；service 處理 API envelope
 
@@ -1383,6 +1407,16 @@
     - `app/services/api/admin/feedback.ts`：`listFeedback(params)` → `GET /api/v1/admin/feedback`（後台回饋紀錄查詢；前台 Feedback API `POST /api/v1/chat/sessions/:sessionToken/messages/:messageId/feedback` 於 Phase 2 已正式串接，此 service 提供後台查詢介面）
     - ~~`app/services/api/admin/reports.ts`~~ **延後（Reports 本期延後）**
     - 補充對應 mock fixtures
+    - 所有 `services/api/admin/**` 必須遵守既有 service 公版：
+      - import `httpRequest` from `@/services/index`
+      - 以 `services/api/admin/conversations.ts` 為 reference implementation
+      - 不使用 `createAdminClient()`
+      - 不使用 `createApiClient()`
+      - 不建立新的 `$fetch` client
+      - API path 使用相對於 baseURL 的路徑，例如 `admin/knowledge`
+      - service 層處理 `ApiResponse<T>` envelope
+      - service 對外回傳 `res.data`
+      - service 不直接接收 `DtParams`
   - **完成條件**：`audit.ts`、`feedback.ts` 兩個 service 可呼叫；mock fixtures 含時序資料；TypeScript 正確；`reports.ts` 本期不建立
 
 ---

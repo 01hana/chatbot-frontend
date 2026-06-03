@@ -28,7 +28,7 @@
 > 5. **Feedback API 本期納入**：`POST /api/v1/chat/sessions/:sessionToken/messages/:messageId/feedback` 為本期正式串接；payload `{ value: "up"|"down", reason?: string }`（欄位名稱為 `value`，非 `type`）；`useFeedback` composable 呼叫 API；至少支援 👍/👎 + 選填原因；可關聯 AI 訊息
 > 6. **Ticket 本期納入**：`TicketSummaryVM`、Ticket 列表 / 詳情 / 狀態更新（`PATCH .../status`）/ 備註（`POST .../notes`）流程均為本期正式範圍；`services/api/admin/tickets.ts` 本期建立；狀態四態：`open | in_progress | resolved | closed`
 > 7. **無 handoff status API**：無 `getHandoffStatus()` polling；`requestHandoff()` → `POST /api/v1/chat/sessions/:sessionToken/handoff` → 後端建立 Lead → 前端顯示靜態「已轉交專人協助」；回傳 `{ accepted, action, leadId?, ticketId?, message }`；`HandoffStatusCard` 多狀態移至未來規劃
-> 8. **無後台登入驗證**：本期後台無 auth token 管理，`/api/v1/admin/...` 請求直接發送，不附加 Authorization header
+> 8. **無後台登入驗證**：本期不建立後台登入、auth store、route middleware 或 RBAC；domain service 不手動處理 Authorization。若共用 `httpRequest` 內部有既有 header 行為，屬於全域 HTTP client 實作細節，不代表本期要建立後台登入流程。
 > 9. **無 Email 通知**：移至未來規劃
 > 10. **所有 API 路徑統一為 `/api/v1/...`**：前台 `/api/v1/chat/...`、Widget Config `/api/v1/widget/config`、後台 `/api/v1/admin/...`
 >
@@ -820,7 +820,7 @@ Header 或訊息區提供「重新開始對話」入口（TBD：位置為 header
 |------|------|
 | `services/api/chat.ts` | 前台聊天相關 API 呼叫 |
 | `services/api/admin/*.ts` | 後台各功能 API 呼叫 |
-| `services/api/client.ts` | API client 基礎設定（baseURL、interceptor） |
+| `services/index.ts` | 專案統一 HTTP client 公版（`httpRequest`：baseURL、headers、GET params / 非 GET body、錯誤 toast、get/post/put/patch/delete） |
 | `services/streaming.ts` | SSE 串流處理邏輯（本期確認使用 SSE；`fetch + ReadableStream` 接收；`AbortController` 取消）|
 | `composables/useChat.ts` | 前台聊天核心邏輯 |
 | `composables/useWidgetConfig.ts` | Widget 設定載入與管理 |
@@ -1114,9 +1114,31 @@ getTable(params: DtParams): Promise<DtTableResult<T>>
 ### 7C.4 API Service 責任（`services/api/admin/{domain}.ts`）
 
 - 使用後端 API DTO 型別（`ConversationListParams`、`LeadListParams`、`TicketListParams` 等）
-- 呼叫 `/api/v1/admin/...`
+- 使用相對於 `httpRequest` baseURL 的路徑，例如 `admin/conversations`
 - 處理 API envelope（`{ code, data }`），對 store 回傳乾淨的 domain result
 - **不直接接收 `DtParams`**：DtParams → domain adapter → API params 的轉換在 domain store 內完成
+
+### API Service 實作標準
+
+本專案統一使用 `app/services/index.ts` 匯出的 `httpRequest` 作為 HTTP client。
+
+所有 `app/services/api/**` 檔案必須遵守：
+
+- 使用 `import httpRequest from '@/services/index'`
+- 不建立 domain-local `$fetch`
+- 不建立 `createAdminClient()`
+- 不建立 `createApiClient()`
+- 不重新封裝另一套 API client
+- API path 使用相對於 `httpRequest` baseURL 的路徑，例如：
+  - `admin/conversations`
+  - `admin/conversations/:id`
+  - `admin/conversations/export`
+- 不在 service 內硬寫完整 `/api/v1/...`，因為 `/api/v1/` 已由 `httpRequest` 的 baseURL 統一處理
+- service 層負責處理 API envelope，例如 `ApiResponse<T>`
+- service 對外回傳實際 `data`
+- service 接收後端 API DTO / params，不直接接收 `DtParams`
+
+`app/services/api/admin/conversations.ts` 是 admin service 的 reference implementation。
 
 ---
 
@@ -1181,7 +1203,7 @@ getTable(params: DtParams): Promise<DtTableResult<T>>
 
 前台聊天以 `sessionToken` 識別匿名訪客會話，儲存於 `localStorage`（key: `chat_session_token`），用於跨頁面重整恢復對話。所有 session-scoped API（訊息、留資、轉人工、回饋）以 `:sessionToken` **path parameter** 呼叫，例如 `POST /api/v1/chat/sessions/:sessionToken/messages`。後端以 `sessionToken` 映射至內部 `sessionId`，前端不直接操作 `sessionId`。
 
-後台本期無 auth token，`/api/v1/admin/...` 請求直接發送，不附加任何 Authorization header。
+本期不建立後台登入、auth store、route middleware 或 RBAC；domain service 不手動處理 Authorization。若共用 `httpRequest` 內部有既有 header 行為，屬於全域 HTTP client 實作細節，不代表本期要建立後台登入流程。
 
 ---
 
@@ -1189,13 +1211,13 @@ getTable(params: DtParams): Promise<DtTableResult<T>>
 
 ### 9.1 API Client 設計原則
 
-統一使用 Nuxt 4 的 `$fetch` 或封裝的 `useApi` composable。
+統一使用 `app/services/index.ts` 匯出的 `httpRequest`。`httpRequest` 內部封裝 `$fetch`、baseURL、headers、GET params / 非 GET body、錯誤 toast，以及 `request / get / post / put / patch / delete` 方法。
 
 基礎設定：
-- `baseURL`：從 `runtimeConfig.public.apiBase` 取得，不 hardcode
+- `baseURL`：由 `httpRequest` 統一處理，不在 domain service hardcode `/api/v1/...`
 - 前台 chat API request：自動附加前台 session token（從 `localStorage` 讀取）
-- 後台 admin API request：直接發送，本期不附加任何 Authorization header
-- 全域 response interceptor：處理 5xx（顯示 toast）
+- 後台 admin domain service：不手動處理 Authorization
+- 全域錯誤處理：由 `httpRequest` 顯示錯誤 toast
 - Timeout：預設 15 秒（串流請求另行設定）
 
 不在前端 bundle 中放置任何 API Key 或後端機密設定。所有設定從環境變數取得，且只有 `NUXT_PUBLIC_` 前綴的才暴露給前端。
@@ -1281,7 +1303,7 @@ POST /api/v1/chat/sessions/:sessionToken/handoff
 - **分頁**：offset-based pagination（`p` + `pageSize`，預設 20），由 `DtUtils` 管理
 - **排序**：`vxe-column` header 點擊觸發，由 `DtUtils.sortChange` 處理
 - **Domain Store Adapter**：domain store 負責將 `DtParams` 轉換為 domain-specific API params（如 `ConversationListParams`、`LeadListParams`），不在 page 或 DtUtils 內做此轉換
-- **API Service**：不直接接收 `DtParams`；接收 domain-specific params，呼叫 `/api/v1/admin/...`，回傳乾淨的 domain result
+- **API Service**：不直接接收 `DtParams`；接收 domain-specific params，使用相對於 `httpRequest` baseURL 的路徑（如 `admin/conversations`），回傳乾淨的 domain result
 
 ### 9.8 知識庫匯入流程
 
@@ -1315,7 +1337,7 @@ POST /api/v1/admin/knowledge/import（multipart/form-data）
 
 前端 bundle 中嚴禁出現任何 OpenAI API Key、後端 JWT secret、資料庫連線字串等機密資訊。所有環境變數需透過 `NUXT_` 前綴設定，公開給前端的僅 `NUXT_PUBLIC_API_BASE` 等基礎設定。
 
-本期後台不設登入驗證，無 auth token 相關安全考量。未來若加入登入保護，再評估 token 儲存策略。
+本期不建立後台登入、auth store、route middleware 或 RBAC；domain service 不手動處理 Authorization。若共用 `httpRequest` 內部有既有 header 行為，屬於全域 HTTP client 實作細節，不代表本期要建立後台登入流程。
 
 CSP（Content Security Policy）設定：前台 Widget 嵌入的頁面應設定 CSP，防止 XSS 注入（TBD：需與後端或官網技術確認）。
 
@@ -1323,7 +1345,7 @@ CSP（Content Security Policy）設定：前台 Widget 嵌入的頁面應設定 
 
 ### 10.2 錯誤處理
 
-全域 API 錯誤由 `services/api/client.ts` 的 interceptor 統一處理。元件層不直接 catch HTTP 錯誤，由 API client 統一映射為應用層錯誤。
+全域 API 錯誤由 `app/services/index.ts` 的 `httpRequest` 統一處理。元件層不直接 catch HTTP 錯誤，由統一 HTTP client 映射為應用層錯誤。
 
 前台：所有非預期錯誤均不允許空白頁或無反應，必須顯示對應 `System*Item` 訊息。後台：表單級別錯誤以欄位 inline 顯示，系統級別錯誤以 toast 通知。
 

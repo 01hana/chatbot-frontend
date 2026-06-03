@@ -159,6 +159,41 @@ Phase 0（基礎建設）
 
 Phase 3 的 `/admin/conversations` 會作為後續所有後台資料管理頁面的 reference implementation。
 
+### API service 實作原則
+
+本專案以 `app/services/index.ts` 的 `httpRequest` 作為唯一 HTTP client 公版。所有 `services/api/**` 檔案需 import：
+
+```ts
+import httpRequest from '@/services/index'
+```
+
+不得新增或使用：
+
+- `createAdminClient()`
+- `createApiClient()`
+- domain-local `$fetch`
+- 另一套 `services/api/client.ts` 作為新標準
+
+後台 domain service 以 `services/api/admin/conversations.ts` 為 reference implementation：
+
+- service 使用 class 或等價物件封裝 domain API
+- service method 接收後端 API DTO / params
+- service 使用相對路徑，例如 `admin/conversations`
+- service 層處理 `ApiResponse<T>` envelope
+- service 對外回傳 `res.data`
+- service 不直接接收 `DtParams`
+
+資料管理 table 的呼叫鏈固定為：
+
+```txt
+DtUtils.params
+→ domain Pinia store getTable(params: DtParams)
+→ domain adapter 將 DtParams 轉成 DomainListParams
+→ services/api/admin/<domain>.ts
+→ httpRequest
+→ 後端 API
+```
+
 ---
 
 ## 5. Phase / Milestone 規劃
@@ -173,7 +208,7 @@ Phase 3 的 `/admin/conversations` 會作為後續所有後台資料管理頁面
 - `app.config.ts` 設定（Nuxt UI 主題 token、品牌色）
 - `tailwind.config.ts` 延伸色設定（`chat-user-bubble`、`chat-ai-bubble`、`intercept-warning` 等）
 - `nuxt.config.ts` 基礎設定（runtimeConfig、i18n module、modules）
-- API client（`services/api/client.ts`）：`$fetch` 封裝、`baseURL`、全域 5xx interceptor、timeout 設定
+- API client 公版（`app/services/index.ts`）：`httpRequest` 封裝 `$fetch`、baseURL、headers、GET params / 非 GET body、錯誤 toast、request / get / post / put / patch / delete 方法
 - Shared TypeScript types（`types/chat.ts`、`types/admin.ts`、`types/api.ts`）：ChatMessageVM、WidgetConfigVM、ChatSession、Lead、Ticket、KnowledgeEntry、Intent、AuditEvent、Feedback 等 VM type 基礎定義
 - Pinia 初始化，store 骨架（`useChatWidgetStore`、`useChatSessionStore`、`useWidgetConfigStore`）
 - Nuxt UI plugin 確認可用，`useToast()` 可運作
@@ -957,8 +992,8 @@ app/
   pages/
   plugins/
   services/
+    index.ts
     api/
-      client.ts
       chat.ts
       admin/
     streaming.ts
@@ -976,14 +1011,14 @@ i18n/locales/
 - 語意色：success、warning、error
 - 聊天氣泡背景色延伸至 `tailwind.config.ts` 的 `theme.extend.colors`（如 `chat-user-bubble`、`chat-ai-bubble`、`intercept-warning`）
 
-### 7.3 API Client（`services/api/client.ts`）
+### 7.3 API Client（`app/services/index.ts`）
 
-- 使用 Nuxt 4 的 `$fetch` 封裝為 `createApiClient()`
-- `baseURL`：`useRuntimeConfig().public.apiBase`
+- 使用 `app/services/index.ts` 匯出的 `httpRequest` 作為唯一 HTTP client 公版
+- `httpRequest` 內部封裝 `$fetch`、baseURL、headers、GET params / 非 GET body、錯誤 toast、request / get / post / put / patch / delete 方法
+- 所有 `services/api/**` 檔案 import `httpRequest`，不得建立 `createAdminClient()`、`createApiClient()`、domain-local `$fetch` 或另一套 API client
+- API service 使用相對於 baseURL 的 path，例如 `admin/conversations`；不在 service 內硬寫完整 `/api/v1/...`
 - 前台 chat session-scoped 請求透過 path parameter（`:sessionToken`）傳遞，不附加 `X-Session-Token` header
-- 後台 admin 請求本期直接發送，不附加 Authorization
-- 全域 5xx interceptor：顯示 `useToast()` 錯誤 toast
-- 15 秒 timeout（串流請求不走此 timeout，由 `useStreaming` 自行計時）
+- 本期不建立後台登入、auth store、route middleware 或 RBAC；domain service 不手動處理 Authorization
 - 環境變數：僅 `NUXT_PUBLIC_API_BASE` 暴露給前端
 
 ### 7.4 Shared Types / View Models（`types/`）
