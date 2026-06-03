@@ -81,6 +81,20 @@
 
 `FormModal.vue` 可作為 `useForm + useAppForm + FormField + FileUpload` 的參考實作。
 
+### State Change 實作標準
+
+本專案可變的 boolean UI / async state 統一使用 `useAppState(initial)` 管理，並透過 setter 改變狀態。
+
+```ts
+const [loading, setLoading] = useAppState(true);
+const [saving, setSaving] = useAppState(false);
+
+setLoading(true);
+setSaving(false);
+```
+
+適用範圍包含 loading、saving、open、requesting、visible、submitted、modal open、filter open 等本地 boolean control state。資料物件、字串錯誤訊息、陣列、selected item、domain enum state、computed derived state 仍可依情境使用 `ref` / `computed`。若 boolean state 需提供給 `v-model`，以 computed wrapper 串接 setter，避免在元件邏輯中直接寫 `state.value = true / false`。
+
 ---
 
 ## 1. 設計目標與範圍
@@ -1163,7 +1177,7 @@ getTable(params: DtParams): Promise<DtTableResult<T>>
 ### 8.1 設計原則
 
 - Store 只用於**跨元件、跨頁面**需要共享的持久狀態
-- 頁面 local 狀態（篩選條件、表單暫存）使用 composable 或 `ref` / `reactive` 管理在頁面元件中
+- 頁面 local 狀態（篩選條件、表單暫存）使用 composable 或 `ref` / `reactive` 管理在頁面元件中；其中可變的 boolean control state 預設使用 `useAppState` + setter pattern
 - 前台聊天 session 與後台登入 session 嚴格分離，互不干擾
 
 ### 8.2 前台 Store
@@ -1199,10 +1213,12 @@ getTable(params: DtParams): Promise<DtTableResult<T>>
 
 ### 8.5 Page-Local 狀態（不進 Store）
 
-以下狀態在各頁面元件的 `setup()` 中以 `ref` / `reactive` 管理：
+以下狀態在各頁面元件的 `setup()` 中管理：
 - 後台表單頁的表單資料
 - Dashboard 圖表的時間範圍選擇
 - Modal 的開關狀態
+
+可變的 boolean state（例如 `loading`、`saving`、`open`、`requesting`、`visible`）需使用 `useAppState(initial)`，並透過 `setXxx(true / false)` 更新；非 boolean 資料仍可使用 `ref` / `reactive`。
 
 > **注意**：後台**資料管理列表頁**（含 vxe-table 的 admin domain page）不在 page 內直接管理 table rows / loading / pagination / sort / filters，改由 `DtUtils` + domain Pinia store 負責。詳見 §7C。
 

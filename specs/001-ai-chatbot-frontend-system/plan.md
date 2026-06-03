@@ -246,6 +246,20 @@ DtUtils.params
 - 檔案欄位使用 `FileUpload`
 - page 只負責呼叫 store action、toast、loading、router navigation，不重複寫欄位驗證
 
+### State Change 公版原則
+
+可變的 boolean UI / async state 統一使用 `useAppState(initial)`，並以 setter 更新狀態：
+
+```ts
+const [loading, setLoading] = useAppState(true);
+const [saving, setSaving] = useAppState(false);
+
+setLoading(true);
+setSaving(false);
+```
+
+適用於 loading、saving、open、requesting、visible、submitted、modal open、filter open 等本地 boolean control state。資料物件、錯誤訊息、陣列、selected item、domain enum state、computed derived state 可保留 `ref` / `computed`。需要 `v-model` 的 boolean state 以 computed wrapper 串接 setter。
+
 **後台 vxe-table 公版基礎建設（WS-E 前置）**：
 
 - vxe-table / vxe-pc-ui 安裝與初始化

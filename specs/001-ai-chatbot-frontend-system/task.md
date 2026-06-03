@@ -145,6 +145,8 @@
   - 確認 `app/components/FormField.vue` 作為一般欄位公版
   - 確認 `app/components/FileUpload.vue` 作為檔案欄位公版
   - 後續 domain form 預設使用 `UForm + useForm + useAppForm + FormField`；檔案欄位使用 `FileUpload`
+  - 確認可變的 boolean UI / async state 使用 `useAppState(initial)`，並透過 `setXxx(true / false)` 更新；例如 `loading`、`saving`、`open`、`requesting`、`visible`、`submitted`
+  - 需要 `v-model` 的 boolean state 以 computed wrapper 串接 `useAppState` setter；資料物件、字串錯誤訊息、陣列、selected item、domain enum state 可依情境保留 `ref` / `computed`
   - **完成條件**：
     - 在測試元件中，使用 `UForm` 搭配既有封裝的 `FormField` 元件可正確顯示驗證錯誤訊息
     - `name`（必填）、`email`（必填，格式驗證）規則可在各表單中自行定義；無需 `phoneOrEmail` 自訂規則
@@ -152,6 +154,7 @@
     - edit mode 可透過 `useAppForm().formUpdate(data)` 批次回填資料，不需要逐欄手動 `setFieldValue`
     - 一般欄位可透過 `FormField` 顯示驗證錯誤
     - 檔案欄位可透過 `FileUpload` 整合表單狀態
+    - boolean state change 不直接以 `ref(true / false)` + `.value = true / false` 管理，改以 `useAppState` setter pattern 管理
 
 ---
 
