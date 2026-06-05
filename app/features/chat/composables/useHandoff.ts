@@ -23,7 +23,7 @@ export function useHandoff() {
   const { t } = useI18n()
 
   /** Transient flag: true only while the POST is in-flight. */
-  const isRequesting = ref(false)
+  const [isRequesting, setRequesting] = useAppState(false)
 
   /** Human-readable error message to surface to the user. */
   const errorMessage = ref<string | null>(null)
@@ -51,7 +51,7 @@ export function useHandoff() {
     const token = sessionStore.sessionToken
     if (!token) return
 
-    isRequesting.value = true
+    setRequesting(true)
     errorMessage.value = null
 
     try {
@@ -67,7 +67,7 @@ export function useHandoff() {
     } catch {
       errorMessage.value = t('handoff.error')
     } finally {
-      isRequesting.value = false
+      setRequesting(false)
     }
   }
 

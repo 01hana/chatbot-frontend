@@ -14,7 +14,7 @@ export const useChatSessionStore = defineStore('chatSession', () => {
   const streamingState = ref<StreamingState>('idle');
   const handoffState = ref<HandoffState>({ status: 'normal' } as HandoffState);
   const leadFormState = ref<LeadFormState>({ submitted: false } as LeadFormState);
-  const quickRepliesVisible = ref(true);
+  const [quickRepliesVisible, setQuickRepliesVisibleState] = useAppState(true);
 
   function setSessionToken(token: string | null) {
     sessionToken.value = token;
@@ -50,7 +50,7 @@ export const useChatSessionStore = defineStore('chatSession', () => {
   }
 
   function setQuickRepliesVisible(visible: boolean) {
-    quickRepliesVisible.value = visible;
+    setQuickRepliesVisibleState(visible);
   }
 
   function reset() {
@@ -60,7 +60,7 @@ export const useChatSessionStore = defineStore('chatSession', () => {
     streamingState.value = 'idle';
     handoffState.value = { status: 'normal' } as HandoffState;
     leadFormState.value = { submitted: false } as LeadFormState;
-    quickRepliesVisible.value = true;
+    setQuickRepliesVisible(true);
   }
 
   return {

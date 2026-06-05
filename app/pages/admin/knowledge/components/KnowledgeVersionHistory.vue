@@ -15,17 +15,23 @@ const toast = useAppToast();
 const { formatDateTime } = useFormat();
 const knowledgeStore = useAdminKnowledge();
 
+const [loading, setLoading] = useAppState(false);
+const [restoring, setRestoring] = useAppState(false);
+const [confirmOpen, setConfirmOpen] = useAppState(false);
+
 const revisions = ref<KnowledgeRevisionVM[]>([]);
-const loading = ref(false);
-const restoring = ref(false);
 const error = ref('');
 const expandedId = ref<string | null>(null);
-const confirmOpen = ref(false);
 const selectedRevision = ref<KnowledgeRevisionVM | null>(null);
 
 const isOpen = computed({
   get: () => props.open,
   set: value => emit('update:open', value),
+});
+
+const confirmOpenModel = computed({
+  get: () => confirmOpen.value,
+  set: setConfirmOpen,
 });
 
 watch(
@@ -36,7 +42,7 @@ watch(
 );
 
 async function loadRevisions() {
-  loading.value = true;
+  setLoading(true);
   error.value = '';
 
   try {
@@ -45,7 +51,7 @@ async function loadRevisions() {
     revisions.value = [];
     error.value = e instanceof Error ? e.message : '載入版本歷史失敗，請稍後再試';
   } finally {
-    loading.value = false;
+    setLoading(false);
   }
 }
 
@@ -55,25 +61,23 @@ function toggleRevision(revision: KnowledgeRevisionVM) {
 
 function openRestoreConfirm(revision: KnowledgeRevisionVM) {
   selectedRevision.value = revision;
-  confirmOpen.value = true;
+  setConfirmOpen(true);
 }
 
 async function restoreSelectedRevision() {
   if (!selectedRevision.value) return;
 
-  restoring.value = true;
+  setRestoring(true);
 
-  try {
-    await knowledgeStore.restoreVersion(props.entryId, selectedRevision.value.revisionId);
-    toast.success('還原成功');
-    confirmOpen.value = false;
-    isOpen.value = false;
-    emit('restored');
-  } catch (e) {
-    toast.error(e instanceof Error ? e.message : '還原失敗，請稍後再試');
-  } finally {
-    restoring.value = false;
-  }
+  await knowledgeStore.restoreVersion(props.entryId, selectedRevision.value.revisionId);
+
+  toast.success('還原成功');
+  setConfirmOpen(false);
+
+  emit('update:open', false);
+  emit('restored');
+
+  setRestoring(false);
 }
 </script>
 
@@ -96,11 +100,7 @@ async function restoreSelectedRevision() {
             class="rounded-lg border border-gray-200 p-4"
           >
             <div class="flex flex-wrap items-start justify-between gap-3">
-              <button
-                type="button"
-                class="min-w-0 text-left"
-                @click="toggleRevision(revision)"
-              >
+              <button type="button" class="min-w-0 text-left" @click="toggleRevision(revision)">
                 <p class="text-sm font-semibold text-gray-800">
                   版本 {{ revision.revisionNumber }}
                 </p>
@@ -128,7 +128,9 @@ async function restoreSelectedRevision() {
               class="mt-4 rounded bg-gray-50 p-3 text-sm text-gray-700"
             >
               <p class="mb-2 text-xs font-medium text-gray-500">差異 / 內容摘要</p>
-              <pre class="whitespace-pre-wrap font-sans">{{ revision.diff || revision.content || '無差異內容' }}</pre>
+              <pre class="whitespace-pre-wrap font-sans">{{
+                revision.diff || revision.content || '無差異內容'
+              }}</pre>
             </div>
           </div>
         </div>
@@ -137,7 +139,7 @@ async function restoreSelectedRevision() {
   </USlideover>
 
   <AlertModal
-    v-model:open="confirmOpen"
+    v-model:open="confirmOpenModel"
     title="確認還原版本"
     type="warning"
     icon="i-heroicons-arrow-uturn-left"

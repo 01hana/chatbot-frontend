@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import KnowledgeEditorForm from './components/KnowledgeEditorForm.vue';
-import type { KnowledgeCreatePayload, KnowledgeUpdatePayload } from '~/types/admin';
+import type { KnowledgeCreatePayload } from '~/types/admin';
 
 definePageMeta({ layout: 'admin', title: '新增知識庫' });
 
@@ -9,18 +9,16 @@ const toast = useAppToast();
 const knowledgeStore = useAdminKnowledge();
 const [saving, setSaving] = useAppState(false);
 
-async function onSubmit(payload: KnowledgeCreatePayload | KnowledgeUpdatePayload) {
+async function onSubmit(payload: Omit<KnowledgeCreatePayload, 'status'>) {
   setSaving(true);
 
-  try {
-    await knowledgeStore.create(payload as KnowledgeCreatePayload);
+  await knowledgeStore.create(payload).then(async () => {
     toast.success('新增成功');
+
     await router.push('/admin/knowledge');
-  } catch (error) {
-    toast.error(error instanceof Error ? error.message : '新增失敗，請稍後再試');
-  } finally {
+
     setSaving(false);
-  }
+  });
 }
 </script>
 

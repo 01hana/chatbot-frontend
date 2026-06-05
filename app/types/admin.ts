@@ -27,6 +27,11 @@ export interface AdminListParams extends DateRangeFilter {
   sortOrder?: 'asc' | 'desc';
 }
 
+export interface AdminFilterOption<TValue extends string = string> {
+  label: string;
+  value: TValue;
+}
+
 // ── Conversations ────────────────────────────────────────────
 
 /** Summary row shown in the conversations list table. */
@@ -131,7 +136,7 @@ export interface TicketListParams extends AdminListParams {
 
 // ── Knowledge Base ───────────────────────────────────────────
 
-export type KnowledgeStatus = 'draft' | 'published' | 'disabled';
+export type KnowledgeStatus = 'draft' | 'published' | 'archived';
 
 /** A single knowledge base entry (Q&A pair). */
 export interface KnowledgeEntryVM {
@@ -166,6 +171,11 @@ export interface KnowledgeListParams extends AdminListParams {
   status?: KnowledgeStatus;
 }
 
+export interface KnowledgeFiltersVM {
+  category: AdminFilterOption<string>[];
+  status: AdminFilterOption<KnowledgeStatus>[];
+}
+
 export interface KnowledgeCreatePayload {
   title: string;
   category: string;
@@ -173,7 +183,7 @@ export interface KnowledgeCreatePayload {
   content: string;
 }
 
-export type KnowledgeUpdatePayload = Partial<KnowledgeCreatePayload>;
+export type KnowledgeUpdatePayload = Partial<Omit<KnowledgeCreatePayload, 'status'>>;
 
 export interface KnowledgeImportResult {
   success: number;

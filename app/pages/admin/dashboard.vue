@@ -17,18 +17,18 @@ definePageMeta({
 // ── Data fetch ────────────────────────────────────────────────────────────────
 
 const stats = ref<DashboardStatsVM | null>(null);
-const loading = ref(true);
+const [loading, setLoading] = useAppState(true);
 const error = ref<string | null>(null);
 
 async function fetchStats() {
-  loading.value = true;
+  setLoading(true);
   error.value = null;
   try {
     stats.value = await getDashboardStats();
   } catch (e) {
     error.value = e instanceof Error ? e.message : '載入失敗';
   } finally {
-    loading.value = false;
+    setLoading(false);
   }
 }
 

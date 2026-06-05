@@ -84,6 +84,13 @@ function onView(row: Record<string, any>) {
 
   router.push(`${basePath}/${row.id}`);
 }
+
+function onEdit(row: Record<string, any>) {
+  console.log('onEdit', row.id);
+  const basePath = route.path.replace(/\/$/, '');
+
+  router.push(`${basePath}/${row.id}/edit`);
+}
 </script>
 
 <template>
@@ -137,7 +144,7 @@ function onView(row: Record<string, any>) {
                 v-if="actions.edit"
                 icon="fluent:edit-line-horizontal-3-24-regular"
                 variant="ghost"
-                @click="setModal(row.id)"
+                @click="onEdit(row)"
               />
 
               <UButton

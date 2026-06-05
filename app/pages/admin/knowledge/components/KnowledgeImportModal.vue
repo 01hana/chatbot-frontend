@@ -16,37 +16,42 @@ const emit = defineEmits<{
 
 const toast = useAppToast();
 const knowledgeStore = useAdminKnowledge();
+const [loading, setLoading] = useAppState(false);
 
-const loading = ref(false);
-const result = ref<KnowledgeImportResult | null>(null);
-const error = ref('');
 const { handleSubmit, resetForm } = useForm<ImportFormValues>({
   validationSchema: {
     file: 'required',
   },
 });
 
+const result = ref<KnowledgeImportResult | null>(null);
+const error = ref('');
+
 const isOpen = computed({
   get: () => props.open,
   set: value => emit('update:open', value),
 });
 
-const csvTemplateHref = computed(() =>
-  `data:text/csv;charset=utf-8,${encodeURIComponent('title,category,status,content\n範例標題,使用教學,published,範例內容')}`,
+const csvTemplateHref = computed(
+  () =>
+    `data:text/csv;charset=utf-8,${encodeURIComponent('title,category,status,content\n範例標題,使用教學,published,範例內容')}`,
 );
-const jsonTemplateHref = computed(() =>
-  `data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(
-    [
-      {
-        title: '範例標題',
-        category: '使用教學',
-        status: 'published',
-        content: '範例內容',
-      },
-    ],
-    null,
-    2,
-  ))}`,
+const jsonTemplateHref = computed(
+  () =>
+    `data:application/json;charset=utf-8,${encodeURIComponent(
+      JSON.stringify(
+        [
+          {
+            title: '範例標題',
+            category: '使用教學',
+            status: 'published',
+            content: '範例內容',
+          },
+        ],
+        null,
+        2,
+      ),
+    )}`,
 );
 
 watch(
@@ -58,9 +63,13 @@ watch(
 
 function resetState() {
   resetForm();
-  loading.value = false;
+  setLoading(false);
   result.value = null;
   error.value = '';
+}
+
+function closeModal() {
+  emit('update:open', false);
 }
 
 function resolveFile(fileValue: ImportFormValues['file']) {
@@ -81,7 +90,7 @@ const onSubmit = handleSubmit(async values => {
 
   const formData = new FormData();
   formData.append('file', file);
-  loading.value = true;
+  setLoading(true);
   error.value = '';
 
   try {
@@ -90,9 +99,8 @@ const onSubmit = handleSubmit(async values => {
     emit('imported');
   } catch (e) {
     error.value = e instanceof Error ? e.message : '匯入失敗，請稍後再試';
-    toast.error(error.value);
   } finally {
-    loading.value = false;
+    setLoading(false);
   }
 }) as (e?: Event) => Promise<void>;
 </script>
@@ -181,7 +189,7 @@ const onSubmit = handleSubmit(async values => {
             variant="outline"
             color="neutral"
             :disabled="loading"
-            @click="isOpen = false"
+            @click="closeModal"
           >
             取消
           </UButton>

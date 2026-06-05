@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import LeadService from '~/services/api/admin/leads';
 import type { DtParams, DtTableResult } from '~/libs/vxe-table';
 import { cleanParams, firstValue, toAdminListParams } from '~/libs/vxe-table/adapters';
-import type { LeadListParams, LeadStatus, LeadSummaryVM } from '~/types/admin';
+import type { LeadListParams, LeadStatus, LeadSummaryVM, LeadUpdatePayload } from '~/types/admin';
 
 export const useAdminLeads = defineStore('admin-leads', () => {
   function toLeadListParams(params: DtParams): LeadListParams {
@@ -36,9 +36,14 @@ export const useAdminLeads = defineStore('admin-leads', () => {
     return await LeadService.updateLeadStatus(id, status);
   }
 
+  async function update(id: string | number, payload: LeadUpdatePayload) {
+    return await LeadService.updateLead(id, payload);
+  }
+
   return {
     getTable,
     get,
     setStatus,
+    update,
   };
 });

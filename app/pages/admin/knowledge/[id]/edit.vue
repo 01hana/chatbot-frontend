@@ -1,57 +1,78 @@
 <script setup lang="ts">
 import AppEmptyState from '~/features/admin/components/AppEmptyState.vue';
 import AppErrorState from '~/features/admin/components/AppErrorState.vue';
+import AppStatusBadge from '~/features/admin/components/AppStatusBadge.vue';
 import KnowledgeEditorForm from '../components/KnowledgeEditorForm.vue';
 import KnowledgeVersionHistory from '../components/KnowledgeVersionHistory.vue';
-import type {
-  KnowledgeCreatePayload,
-  KnowledgeEntryVM,
-  KnowledgeUpdatePayload,
-} from '~/types/admin';
+import type { KnowledgeEntryVM, KnowledgeUpdatePayload } from '~/types/admin';
 
 definePageMeta({ layout: 'admin', title: '編輯知識庫' });
 
 const route = useRoute();
 const router = useRouter();
 const toast = useAppToast();
-const knowledgeStore = useAdminKnowledge();
+const { get, update, publish, archive } = useAdminKnowledge();
+
+const [loading, setLoading] = useAppState(true);
+const [saving, setSaving] = useAppState(false);
+const [statusSaving, setStatusSaving] = useAppState(false);
 
 const id = computed(() => String(route.params.id));
 const entry = ref<KnowledgeEntryVM | null>(null);
-const loading = ref(true);
-const saving = ref(false);
 const error = ref('');
-const versionOpen = ref(false);
+const [versionOpen, setVersionOpen] = useAppState(false);
+
+const versionOpenModel = computed({
+  get: () => versionOpen.value,
+  set: setVersionOpen,
+});
+
+onMounted(loadEntry);
 
 async function loadEntry() {
-  loading.value = true;
+  setLoading(true);
   error.value = '';
 
   try {
-    entry.value = await knowledgeStore.get(id.value);
+    entry.value = await get(id.value);
   } catch (e) {
     entry.value = null;
     error.value = e instanceof Error ? e.message : '載入知識庫失敗，請稍後再試';
   } finally {
-    loading.value = false;
+    setLoading(false);
   }
 }
 
-async function onSubmit(payload: KnowledgeCreatePayload | KnowledgeUpdatePayload) {
-  saving.value = true;
+async function onSubmit(payload: KnowledgeUpdatePayload) {
+  setSaving(true);
 
   try {
-    await knowledgeStore.update(id.value, payload as KnowledgeUpdatePayload);
+    await update(id.value, payload);
     toast.success('儲存成功');
+
     await loadEntry();
-  } catch (e) {
-    toast.error(e instanceof Error ? e.message : '儲存失敗，請稍後再試');
   } finally {
-    saving.value = false;
+    setSaving(false);
   }
 }
 
-onMounted(loadEntry);
+async function updateStatus(action: 'publish' | 'archive') {
+  setStatusSaving(true);
+
+  try {
+    if (action === 'publish') {
+      await publish(id.value);
+      toast.success('狀態已更新為已核准');
+    } else {
+      await archive(id.value);
+      toast.success('狀態已更新為已封存');
+    }
+
+    await loadEntry();
+  } finally {
+    setStatusSaving(false);
+  }
+}
 </script>
 
 <template>
@@ -77,7 +98,7 @@ onMounted(loadEntry);
         icon="fluent:arrow-rotate-counterclockwise-24-regular"
         variant="outline"
         :disabled="!entry"
-        @click="versionOpen = true"
+        @click="setVersionOpen(true)"
       >
         版本歷史
       </UButton>
@@ -91,16 +112,51 @@ onMounted(loadEntry);
 
     <AppEmptyState v-else-if="!entry" title="找不到知識庫資料" />
 
-    <UCard v-else>
-      <KnowledgeEditorForm
-        :model-value="entry"
-        :loading="saving"
-        submit-label="儲存"
-        @submit="onSubmit"
-        @cancel="router.push('/admin/knowledge')"
-      />
-    </UCard>
+    <template v-else>
+      <UCard>
+        <template #header>
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-4">
+              <p class="text-sm font-medium text-gray-700">狀態</p>
+              <AppStatusBadge :status="entry.status" />
+            </div>
 
-    <KnowledgeVersionHistory v-model:open="versionOpen" :entry-id="id" @restored="loadEntry" />
+            <div class="flex flex-wrap justify-end gap-2">
+              <UButton
+                icon="i-heroicons-check-circle"
+                :loading="statusSaving"
+                :disabled="entry.status === 'published' || statusSaving"
+                @click="updateStatus('publish')"
+              >
+                核准 / 發佈
+              </UButton>
+
+              <UButton
+                icon="i-heroicons-archive-box"
+                variant="outline"
+                color="neutral"
+                :loading="statusSaving"
+                :disabled="entry.status === 'archived' || statusSaving"
+                @click="updateStatus('archive')"
+              >
+                封存
+              </UButton>
+            </div>
+          </div>
+        </template>
+      </UCard>
+
+      <UCard>
+        <KnowledgeEditorForm
+          :model-value="entry"
+          :loading="saving"
+          submit-label="儲存"
+          @submit="onSubmit"
+          @cancel="router.push('/admin/knowledge')"
+        />
+      </UCard>
+    </template>
+
+    <KnowledgeVersionHistory v-model:open="versionOpenModel" :entry-id="id" @restored="loadEntry" />
   </div>
 </template>

@@ -5,11 +5,10 @@
  * Uses:
  * - useFormat       — formatDateTime (no local formatDate)
  * - AppStatusBadge  — status display (no local STATUS_LABEL)
- * - useLeads        — API state
+ * - useAdminLeads   — domain store actions
  */
 
-import { useLeads } from '~/features/admin/composables/useLeads'
-import type { LeadUpdatePayload, LeadStatus } from '~/types/admin'
+import type { LeadStatus, LeadVM } from '~/types/admin'
 
 definePageMeta({ layout: 'admin', title: 'Lead 詳情' })
 
@@ -18,15 +17,19 @@ const id = computed(() => String(route.params.id))
 const toast = useToast()
 
 const { formatDateTime } = useFormat()
-const { lead, loading, error, fetchLeadDetail, updateLead } = useLeads()
+const leadStore = useAdminLeads()
 
-onMounted(() => fetchLeadDetail(id.value))
+const lead = ref<LeadVM | null>(null)
+const [loading, setLoading] = useAppState(true)
+const error = ref('')
+
+onMounted(loadLead)
 
 // ── Edit state ─────────────────────────────────────────────────────────────
 
 const editStatus = ref<LeadStatus | undefined>()
 const editNote = ref('')
-const saving = ref(false)
+const [saving, setSaving] = useAppState(false)
 
 watch(
   lead,
@@ -46,19 +49,37 @@ const statusOptions = [
   { label: '已關閉', value: 'closed' },
 ]
 
+async function loadLead() {
+  setLoading(true)
+  error.value = ''
+
+  try {
+    lead.value = await leadStore.get(id.value)
+  } catch (e) {
+    lead.value = null
+    error.value = e instanceof Error ? e.message : '載入 Lead 失敗，請稍後再試'
+  } finally {
+    setLoading(false)
+  }
+}
+
 async function handleSave() {
   if (!lead.value) return
-  saving.value = true
-  const payload: LeadUpdatePayload = {
-    status: editStatus.value,
-    note: editNote.value,
-  }
-  const updated = await updateLead(id.value, payload)
-  saving.value = false
-  if (updated) {
+  setSaving(true)
+
+  try {
+    if (editStatus.value && editStatus.value !== lead.value.status) {
+      await leadStore.setStatus(id.value, editStatus.value)
+    }
+
+    if ((editNote.value ?? '') !== (lead.value.note ?? '')) {
+      await leadStore.update(id.value, { note: editNote.value })
+    }
+
     toast.add({ title: '儲存成功', color: 'success' })
-  } else {
-    toast.add({ title: '儲存失敗', description: error.value ?? '請稍後再試', color: 'error' })
+    await loadLead()
+  } finally {
+    setSaving(false)
   }
 }
 </script>
@@ -83,7 +104,7 @@ async function handleSave() {
     <AppErrorState
       v-if="error && !lead"
       :message="error"
-      @retry="fetchLeadDetail(id)"
+      @retry="loadLead"
     />
 
     <!-- Loading skeleton -->

@@ -26,26 +26,12 @@ const { get } = useAdminConversations();
 // ── Data fetch ──────────────────────────────────────────────────────────────
 
 const detail = ref<ConversationDetailVM | null>(null);
-const loading = ref(true);
+const [loading, setLoading] = useAppState(true);
 const error = ref<string | null>(null);
-
-// async function fetchDetail() {
-//   loading.value = true;
-//   error.value = null;
-//   try {
-//     detail.value = await getConversationDetail(id.value);
-//   } catch (e) {
-//     error.value = e instanceof Error ? e.message : '載入失敗';
-//   } finally {
-//     loading.value = false;
-//   }
-// }
-
-// onMounted(fetchDetail);
 
 onMounted(async () => {
   detail.value = await get(id.value);
-  loading.value = false;
+  setLoading(false);
 
   console.log(detail.value);
 });

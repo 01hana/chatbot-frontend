@@ -8,15 +8,15 @@
  */
 
 export const useChatWidgetStore = defineStore('chatWidget', () => {
-  const isOpen = ref(false);
+  const [isOpen, setOpenState] = useAppState(false);
   const mode = ref<'normal' | 'fallback'>('normal');
 
   function setOpen(value: boolean) {
-    isOpen.value = value;
+    setOpenState(value);
   }
 
   function toggle() {
-    isOpen.value = !isOpen.value;
+    setOpen(!isOpen.value);
   }
 
   function setMode(m: 'normal' | 'fallback') {
@@ -24,7 +24,7 @@ export const useChatWidgetStore = defineStore('chatWidget', () => {
   }
 
   function reset() {
-    isOpen.value = false;
+    setOpen(false);
     mode.value = 'normal';
   }
 

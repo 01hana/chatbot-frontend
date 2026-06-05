@@ -31,11 +31,11 @@ export function useModal(): ModalProps {
 
   const id = ref();
   const type = ref();
-  const show = ref(false);
+  const [show, setShow] = useAppState(false);
   const title = ref('');
   const subtitle = ref('');
 
-  const _shown = shallowRef(false);
+  const [_shown, setShown] = useAppState(false);
 
   const isShown = computed(() => _shown.value);
   const isView = computed(() => type.value === 'VIEW');
@@ -48,11 +48,11 @@ export function useModal(): ModalProps {
   }
 
   function afterEnter() {
-    _shown.value = true;
+    setShown(true);
   }
 
   function afterLeave() {
-    _shown.value = false;
+    setShown(false);
 
     id.value = undefined;
     type.value = undefined;
@@ -66,7 +66,7 @@ export function useModal(): ModalProps {
 
     if (typeof statusOrId === 'boolean') {
       if (!statusOrId) {
-        show.value = false;
+        setShow(false);
 
         return;
       }
@@ -74,7 +74,7 @@ export function useModal(): ModalProps {
       id.value = undefined;
       type.value = 'ADD';
       subtitle.value = t('actions.create');
-      show.value = true;
+      setShow(true);
 
       return;
     }
@@ -83,7 +83,7 @@ export function useModal(): ModalProps {
 
     type.value = !isView ? 'EDIT' : 'VIEW';
     subtitle.value = !isView ? t('actions.edit') : t('actions.view');
-    show.value = true;
+    setShow(true);
   }
 
   return {

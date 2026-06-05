@@ -18,6 +18,8 @@ const {
   removeBatch,
 } = inject(DtUtils.key) as InstanceType<typeof DtUtils>;
 
+const route = useRoute();
+const router = useRouter();
 const { t } = useI18n();
 const {
   isDeleteConfirm,
@@ -92,6 +94,12 @@ function onReset() {
   resetDt();
 }
 
+function onAdd() {
+  const basePath = route.path.replace(/\/$/, '');
+
+  router.push(`${basePath}/create`);
+}
+
 provide('useSearchModal', useSearchModal);
 </script>
 
@@ -100,19 +108,20 @@ provide('useSearchModal', useSearchModal);
     <div class="flex items-center gap-2.5 flex-wrap">
       <UButton
         v-if="actions.create"
-        icon="fluent:add-circle-24-filled"
+        icon="i-heroicons-plus"
+        class="shadow-xs transition-all duration-200 hover:shadow-md active:scale-95"
         :label="t('actions.create')"
-        variant="solid"
-        class="rounded-xl font-semibold shadow-md bg-gradient-to-br from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 transition-colors"
-        @click="setModal(true)"
+        @click="onAdd"
       />
 
-      <slot v-if="$slots.create" name="create" />
+      <slot v-if="$slots.action" name="action" />
 
-      <div v-if="actions.batch" class="batch-group flex items-center gap-0.5 rounded-xl">
+      <div
+        v-if="actions.batch"
+        class="bg-gradient-to-r from-primary-50/30 to-primary-50 border border-blue-200 flex items-center gap-0.5 rounded-lg"
+      >
         <!-- 批次選擇切換 -->
         <UButton
-          color="neutral"
           variant="ghost"
           :icon="
             !isSelectBatch
@@ -120,19 +129,18 @@ provide('useSearchModal', useSearchModal);
               : 'fluent:dismiss-circle-24-regular'
           "
           :label="isSelectBatch ? $t('actions.batch') : $t('actions.batch', 0)"
-          class="rounded-lg text-slate-500 hover:text-sky-600 hover:bg-sky-50/80 transition-colors"
+          class="text-slate-500 hover:text-sky-600 hover:bg-sky-50/80 transition-colors"
           @click="selectVisible"
         />
 
-        <div class="w-px h-5 bg-slate-200/80 mx-0.5" />
+        <!-- <div class="w-px h-5 bg-slate-200/80 mx-0.5" /> -->
 
         <!-- 批次操作下拉 -->
         <UDropdownMenu :items="batchItems">
           <UButton
-            color="neutral"
             variant="ghost"
             trailing-icon="fluent:chevron-down-24-regular"
-            class="rounded-lg text-slate-500 hover:text-sky-600 hover:bg-sky-50/80 transition-colors"
+            class="text-slate-500 hover:text-sky-600 hover:bg-sky-50/80 transition-colors"
           >
             <span v-if="isSelected" class="flex items-center gap-1.5">
               <span class="text-sky-600 font-medium">{{ $t('actions.batchApply') }}</span>
@@ -150,7 +158,7 @@ provide('useSearchModal', useSearchModal);
       </div>
     </div>
 
-    <div class="flex items-center justify-between border-b border-gray-200 gap-2 p-2">
+    <!-- <div class="flex items-center justify-between border-b border-gray-200 gap-2 p-2">
       <FormField
         name="keyword"
         :label="t('actions.search')"
@@ -169,7 +177,7 @@ provide('useSearchModal', useSearchModal);
           type="submit"
           variant="soft"
           icon="fluent:search-24-regular"
-          class="rounded-xl font-medium shadow-sm"
+          class="rounded-lg font-medium shadow-sm"
           @click="onSubmit"
         />
 
@@ -180,7 +188,7 @@ provide('useSearchModal', useSearchModal);
             variant="outline"
             color="neutral"
             icon="fluent:filter-24-regular"
-            class="rounded-xl border-gray-300 text-gray-500 hover:border-sky-400 hover:text-sky-600 hover:bg-white transition-colors"
+            class="rounded-lg border-gray-300 text-gray-500 hover:border-sky-400 hover:text-sky-600 hover:bg-white transition-colors"
             @click="setSearchModal(true)"
           />
           <AdvancedSearch injection-key="useSearchModal" :groups :multiple="true" />
@@ -191,12 +199,12 @@ provide('useSearchModal', useSearchModal);
             variant="outline"
             color="neutral"
             icon="fluent:arrow-counterclockwise-24-regular"
-            class="rounded-xl border-gray-300 text-gray-500 hover:border-sky-400 hover:text-sky-600 hover:bg-white transition-colors"
+            class="rounded-lg border-gray-300 text-gray-500 hover:border-sky-400 hover:text-sky-600 hover:bg-white transition-colors"
             @click="onReset"
           />
         </UTooltip>
       </div>
-    </div>
+    </div> -->
   </div>
 
   <!-- ── 刪除確認 Modal ──────────────────────────────── -->
@@ -222,8 +230,7 @@ provide('useSearchModal', useSearchModal);
 <style scoped>
 .batch-group {
   background: linear-gradient(135deg, #f8faff 0%, #eef4ff 100%);
-  border: 1px solid rgba(148, 192, 255, 0.4);
-  box-shadow: inset 0 1px 2px rgba(99, 160, 255, 0.06);
+  /* box-shadow: inset 0 1px 2px rgba(99, 160, 255, 0.06); */
 }
 
 :deep([data-slot='wrapper']) {

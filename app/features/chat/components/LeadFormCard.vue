@@ -38,11 +38,11 @@ const isSubmitted = computed(() => status.value === 'submitted')
  * this card appeared?  (Prevents showing "success" banner immediately
  * after submitting — that case shows the "already submitted" notice instead.)
  */
-const wasAlreadySubmitted = ref(false)
+const [wasAlreadySubmitted, setWasAlreadySubmitted] = useAppState(false)
 
 onMounted(() => {
   if (sessionStore.leadFormState.submitted) {
-    wasAlreadySubmitted.value = true
+    setWasAlreadySubmitted(true)
     status.value = 'submitted'
   }
 })

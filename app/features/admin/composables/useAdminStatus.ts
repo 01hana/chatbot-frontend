@@ -10,7 +10,6 @@ export type AdminBadgeColor = 'success' | 'neutral' | 'warning' | 'error' | 'inf
 const GLOBAL_COLOR_MAP: Record<string, AdminBadgeColor> = {
   // success
   active: 'success',
-  approved: 'success',
   resolved: 'success',
   qualified: 'success',
   published: 'success',
@@ -35,7 +34,6 @@ const GLOBAL_COLOR_MAP: Record<string, AdminBadgeColor> = {
 
 const GLOBAL_LABEL_MAP: Record<string, string> = {
   active: 'Active',
-  approved: '已核准',
   resolved: '已解決',
   qualified: '已評估',
   published: '已發佈',

@@ -1,17 +1,17 @@
 <script setup lang="ts">
 const route = useRoute();
-const { isCollapsed, isMobileOpen, toggleMobileOpen } = useAdminNav();
+const { isCollapsed, setCollapsed, isMobileOpen, setMobileOpen, toggleMobileOpen } = useAdminNav();
 
 // Reset collapsed state when viewport drops below lg, so mobile drawer always shows icon + label
 const isLg = useMediaQuery('(min-width: 1024px)');
 watch(isLg, (lg) => {
-  if (!lg) isCollapsed.value = false;
+  if (!lg) setCollapsed(false);
 });
 
 // Close mobile drawer on navigation
 watch(
   () => route.path,
-  () => { isMobileOpen.value = false; },
+  () => { setMobileOpen(false); },
 );
 
 const navItems = [

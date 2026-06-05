@@ -1,4 +1,3 @@
-import { defineStore } from 'pinia';
 import KnowledgeService from '~/services/api/admin/knowledge';
 import type { DtParams, DtTableResult } from '~/libs/vxe-table';
 import { cleanParams, firstValue, toAdminListParams } from '~/libs/vxe-table/adapters';
@@ -14,6 +13,7 @@ type RemovePayload = string | number | { rows?: Array<string | number>; id?: str
 
 export const useAdminKnowledge = defineStore('admin-knowledge', () => {
   const toast = useAppToast();
+  const categoryItems = ref<{ label: string; value: string }[]>([]);
 
   function toKnowledgeListParams(params: DtParams): KnowledgeListParams {
     const searches = params.searches ?? {};
@@ -46,6 +46,16 @@ export const useAdminKnowledge = defineStore('admin-knowledge', () => {
     };
   }
 
+  async function getFilters(filterColumns: string[]) {
+    if (!filterColumns.length) return;
+
+    const res = await KnowledgeService.getFilters();
+
+    categoryItems.value = res.category;
+
+    return res;
+  }
+
   async function get(id: string | number) {
     return await KnowledgeService.getKnowledgeEntry(id);
   }
@@ -58,6 +68,14 @@ export const useAdminKnowledge = defineStore('admin-knowledge', () => {
     return await KnowledgeService.updateKnowledge(id, data);
   }
 
+  async function publish(id: string | number) {
+    return await KnowledgeService.publishKnowledge(id);
+  }
+
+  async function archive(id: string | number) {
+    return await KnowledgeService.archiveKnowledge(id);
+  }
+
   async function remove(payload: RemovePayload) {
     const ids = resolveRemoveIds(payload);
 
@@ -68,10 +86,15 @@ export const useAdminKnowledge = defineStore('admin-knowledge', () => {
   }
 
   return {
+    categoryItems,
+
     getTable,
+    getFilters,
     get,
     create,
     update,
+    publish,
+    archive,
     remove,
     getVersionHistory: KnowledgeService.getVersionHistory.bind(KnowledgeService),
     restoreVersion: KnowledgeService.restoreVersion.bind(KnowledgeService),

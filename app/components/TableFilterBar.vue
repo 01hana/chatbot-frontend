@@ -19,7 +19,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const { params, advancedSearchSubmit } = inject(DtUtils.key) as InstanceType<typeof DtUtils>;
 
-const showFilters = ref(false);
+const [showFilters, setShowFilters] = useAppState(false);
 
 if (!params || !advancedSearchSubmit) {
   throw new Error('DtFilterBar requires DtUtils provider');
@@ -38,7 +38,7 @@ const filterValues = computed<FilterValues>(() => {
 });
 
 function toggleFilters() {
-  showFilters.value = !showFilters.value;
+  setShowFilters(!showFilters.value);
 }
 
 function onFiltersUpdate(values: FilterValues) {
@@ -69,6 +69,11 @@ const FilterToggle = defineComponent({
       });
   },
 });
+
+const showFiltersModel = computed({
+  get: () => showFilters.value,
+  set: setShowFilters,
+});
 </script>
 
 <template>
@@ -76,7 +81,7 @@ const FilterToggle = defineComponent({
     <slot name="header" :open="showFilters" :toggle="toggleFilters" :FilterToggle="FilterToggle" />
 
     <UCollapsible
-      v-model:open="showFilters"
+      v-model:open="showFiltersModel"
       :ui="{
         content:
           'overflow-hidden data-[state=open]:animate-[collapsible-down_260ms_cubic-bezier(0.22,1,0.36,1)] data-[state=closed]:animate-[collapsible-up_220ms_ease-in]',

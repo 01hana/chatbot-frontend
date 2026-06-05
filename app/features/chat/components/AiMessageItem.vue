@@ -35,7 +35,7 @@ const isStreaming = computed(() => props.message.type === 'ai-streaming');
 // ── Feedback ─────────────────────────────────────────────────────────────────
 
 /** Show reason chips after a 'down' vote. */
-const showReasonChips = ref(false);
+const [showReasonChips, setShowReasonChips] = useAppState(false);
 
 const REASON_KEYS = ['inaccurate', 'incomplete', 'notRelevant', 'other'] as const;
 type ReasonKey = typeof REASON_KEYS[number];
@@ -44,7 +44,7 @@ function handleRateUp() {
   const wasCancelled = props.message.rating === 'up';
   // Optimistic toggle
   props.message.rating = wasCancelled ? null : 'up';
-  showReasonChips.value = false;
+  setShowReasonChips(false);
   if (!wasCancelled) {
     submitFeedback(props.message.id, 'up');
   }
@@ -55,16 +55,16 @@ function handleRateDown() {
   // Optimistic toggle
   props.message.rating = wasCancelled ? null : 'down';
   if (wasCancelled) {
-    showReasonChips.value = false;
+    setShowReasonChips(false);
   } else {
-    showReasonChips.value = true;
+    setShowReasonChips(true);
     submitFeedback(props.message.id, 'down');
   }
 }
 
 function handleReason(key: ReasonKey) {
   submitFeedback(props.message.id, 'down', key);
-  showReasonChips.value = false;
+  setShowReasonChips(false);
 }
 </script>
 

@@ -5,14 +5,13 @@
  * Uses:
  * - useFormat       — formatDateTime (no local formatDate)
  * - AppStatusBadge  — status display (no local STATUS_LABEL)
- * - useTickets      — API state (updateTicketStatus, addTicketNote)
+ * - useAdminTickets — domain store actions
  *
  * Status update: PATCH /admin/tickets/:id/status
  * Note add:      POST  /admin/tickets/:id/notes
  */
 
-import { useTickets } from '~/features/admin/composables/useTickets'
-import type { TicketStatus } from '~/types/admin'
+import type { TicketStatus, TicketVM } from '~/types/admin'
 
 definePageMeta({ layout: 'admin', title: 'Ticket 詳情' })
 
@@ -21,16 +20,19 @@ const id = computed(() => String(route.params.id))
 const toast = useToast()
 
 const { formatDateTime } = useFormat()
-const { ticket, loading, error, fetchTicketDetail, updateTicketStatus, addTicketNote } =
-  useTickets()
+const ticketStore = useAdminTickets()
 
-onMounted(() => fetchTicketDetail(id.value))
+const ticket = ref<TicketVM | null>(null)
+const [loading, setLoading] = useAppState(true)
+const error = ref('')
+
+onMounted(loadTicket)
 
 // ── Edit state ─────────────────────────────────────────────────────────────
 
 const editStatus = ref<TicketStatus>('open')
 const newNote = ref('')
-const saving = ref(false)
+const [saving, setSaving] = useAppState(false)
 
 watch(
   ticket,
@@ -49,31 +51,38 @@ const statusOptions = [
   { label: '已關閉', value: 'closed' },
 ]
 
+async function loadTicket() {
+  setLoading(true)
+  error.value = ''
+
+  try {
+    ticket.value = await ticketStore.get(id.value)
+  } catch (e) {
+    ticket.value = null
+    error.value = e instanceof Error ? e.message : '載入 Ticket 失敗，請稍後再試'
+  } finally {
+    setLoading(false)
+  }
+}
+
 async function handleSubmit() {
   if (!ticket.value) return
-  saving.value = true
-  let success = true
+  setSaving(true)
 
-  // Update status only when changed
-  if (editStatus.value !== ticket.value.status) {
-    const updated = await updateTicketStatus(id.value, editStatus.value)
-    if (!updated) success = false
-  }
+  try {
+    if (editStatus.value !== ticket.value.status) {
+      await ticketStore.updateStatus(id.value, editStatus.value)
+    }
 
-  // Add note when non-empty
-  if (newNote.value.trim()) {
-    const note = await addTicketNote(id.value, newNote.value.trim())
-    if (!note) success = false
-    else newNote.value = ''
-  }
+    if (newNote.value.trim()) {
+      await ticketStore.createNote(id.value, newNote.value.trim())
+      newNote.value = ''
+    }
 
-  saving.value = false
-
-  if (success) {
     toast.add({ title: '更新成功', color: 'success' })
-    await fetchTicketDetail(id.value)
-  } else {
-    toast.add({ title: '更新失敗', description: error.value ?? '請稍後再試', color: 'error' })
+    await loadTicket()
+  } finally {
+    setSaving(false)
   }
 }
 
@@ -104,7 +113,7 @@ function getTimelineIcon(eventType: string): string {
     <AppErrorState
       v-if="error && !ticket"
       :message="error"
-      @retry="fetchTicketDetail(id)"
+      @retry="loadTicket"
     />
 
     <!-- Loading skeleton -->

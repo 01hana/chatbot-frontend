@@ -13,7 +13,7 @@ const { getAdminStatusColor, getAdminStatusLabel, getTicketStatusLabel, getLeadS
 
 describe('getAdminStatusColor', () => {
   it('active → success', () => expect(getAdminStatusColor('active')).toBe('success'))
-  it('approved → success', () => expect(getAdminStatusColor('approved')).toBe('success'))
+  it('published → success', () => expect(getAdminStatusColor('published')).toBe('success'))
   it('resolved → success', () => expect(getAdminStatusColor('resolved')).toBe('success'))
   it('qualified → success', () => expect(getAdminStatusColor('qualified')).toBe('success'))
 

@@ -35,15 +35,34 @@ export function useAdminNav() {
 
   // Sidebar collapsed state (desktop only) — shared via useState
   const isCollapsed = useState('admin-sidebar-collapsed', () => false);
+  function setCollapsed(value: boolean) {
+    isCollapsed.value = value;
+  }
+
   function toggleCollapsed() {
-    isCollapsed.value = !isCollapsed.value;
+    setCollapsed(!isCollapsed.value);
   }
 
   // Mobile drawer open state — shared via useState
   const isMobileOpen = useState('admin-sidebar-mobile-open', () => false);
-  function toggleMobileOpen() {
-    isMobileOpen.value = !isMobileOpen.value;
+  function setMobileOpen(value: boolean) {
+    isMobileOpen.value = value;
   }
 
-  return { adminNavItems, currentNav, pageTitle, pageSubtitle, isCollapsed, toggleCollapsed, isMobileOpen, toggleMobileOpen };
+  function toggleMobileOpen() {
+    setMobileOpen(!isMobileOpen.value);
+  }
+
+  return {
+    adminNavItems,
+    currentNav,
+    pageTitle,
+    pageSubtitle,
+    isCollapsed,
+    setCollapsed,
+    toggleCollapsed,
+    isMobileOpen,
+    setMobileOpen,
+    toggleMobileOpen,
+  };
 }

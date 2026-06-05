@@ -9,23 +9,23 @@ import type { WidgetConfigVM } from '~/types/chat';
 
 export const useWidgetConfigStore = defineStore('widgetConfig', () => {
   const config = ref<WidgetConfigVM | null>(null);
-  const isLoaded = ref(false);
-  const isOnline = ref(false);
+  const [isLoaded, setLoaded] = useAppState(false);
+  const [isOnline, setOnline] = useAppState(false);
 
   function setConfig(payload: WidgetConfigVM) {
     config.value = payload;
-    isLoaded.value = true;
-    isOnline.value = payload.status !== 'offline';
+    setLoaded(true);
+    setOnline(payload.status !== 'offline');
   }
 
   function setOffline() {
-    isOnline.value = false;
+    setOnline(false);
   }
 
   function reset() {
     config.value = null;
-    isLoaded.value = false;
-    isOnline.value = false;
+    setLoaded(false);
+    setOnline(false);
   }
 
   return {

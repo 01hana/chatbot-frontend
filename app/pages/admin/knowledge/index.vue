@@ -8,7 +8,7 @@ provide(useModalKey, useModal());
 
 const knowledgeStore = useAdminKnowledge();
 const dt = new DtUtils(knowledgeStore);
-const importOpen = ref(false);
+const [importOpen, setImportOpen] = useAppState(false);
 
 provide(DtUtils.key, dt);
 
@@ -17,6 +17,11 @@ definePageMeta({ layout: 'admin', title: '知識庫管理' });
 function refreshTable() {
   knowledgeStore.getTable(dt.params.value);
 }
+
+const importOpenModel = computed({
+  get: () => importOpen.value,
+  set: setImportOpen,
+});
 </script>
 
 <template>
@@ -26,14 +31,14 @@ function refreshTable() {
 
   <UCard>
     <template #header>
-      <DtHeader @open-import="importOpen = true" />
+      <DtHeader @open-import="setImportOpen(true)" />
     </template>
 
     <DtTable />
   </UCard>
 
   <KnowledgeImportModal
-    v-model:open="importOpen"
+    v-model:open="importOpenModel"
     @imported="refreshTable"
   />
 </template>

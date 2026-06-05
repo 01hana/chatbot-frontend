@@ -6,6 +6,7 @@ import httpRequest from '@/services/index';
 import type {
   KnowledgeCreatePayload,
   KnowledgeEntryVM,
+  KnowledgeFiltersVM,
   KnowledgeImportResult,
   KnowledgeListParams,
   KnowledgeRevisionVM,
@@ -21,6 +22,12 @@ class KnowledgeService {
       'admin/knowledge',
       params,
     );
+
+    return res.data;
+  }
+
+  public async getFilters(): Promise<KnowledgeFiltersVM> {
+    const res = await httpRequest.get<ApiResponse<KnowledgeFiltersVM>>('admin/knowledge/filters');
 
     return res.data;
   }
@@ -44,6 +51,22 @@ class KnowledgeService {
     const res = await httpRequest.patch<ApiResponse<KnowledgeEntryVM>>(
       `admin/knowledge/${id}`,
       data,
+    );
+
+    return res.data;
+  }
+
+  public async publishKnowledge(id: string | number): Promise<KnowledgeEntryVM> {
+    const res = await httpRequest.post<ApiResponse<KnowledgeEntryVM>>(
+      `admin/knowledge/${id}/publish`,
+    );
+
+    return res.data;
+  }
+
+  public async archiveKnowledge(id: string | number): Promise<KnowledgeEntryVM> {
+    const res = await httpRequest.post<ApiResponse<KnowledgeEntryVM>>(
+      `admin/knowledge/${id}/archive`,
     );
 
     return res.data;
