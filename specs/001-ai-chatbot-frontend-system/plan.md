@@ -14,7 +14,7 @@
 >
 > 1. **SSE 為官方串流方案**：前台聊天主流程採 SSE（`fetch + ReadableStream`），不考慮 WebSocket 或 `EventSource`；`services/streaming.ts` 與 `useStreaming` 均以 `fetch + ReadableStream` 實作；取消串流以 `AbortController.abort()` 實現，不需 DELETE 端點
 > 2. **sessionToken 以 path parameter 傳入**：`sessionToken` 識別匿名訪客，儲存於 `localStorage`（key: `chat_session_token`）；所有 session-scoped API 均透過路徑 `/api/v1/chat/sessions/:sessionToken/...` 傳入，不使用 `X-Session-Token` header 作為正式 contract
-> 3. **Widget Config API 為強依賴**：`GET /api/v1/widget/config` 為正式依賴，Widget 初始化必須呼叫；`status`（`online|offline|degraded`）、`welcomeMessage`、`quickReplies`、`disclaimer`、`fallbackMessage` 均為多語系物件（`Record<string, string>`）；`status: 'offline'` 或 `status: 'degraded'` 或 API 失敗均觸發降級模式
+> 3. **Widget Config API 為強依賴**：`GET /api/v1/widget/config` 為正式依賴，Widget 初始化必須呼叫；`status`（`online | offline | degraded`）、`welcomeMessage`、`disclaimer`、`fallbackMessage` 為多語系文字物件（`Record<string, string>`）；`quickReplies` 為多語系字串陣列物件（`Record<string, string[]>`）；`status: 'offline'` 或 `status: 'degraded'` 或 API 失敗均觸發降級模式
 > 4. **Dashboard 本期納入**：`/admin/dashboard` 本期建立；統計卡片列 + 對話量趨勢圖 + 意圖分布圓餅圖 + 最新稽核事件；`services/api/admin/dashboard.ts` 本期建立
 > 5. **Feedback API 本期正式串接**：`POST /api/v1/chat/sessions/:sessionToken/messages/:messageId/feedback`，payload `{ value: 'up'|'down', reason? }`；`useFeedback.ts` composable 呼叫 API，fire-and-forget；後台回饋紀錄由 `GET /api/v1/admin/feedback` 提供
 > 6. **Handoff 簡化版**：無 handoff status polling；流程為：`POST /api/v1/chat/sessions/:sessionToken/handoff` → 後端回傳 `{ accepted, action, leadId?, ticketId?, message }` → 前端顯示「已轉交專人協助」靜態訊息；`HandoffStatusCard` 多狀態移至未來規劃
@@ -74,9 +74,9 @@
 
 **前台**：Widget 收合展開、多輪對話、串流回覆、快捷提問、留資表單、轉人工、機密攔截、Prompt Injection 攔截、低信心度提示、回覆失敗／timeout／retry／interrupted、降級模式、滿意度回饋、多語系（繁中／英文，預留第三語系）、RWD、Session 恢復、事件追蹤埋點
 
-**後台**：知識庫管理（含版本歷史、批次匯入）、對話紀錄查詢（含匯出）、Lead 管理、意圖／模板管理、快捷提問管理、Widget 設定（含即時預覽）、稽核事件、回饋紀錄
+**後台**：知識庫管理（含版本歷史、批次匯入）、對話紀錄查詢（含匯出）、Lead 管理、意圖／模板管理、Widget 設定（含 welcomeMessage / quickReplies / disclaimer / fallbackMessage 與即時預覽）、稽核事件、回饋紀錄
 
-> **本期不做（已 deferred）**：營運報表、後台登入驗證、Auth/RBAC、handoff status polling、Email 通知、end session API（「重新開始對話」為純前端：清除 localStorage + 建立新 session，不呼叫刪除端點）
+> **本期不做（已 deferred）**：獨立 `/admin/quick-replies` 管理頁、quickReplies CRUD、quickReplies 拖曳排序、`reorderQuickReplies(ids)` API、營運報表、後台登入驗證、Auth/RBAC、handoff status polling、Email 通知、end session API（「重新開始對話」為純前端：清除 localStorage + 建立新 session，不呼叫刪除端點）
 
 ### 2.3 開發前提
 
@@ -136,7 +136,7 @@ Phase 0（基礎建設）
 | WS-C | 前台聊天核心      | Session、訊息列表、串流回覆、狀態機、Message Renderer                   |
 | WS-D | 前台進階互動      | 留資表單、轉人工、回饋、降級、低信心度、語系切換                        |
 | WS-E | 後台基礎          | Admin layout、後台資料管理 table 公版、Dashboard、對話紀錄、Lead/Ticket |
-| WS-F | 後台內容管理      | 知識庫、意圖/模板、快捷提問、Widget 設定                                |
+| WS-F | 後台內容管理      | 知識庫、意圖/模板、Widget 設定（含 welcomeMessage / quickReplies / disclaimer / fallbackMessage） |
 | WS-G | 後台維運工具      | 稽核事件、回饋紀錄、營運報表                                            |
 | WS-H | 品質與完整化      | i18n 英文、埋點、無障礙、效能、E2E 補全、RWD 細化                       |
 
@@ -479,7 +479,7 @@ export interface DtTableResult<T = any> {
 **後台共用基礎（WS-E）**：
 
 - `layouts/admin.vue` 完整實作：左側導覽列（含各功能頁連結）、頂部 topbar、主內容區
-- 左側導覽列：Dashboard、對話紀錄、Lead、Ticket、意圖/模板、快捷提問、Widget 設定、稽核事件、回饋紀錄
+- 左側導覽列：Dashboard、對話紀錄、Lead、Ticket、意圖/模板、Widget 設定、稽核事件、回饋紀錄
 - 預設路由：`/admin` → redirect 至 `/admin/dashboard`
 - 後台資料管理 table 公版（依 `design.md §7C`，Phase 0 已完成安裝；本 Phase 首次落地為 domain page）：
   - `TableData`：vxe-table 公版 DOM shell
@@ -587,7 +587,7 @@ export interface DtTableResult<T = any> {
 
 **完成定義（DoD）**：
 
-- [ ] 後台 admin layout 正確（左側導覽列含 Dashboard / 對話紀錄 / Lead / Ticket / 意圖 / 快捷提問 / Widget 設定 / 稽核 / 回饋、topbar、內容區）
+- [ ] 後台 admin layout 正確（左側導覽列含 Dashboard / 對話紀錄 / Lead / Ticket / 意圖 / Widget 設定 / 稽核 / 回饋、topbar、內容區）
 - [ ] 預設路由 `/admin` 跳轉至 `/admin/dashboard`
 - [ ] Dashboard 統計卡片正確顯示，折線圖 / 圓餅圖可渲染
 - [ ] 後台資料管理頁不使用 `AdminDataTable`、`AdminFilterBar`、`UTable`、`useAdminTablePage`
@@ -608,7 +608,7 @@ export interface DtTableResult<T = any> {
 
 ### Phase 4 — 後台內容管理
 
-**目標**：完成後台四個核心內容管理模組，讓管理者可維護 AI 客服的知識庫、意圖、快捷提問與 Widget 設定。
+**目標**：完成後台核心內容管理模組，讓管理者可維護 AI 客服的知識庫、意圖與 Widget 設定。
 
 > 所有含 table / 智慧列表的 admin domain page，必須使用 `TableData` + `DtUtils` + `DtTable` 架構，延續 Phase 3 `/admin/conversations` reference implementation；新增 / 批次匯入 / 批次操作放在 optional `DtHeader.vue`；搜尋 / 日期區間放在 `TableFilterBar.vue`；enum / boolean 篩選放在 `vxe-column :filters`。若該頁不是 table 型資料管理頁（例如 Widget 設定表單），則不需要套用 `DtUtils`。
 
@@ -638,9 +638,9 @@ export interface DtTableResult<T = any> {
 
 **意圖 / 模板管理（WS-F）**：
 
-- 路由：`/admin/intents`
+- 路由：`/admin/intent`
 - 列表頁使用資料管理頁面標準架構：
-  - `index.vue`：provide `DtUtils.key` + `useAdminIntents()`，不直接管理 table state
+  - `index.vue`：provide `DtUtils.key` + `useAdminIntent()`，不直接管理 table state
   - `PageHeader.vue`：page-level header
   - `DtHeader.vue`（optional）：放新增意圖按鈕
   - `DtTable.vue`：意圖名稱、觸發關鍵字（前 3 個 + tooltip）、啟用狀態（`USwitch` inline toggle，直接呼叫 PATCH API）、操作
@@ -648,41 +648,41 @@ export interface DtTableResult<T = any> {
 - `vxe-column :filters`：處理啟用狀態、優先級等固定選項
 - 新增 / 編輯：以 `USlideover` 側抽屜形式（意圖名稱、觸發關鍵字 tag input、優先級、回覆模板內容），一般欄位透過 `FormField` 呈現
 - 本頁表單需遵守表單公版原則，使用 `useForm + useAppForm + FormField`；檔案匯入使用 `FileUpload`
-- 意圖預覽：在 slideover 底部提供測試輸入框，呼叫 `POST /api/v1/admin/intents/preview`
-- domain store `useAdminIntents()`：
+- 意圖預覽：在 slideover 底部提供測試輸入框，呼叫 `POST /api/v1/admin/intent/preview`
+- domain store `useAdminIntent()`：
   - `getTable(params: DtParams): Promise<DtTableResult<IntentSummaryVM>>`
   - `get(id)`
   - `create(data)`
   - `set(id, data)`
   - `remove(payload)`
   - 負責 `DtParams → IntentListParams` adapter
-- `services/api/admin/intents.ts`：service 層處理 API envelope
-
-**快捷提問管理（WS-F）**：
-
-- 路由：`/admin/quick-replies`
-- 此頁以拖曳排序為主，可使用 domain-specific `QuickReplyDragList`，不強制套 `DtTable`
-- 若未來需要 table / 智慧列表能力，再依標準架構接入 `TableData` + `DtUtils` + `DtTable`
-- 新增按鈕屬於資料新增，放在 domain-specific list toolbar（若採 DtTable 架構則放 `DtHeader.vue`）
-- 頁面左右兩欄：左側編輯列表（拖曳排序 `QuickReplyDragList`）、右側即時預覽（顯示前台 Quick Replies Bar 外觀）
-- 拖曳排序（`@vueuse/core` 的 `useSortable` 或 `vue-draggable-plus`，TBD）
-- 每筆可展開編輯：繁中文案、英文文案、啟用狀態；新增 / 刪除（刪除需確認）
-- 拖曳完成後立即呼叫排序更新 API（傳送排序後的 ID 陣列）
-- `services/api/admin/quickReplies.ts`
-- **不使用** `AdminDataTable` / `UTable` 作為資料管理標準
+- `services/api/admin/intent.ts`：service 層處理 API envelope
 
 **Widget 設定管理（WS-F）**：
 
 - 路由：`/admin/widget-settings`
 - 此頁為設定表單 + 即時預覽，不屬於資料管理 table page，**不需要套用 `DtUtils` / `TableData` / `DtTable`**
 - 頁面左右兩欄：左側設定表單、右側 Widget 即時預覽（`WidgetSettingsPreview`）
-- 設定項目：CTA 文案（繁中 / 英文）、歡迎訊息（繁中 / 英文）、頁尾免責聲明（繁中 / 英文）、AI 標記文字、線上 / 離線 / 降級文案、聯絡捷徑（最多 3 組），一般欄位透過 `FormField` 呈現
+- 設定項目：
+  - `welcomeMessage.zh-TW`
+  - `welcomeMessage.en`
+  - `quickReplies.zh-TW`
+  - `quickReplies.en`
+  - `disclaimer.zh-TW`
+  - `disclaimer.en`
+  - `fallbackMessage.zh-TW`
+  - `fallbackMessage.en`
+- `quickReplies` 型別為 `Record<string, string[]>`
+  - UI 可用多行文字、tag input、或可新增 / 刪除列的簡化輸入方式
+  - 儲存時轉成 `Record<string, string[]>`
+  - 不做拖曳排序
+  - 不做單筆 quick reply CRUD
 - 本頁表單需遵守表單公版原則，使用 `useForm + useAppForm + FormField`；檔案匯入使用 `FileUpload`
 - 修改任何欄位後右側預覽即時更新（純前端 local 預覽，不呼叫 API）
-- 確認後「儲存設定」送出 `PUT /api/v1/admin/widget-settings`
-- `services/api/admin/widgetSettings.ts`
+- 確認後「儲存設定」送出 `PATCH /api/v1/admin/widget-settings`
+- `services/api/admin/widgetSettings.ts` 使用 `httpRequest` 公版
 
-**主要輸出**：後台四個內容管理模組完整可操作，Widget 設定可即時預覽並儲存
+**主要輸出**：後台內容管理模組完整可操作，Widget 設定可即時預覽並儲存
 
 **依賴關係**：依賴 Phase 3（admin 共用元件、`AppModal`）；知識庫 / 意圖列表頁以 Phase 3 `/admin/conversations` 作為 reference implementation；知識庫版本功能需後端版本 API 支援
 
@@ -690,7 +690,7 @@ export interface DtTableResult<T = any> {
 
 - 知識庫編輯器：Markdown 編輯器選型（推薦 `@nuxtjs/mdc` 或 `CodeMirror`，TBD）
 - 批次匯入格式：CSV / JSON 欄位定義、單次上限筆數（需後端提供範本）
-- 快捷提問拖曳：排序 API 接受排序後的 ID 陣列
+- Widget Settings quickReplies 編輯 UI：多行文字、tag input、或可新增 / 刪除列的簡化輸入方式待實作時選擇
 
 **完成定義（DoD）**：
 
@@ -699,7 +699,9 @@ export interface DtTableResult<T = any> {
 - [ ] 批次匯入 CSV / JSON，成功 / 失敗結果正確顯示
 - [ ] 意圖列表頁使用 `TableData` + `DtUtils` + `DtTable`，啟用狀態可 inline toggle
 - [ ] 意圖新增 / 編輯以側抽屜操作，意圖預覽可測試
-- [ ] 快捷提問可拖曳排序，順序更新 API 正確呼叫
+- [ ] Widget Settings 可讀取 / 修改 `welcomeMessage / quickReplies / disclaimer / fallbackMessage`
+- [ ] `quickReplies` 可作為前台 Widget welcomeMessage 下方的預設 / 全域 / 歡迎引導 chips
+- [ ] 不建立 `/admin/quick-replies` 頁面，不呼叫 `reorderQuickReplies(ids)`
 - [ ] Widget 設定表單修改後右側預覽即時更新
 - [ ] 所有設定儲存後重新載入頁面資料一致
 
@@ -966,19 +968,22 @@ export interface DtTableResult<T = any> {
 - 列表頁 `USwitch` 即時切換啟用狀態（直接呼叫 PATCH API）
 - 新增 / 編輯以 `USlideover` 形式，避免跳頁；表單欄位遵守表單公版原則，透過 `FormField` 呈現
 - 觸發關鍵字使用 tag-input 元件（Nuxt UI 目前無內建，需自製或使用第三方）
-- 意圖預覽：在 slideover 底部提供測試輸入框，呼叫 `POST /api/v1/admin/intents/preview`
+- 意圖預覽：在 slideover 底部提供測試輸入框，呼叫 `POST /api/v1/admin/intent/preview`
 
 ---
 
-### 6.11 Quick Replies
+### 6.11 Widget Settings Quick Replies
 
-**目的**：拖曳排序的快捷提問管理，並同步預覽前台效果。
+**目的**：由 Widget Settings 管理預設 / 全域 / 歡迎引導 quickReplies，並同步預覽前台 welcome chips 效果。
 
 **關鍵設計**：
 
-- 拖曳排序使用 `@vueuse/integrations/useSortable` 或 `vue-draggable-plus`（TBD）
-- 拖曳結束後 debounce 500ms 後呼叫排序 API（傳送 ID 陣列）
-- 右側預覽面板：`WidgetSettingsPreview` 的快捷提問部分，pure UI，不呼叫 API
+- `quickReplies` 型別為 `Record<string, string[]>`
+- 後台管理位置為 `/admin/widget-settings`
+- UI 可用多行文字、tag input、或可新增 / 刪除列的簡化輸入方式
+- 不建立獨立 `/admin/quick-replies` 頁面
+- 不做單筆 quick reply CRUD、拖曳排序或 `reorderQuickReplies(ids)` API
+- 右側預覽面板顯示 welcomeMessage 下方的 global / welcome quick replies，pure UI，不呼叫 API
 
 ---
 
@@ -1069,7 +1074,7 @@ Phase 0 需先定義以下 VM types 骨架（後期依 API 契約補充）：
 | Type                    | 說明                                                                                 |
 | ----------------------- | ------------------------------------------------------------------------------------ |
 | `ChatMessageVM`         | 前台訊息（type、content、timestamp、metadata）                                       |
-| `WidgetConfigVM`        | Widget 設定（文案、捷徑、快捷提問、status）                                          |
+| `WidgetConfigVM`        | Widget 設定（welcomeMessage / quickReplies / disclaimer / fallbackMessage / status） |
 | `ChatSessionVM`         | Session（token、status、locale）                                                     |
 | `LeadFormData`          | 留資表單資料（name + email 必填，company + phone + message 選填，language 自動帶入） |
 | `KnowledgeEntryVM`      | 知識庫條目（列表 + 編輯）                                                            |
@@ -1079,7 +1084,6 @@ Phase 0 需先定義以下 VM types 骨架（後期依 API 契約補充）：
 | `TicketSummaryVM`       | Ticket 列表項目                                                                      |
 | `TicketDetailVM`        | Ticket 詳情（含處理紀錄時間軸）                                                      |
 | `IntentVM`              | 意圖定義                                                                             |
-| `QuickReplyVM`          | 快捷提問                                                                             |
 | `AuditEventVM`          | 稽核事件                                                                             |
 | `FeedbackVM`            | 回饋紀錄（後台查詢用）                                                               |
 | `DashboardStatsVM`      | Dashboard 統計資料（本期正式使用）                                                   |
@@ -1156,7 +1160,7 @@ Phase 0 需先定義以下 VM types 骨架（後期依 API 契約補充）：
 
 - **P0 測試**（Phase 1 開始即建立）：核心串流狀態機、session 建立恢復、留資表單驗證
 - **P1 測試**（Phase 2-3 補齊）：前台進階互動、後台 CRUD 基本流程
-- **P2 測試**（Phase 4-5 補齊）：後台複雜功能（版本還原、批次匯入、拖曳排序）
+- **P2 測試**（Phase 4-5 補齊）：後台複雜功能（版本還原、批次匯入、Widget Settings 預覽）
 - 每個模組交付時需同步提交對應測試
 
 ### 9.2 單元測試（Vitest，P0 優先）
@@ -1233,7 +1237,7 @@ Phase 0 需先定義以下 VM types 骨架（後期依 API 契約補充）：
 | Phase 1 | 前台 Widget 可互動 MVP（收合展開、多輪對話、SSE 串流回覆、快捷提問、攔截提示、Session 恢復、降級模式）                                                                                                                                    |
 | Phase 2 | 前台留資表單（name+email 必填，`company?` / `phone?` / `message?` 選填，`language?` 自動帶入語系）、轉人工（簡化版靜態訊息）、滿意度回饋（`POST /api/v1/chat/sessions/:sessionToken/messages/:messageId/feedback`，payload `{ value: 'up' | 'down', reason? }` 正式串接）、語系切換（繁中 / 英文）、埋點基礎 |
 | Phase 3 | 後台 admin layout（預設 `/admin/dashboard`）、Dashboard、對話紀錄查詢（含詳情）、Lead 管理、Ticket 管理（四態：`open                                                                                                                      | in_progress                                                      | resolved | closed`，`PATCH .../status`+`POST .../notes`） |
-| Phase 4 | 知識庫管理（含版本歷史、批次匯入）、意圖 / 模板管理、快捷提問管理（含拖曳）、Widget 設定（含即時預覽）                                                                                                                                    |
+| Phase 4 | 知識庫管理（含版本歷史、批次匯入）、意圖 / 模板管理、Widget 設定（含 welcomeMessage / quickReplies / disclaimer / fallbackMessage 與即時預覽）                                                                                           |
 | Phase 5 | 稽核事件查詢（含詳情）、回饋紀錄（`GET /api/v1/admin/feedback`）                                                                                                                                                                          |
 | Phase 6 | RWD 精修、無障礙完善、效能優化、i18n 第三語系接口確認、E2E 補全                                                                                                                                                                           |
 
@@ -1269,7 +1273,7 @@ Phase 0 需先定義以下 VM types 骨架（後期依 API 契約補充）：
 - [ ] 對話紀錄可依條件篩選、查看詳情（含攔截標記）、匯出 CSV
 - [ ] Lead 可查看詳情並更新狀態
 - [ ] 意圖 / 模板可 CRUD，可啟用 / 停用，可預覽意圖匹配
-- [ ] 快捷提問可拖曳排序，順序正確更新
+- [ ] Widget Settings 可管理 `quickReplies`，並於前台 Widget welcomeMessage 下方作為預設快捷提問顯示
 - [ ] Widget 設定修改後即時預覽面板正確反映，儲存後生效
 - [ ] 稽核事件可依類型 / 嚴重程度篩選，詳情頁顯示上下文
 - [ ] 回饋紀錄可依類型篩選，可跳至對話詳情

@@ -13,7 +13,7 @@
 >
 > 1. **SSE 為官方串流方案**：`useStreaming`、`services/streaming.ts` 均採 `fetch + ReadableStream`；無 `EventSource`，無 WebSocket fallback；取消串流以 `AbortController.abort()` 實現，無 DELETE 端點
 > 2. **sessionToken 以 path parameter 傳入**：儲存於 `localStorage` key `chat_session_token`；所有 session-scoped API 透過路徑 `/api/v1/chat/sessions/:sessionToken/...` 傳入；不以 `X-Session-Token` header 作為正式 contract
-> 3. **Widget Config API 為強依賴**：`GET /api/v1/widget/config`；`status`（`online|offline|degraded`）、`welcomeMessage`、`quickReplies`、`disclaimer`、`fallbackMessage` 均為多語系物件（`Record<string, string>`）；`status: 'offline'` 或 `status: 'degraded'` 或 API 失敗均觸發降級模式
+> 3. **Widget Config API 為強依賴**：`GET /api/v1/widget/config`；`status` 值為 `online | offline | degraded`；`welcomeMessage`、`disclaimer`、`fallbackMessage` 為多語系文字物件 `Record<string, string>`；`quickReplies` 為多語系字串陣列物件 `Record<string, string[]>`；`status: 'offline'` 或 `status: 'degraded'` 或 API 失敗均觸發降級模式。
 > 4. **Dashboard 本期納入**：`services/api/admin/dashboard.ts` 本期建立；`AdminStatCard` 統計卡片（對話數、Lead 數、Ticket 數、常見意圖、轉人工原因、最新稽核事件）、`AdminLineChart`、`AdminPieChart` 本期實作；路由 `/admin/dashboard`
 > 5. **Feedback API 本期正式串接**：`POST /api/v1/chat/sessions/:sessionToken/messages/:messageId/feedback`，payload `{ value: 'up'|'down', reason? }`；`useFeedback.ts` 呼叫 API，fire-and-forget；`services/api/admin/feedback.ts` 提供後台查詢
 > 6. **Handoff 簡化**：無 polling；`POST /api/v1/chat/sessions/:sessionToken/handoff` → 後端回傳 `{ accepted, action, leadId?, ticketId?, message }` → 前端顯示靜態「已轉交專人協助」；`HandoffStatusCard` 多狀態延後
@@ -24,6 +24,19 @@
 > 11. **後台資料管理 table 架構**：後台高互動資料管理 table 統一使用 `vxe-table + vxe-pc-ui`，透過 `DtUtils + TableData + DtTable` 實作；不使用 `UTable` / `AdminDataTable` / `AdminFilterBar` / `useAdminTablePage` 作為後台資料管理標準。
 > 12. **Conversations export 同步匯出**：對話紀錄匯出本期採同步匯出，`POST /api/v1/admin/conversations/export` 直接回傳 `{ url }`；前端使用 `domainStore.exportCsv(dt.params.value)` 呼叫，並透過 `useAdminDownload().downloadUrl(url, filename)` 觸發下載。本期不做 export job、jobId、export status API、前端輪詢下載連結或背景非同步產生檔案。
 > 13. **Widget 元件拆分**：`ChatWidget` 內嵌 Launcher FAB，不拆 `ChatLauncher`；`ChatPanel` 內部直接實作 Header / Info Bar / Disclaimer，不拆 `ChatHeader`、`ChatInfoBar`、`ChatDisclaimer`；`AiMessageItem` 內嵌 feedback，不建立獨立 `MessageFeedback`；保留 `ChatQuickReplies` 作為全域快捷提問按鈕列。
+> 14. **Quick Replies 分層決策**：
+>     - **Global / Welcome Quick Replies**：
+>       - 顯示於新 session 開始時的 `welcomeMessage` 下方
+>       - 資料來源為 `GET /api/v1/widget/config` 的 `quickReplies`
+>       - 後台由 `/admin/widget-settings` 管理
+>       - 型別為 `Record<string, string[]>`
+>       - 本期不建立獨立 `/admin/quick-replies` 頁面
+>       - 本期不做 quickReplies CRUD、拖曳排序或 `reorderQuickReplies(ids)`
+>     - **Per-message Quick Replies**：
+>       - 顯示於每一則 AI 回覆訊息下方
+>       - 資料來源為 `ChatMessageVM.quickReplies?: string[]`
+>       - 未來由 chat SSE done event / message metadata 回傳
+>       - 不由 `/admin/widget-settings` 或 `/admin/quick-replies` 管理
 
 ---
 
@@ -109,8 +122,8 @@
   - **所屬 Workstream**：WS-A
   - **依賴**：T-001
   - **實作內容**：
-    - `types/chat.ts`：定義 `ChatMessageVM`（id、type、content、timestamp、metadata；**另含 `quickReplies?: string[]`（per-message KB chips）與 `rating?: FeedbackValue`（`null | 'up' | 'down'`，Phase 1 本地狀態）**）、`WidgetConfigVM`、`ChatSessionVM`、`LeadFormData`、`FeedbackValue`（`null | 'up' | 'down'`，取代原 `FeedbackState` Map 設計）、`HandoffState`、`StreamingState`（含七種狀態 enum）；**訊息型別 `ChatMessageType` 使用 `'ai'`（非 `'ai-text'`）**
-    - `types/admin.ts`：定義 `KnowledgeEntryVM`、`ConversationSummaryVM`、`ConversationDetailVM`、`LeadVM`、`TicketVM`、`IntentVM`、`QuickReplyVM`、`AuditEventVM`、`FeedbackVM`、`DashboardStatsVM`（~~`ReportDataVM` 本期不定義，Reports 延後~~）
+    - `types/chat.ts`：定義 `ChatMessageVM`（id、type、content、timestamp、metadata；**另含 `quickReplies?: string[]`（per-message chips）與 `rating?: FeedbackValue`（`null | 'up' | 'down'`，Phase 1 本地狀態）**）、`WidgetConfigVM`（其中 `WidgetConfigVM.quickReplies` 型別為 `Record<string, string[]>`）、`ChatSessionVM`、`LeadFormData`、`FeedbackValue`（`null | 'up' | 'down'`，取代原 `FeedbackState` Map 設計）、`HandoffState`、`StreamingState`（含七種狀態 enum）；**訊息型別 `ChatMessageType` 使用 `'ai'`（非 `'ai-text'`）**
+    - `types/admin.ts`：定義 `KnowledgeEntryVM`、`ConversationSummaryVM`、`ConversationDetailVM`、`LeadVM`、`TicketVM`、`IntentVM`、`AuditEventVM`、`FeedbackVM`、`DashboardStatsVM`（~~`QuickReplyVM` 若只用於獨立 `/admin/quick-replies` 管理頁，標註為 deferred，不作為本期正式 admin VM；`ReportDataVM` 本期不定義，Reports 延後~~）
     - `types/api.ts`：定義通用 API 回應包裝型別（`ApiResponse<T>`、`PaginatedResponse<T>`）
     - 所有 VM type 均為 TypeScript interface 或 type，有 JSDoc 說明
   - **完成條件**：所有 VM type 可在其他檔案 import 使用；TypeScript 編譯無錯誤；`types/` 下無 `any` 型別
@@ -422,7 +435,8 @@
   - **依賴**：T-018
   - **實作內容**：
     - 建立 `app/features/chat/components/ChatQuickReplies.vue`
-    - 橫向 chip 排列，來自 `useWidgetConfigStore.config.quickReplies`（依語系顯示對應文案）
+    - `ChatQuickReplies` 是 **Global / Welcome Quick Replies** 的前台顯示元件
+    - 橫向 chip 排列，資料來源為 `useWidgetConfigStore.config.quickReplies`，也就是 `GET /api/v1/widget/config` 的 `quickReplies: Record<string, string[]>`
     - 點擊後觸發 `useChat.sendMessage(text)`，並設定 `quickRepliesVisible = false`（點擊後收起）
     - Widget Config 失敗時不顯示（`quickReplies` 為空陣列）
     - 串流進行中 chip 全部 disabled
@@ -953,7 +967,7 @@
 
 ---
 
-- [X] **T-049** 完整實作 `layouts/admin.vue`（含完整導覽列）
+- [x] **T-049** 完整實作 `layouts/admin.vue`（含完整導覽列）
   - **所屬 Phase**：Phase 3
   - **所屬 Workstream**：WS-E
   - **依賴**：T-010
@@ -972,7 +986,7 @@
 
 ---
 
-- [X] **T-050** 建立後台共用元件庫
+- [x] **T-050** 建立後台共用元件庫
   - **所屬 Phase**：Phase 3
   - **所屬 Workstream**：WS-E
   - **依賴**：T-049、T-005
@@ -1017,7 +1031,7 @@
 
 ---
 
-- [X] **T-051** 建立後台共用 API services（admin 目錄）
+- [x] **T-051** 建立後台共用 API services（admin 目錄）
   - **所屬 Phase**：Phase 3
   - **所屬 Workstream**：WS-E
   - **依賴**：T-004、T-005
@@ -1043,7 +1057,7 @@
 
 ---
 
-- [X] **T-052** 建立後台 Dashboard 頁面
+- [x] **T-052** 建立後台 Dashboard 頁面
   - **所屬 Phase**：Phase 3
   - **所屬 Workstream**：WS-E
   - **依賴**：T-050、T-051
@@ -1058,7 +1072,7 @@
 
 ---
 
-- [X] **T-053** ~~使用 `AdminDataTable` 建立對話紀錄列表頁~~ → 已完成舊架構，請參見 **T-053R** 重構
+- [x] **T-053** ~~使用 `AdminDataTable` 建立對話紀錄列表頁~~ → 已完成舊架構，請參見 **T-053R** 重構
   - **所屬 Phase**：Phase 3
   - **所屬 Workstream**：WS-E
   - **依賴**：T-050、T-051
@@ -1108,7 +1122,7 @@
 
 ---
 
-- [X] **T-054** 建立 `ConversationViewer` 元件與對話詳情頁
+- [x] **T-054** 建立 `ConversationViewer` 元件與對話詳情頁
   - **所屬 Phase**：Phase 3
   - **所屬 Workstream**：WS-E
   - **依賴**：T-053、T-028
@@ -1213,7 +1227,7 @@
 
 ## Phase 4 — 後台內容管理
 
-> **目標**：完成知識庫、意圖/模板、快捷提問、Widget 設定四個內容管理模組
+> **目標**：完成知識庫、意圖/模板、Widget 設定內容管理；預設 / 全域 / 歡迎引導 quickReplies 併入 Widget 設定管理
 
 ### WS-F 後台內容管理
 
@@ -1225,9 +1239,9 @@
   - **依賴**：T-051
   - **實作內容**：
     - `app/services/api/admin/knowledge.ts`：`listKnowledge(params)`、`getKnowledgeEntry(id)`、`createKnowledge(data)`、`updateKnowledge(id, data)`、`deleteKnowledge(id)`、`getVersionHistory(id)`、`restoreVersion(id, versionId)`、`importKnowledge(formData: FormData)`
-    - `app/services/api/admin/intents.ts`：`listIntents(params)`、`createIntent(data)`、`updateIntent(id, data)`、`deleteIntent(id)`、`toggleIntent(id, enabled)`、`previewIntent(testInput)`
-    - `app/services/api/admin/quickReplies.ts`：`listQuickReplies()`、`updateQuickReply(id, data)`、`reorderQuickReplies(ids: string[])`、`deleteQuickReply(id)`、`createQuickReply(data)`
+    - `app/services/api/admin/intent.ts`：`listIntents(params)`、`createIntent(data)`、`updateIntent(id, data)`、`deleteIntent(id)`、`toggleIntent(id, enabled)`、`previewIntent(testInput)`
     - `app/services/api/admin/widgetSettings.ts`：`getWidgetSettings()`、`updateWidgetSettings(data)`
+    - 現階段不建立 `services/api/admin/quickReplies.ts` 作為正式需求；預設 / 全域 / 歡迎引導 quickReplies 由 `widgetSettings.ts` 管理
     - 補充對應 mock fixtures
     - 所有 `services/api/admin/**` 必須遵守既有 service 公版：
       - import `httpRequest` from `@/services/index`
@@ -1239,7 +1253,7 @@
       - service 層處理 `ApiResponse<T>` envelope
       - service 對外回傳 `res.data`
       - service 不直接接收 `DtParams`
-  - **完成條件**：四個 service 可呼叫；TypeScript 型別正確；mock fixtures 完整；四個 content-management service 均使用 `httpRequest`，不得使用 `createAdminClient()`；呼叫風格需與 `services/api/admin/conversations.ts` 一致。
+  - **完成條件**：本期正式 content-management services 可呼叫；TypeScript 型別正確；mock fixtures 完整；content-management service 均使用 `httpRequest`，不得使用 `createAdminClient()`；呼叫風格需與 `services/api/admin/conversations.ts` 一致；`task.md` 不再要求建立 `services/api/admin/quickReplies.ts`
 
 ---
 
@@ -1324,20 +1338,20 @@
 
 ---
 
-- [ ] **T-063** 建立意圖 / 模板管理列表（`DtUtils + TableData + DtTable` 架構）與側抽屜編輯
+- [x] **T-063** 建立意圖 / 模板管理列表（`DtUtils + TableData + DtTable` 架構）與側抽屜編輯
   - **所屬 Phase**：Phase 4
   - **所屬 Workstream**：WS-F
   - **依賴**：T-015A ～ T-015E、T-058、T-053R
   - **實作內容**：
-    - 建立 `app/pages/admin/intents/index.vue`：
-      - `provide(DtUtils.key, new DtUtils(useAdminIntents()))`
+    - 建立 `app/pages/admin/intent/index.vue`：
+      - `provide(DtUtils.key, new DtUtils(useAdminIntent()))`
       - 不直接管理 rows / loading / pagination
-    - 建立 `app/pages/admin/intents/DtHeader.vue`（table-level toolbar）：
+    - 建立 `app/pages/admin/intent/DtHeader.vue`（table-level toolbar）：
       - 「新增意圖」按鈕 → 開啟 `IntentEditorDrawer`
-    - 建立 `app/pages/admin/intents/DtTable.vue`：
+    - 建立 `app/pages/admin/intent/DtTable.vue`：
       - 使用 `TableData` + `vxe-column`
       - 欄位：意圖名稱、觸發關鍵字（前 3 個 + tooltip 顯示全部）、優先級、啟用狀態（`USwitch`，即時呼叫 `toggleIntent()`）、操作（編輯 / 刪除）
-    - 建立 `app/features/admin/stores/useAdminIntents.ts` domain store：
+    - 建立 `app/features/admin/stores/useAdminIntent.ts` domain store：
       - `getTable(params: DtParams): Promise<DtTableResult<IntentSummaryVM>>`
       - `get(id)`、`create(data)`、`update(id, data)`、`delete(id)`、`toggle(id, enabled)`
       - 負責 `DtParams → IntentListParams` adapter
@@ -1355,37 +1369,43 @@
 
 ---
 
-- [ ] **T-064** 建立快捷提問管理頁（含拖曳排序）
+- [x] **T-064** 延後獨立快捷提問管理頁
   - **所屬 Phase**：Phase 4
   - **所屬 Workstream**：WS-F
   - **依賴**：T-058
-  - **實作內容**：
-    - 建立 `app/pages/admin/quick-replies/index.vue`
-    - 左右兩欄布局：左側編輯列表（60% 寬）、右側 Widget 快捷提問預覽（40% 寬）
-    - 左側 `QuickReplyDragList`（`app/features/admin/components/`）：
-      - 使用 `vue-draggable-plus` 或 `@vueuse/integrations/useSortable` 實作拖曳排序（TBD，先確認 Nuxt 4 相容性）
-      - 每筆可展開 inline 編輯：繁中文案、英文文案、啟用狀態 `USwitch`
-      - 新增 / 刪除按鈕（刪除需確認）
-      - 拖曳完成後 debounce 500ms 呼叫 `reorderQuickReplies(ids)` API
-    - 右側預覽 `WidgetQuickRepliesPreview`（`app/features/admin/components/`）：pure UI，使用左側 list 的當前資料，依語系切換顯示，不呼叫 API
-  - > **注意**：快捷提問管理頁使用自訂拖曳排序元件 `QuickReplyDragList`，不屬於標準資料管理 table page，**不使用 `AdminDataTable` / `UTable` / `DtUtils`**。
-  - **完成條件**：拖曳排序可執行；排序後 API 正確呼叫（傳 ID 陣列）；右側預覽即時反映左側資料
+  - **決策說明**：
+    - 現階段不建立獨立 `/admin/quick-replies` 頁面
+    - 現階段不建立 `QuickReplyDragList`
+    - 現階段不做 quickReplies CRUD
+    - 現階段不做 quickReplies 拖曳排序
+    - 現階段不呼叫 `reorderQuickReplies(ids)`
+    - 現階段不建立 `services/api/admin/quickReplies.ts`
+    - 預設 / 全域 / 歡迎引導 quickReplies 併入 `/admin/widget-settings` 管理
+    - per-message quick replies 屬於聊天回覆上下文，未來由 chat SSE done event / message metadata 回傳，不由 `/admin/widget-settings` 或 `/admin/quick-replies` 管理
+  - **完成條件**：
+    - `task.md` 不再要求建立 `/admin/quick-replies`
+    - `task.md` 不再要求建立 `QuickReplyDragList`
+    - `task.md` 不再要求建立 quickReplies CRUD
+    - `task.md` 不再要求建立 quickReplies 拖曳排序
+    - `task.md` 不再要求呼叫 `reorderQuickReplies(ids)`
+    - `task.md` 不再要求建立 `services/api/admin/quickReplies.ts`
+    - T-065 已承接 Widget 設定中的 `quickReplies` 管理
 
 ---
 
-- [ ] **T-065** 建立 Widget 設定管理頁（含即時預覽）
+- [x] **T-065** 建立 Widget 設定管理頁（含即時預覽）
   - **所屬 Phase**：Phase 4
   - **所屬 Workstream**：WS-F
   - **依賴**：T-058、T-016 ～ T-021
   - **實作內容**：
+    - > **[舊版已完成 / 待新版 contract 對齊]** 本任務保留為舊版 Widget Settings 頁面已產出紀錄；新版 `welcomeMessage / quickReplies / disclaimer / fallbackMessage` contract 對齊請見 **T-065R**。
     - > **Widget 設定頁為設定表單 + 即時預覽，不屬於資料管理 table page，不需要套用 `DtUtils` / `TableData` / `DtTable`**。
+    - 以下為舊版完成內容，非新版 Widget Settings contract 的正式必做範圍：
     - 建立 `app/pages/admin/widget-settings/index.vue`
     - 設定表單（100% 寬）
-    - 設定表單欄位：
-      - CTA 文案（繁中 / 英文，透過 `FormField` input）
+    - 舊版設定表單欄位：
       - 歡迎訊息（繁中 / 英文，透過 `FormField` textarea）
       - 頁尾免責聲明（繁中 / 英文，透過 `FormField` textarea）
-      - AI 標記文字（透過 `FormField` input）
       - 線上 / 離線 / 降級文案（各一個，透過 `FormField` input）
       - 聯絡捷徑（最多 3 組，每組：名稱 + URL，可新增 / 刪除）
     - `WidgetSettingsForm.vue` 必須使用 `useForm + useAppForm + FormField`
@@ -1396,6 +1416,75 @@
 
 ---
 
+- [ ] **T-065R** 重構 Widget Settings 以管理 `welcomeMessage / quickReplies / disclaimer / fallbackMessage`
+  - **所屬 Phase**：Phase 4
+  - **所屬 Workstream**：WS-F
+  - **依賴**：T-058、T-064、T-065、T-016 ～ T-021
+  - **實作內容**：
+    - > **Widget 設定頁為設定表單 + 即時預覽，不屬於資料管理 table page，不需要套用 `DtUtils` / `TableData` / `DtTable`**。
+    - 建立 / 調整 `app/pages/admin/widget-settings/index.vue`
+    - 建立 / 調整 `WidgetSettingsForm.vue`
+    - 建立 / 調整 `WidgetPreviewPanel.vue` 或既有等價 preview 元件
+    - 使用 `useAdminWidgetSettings()` domain store
+    - 使用 `services/api/admin/widgetSettings.ts`
+    - `services/api/admin/widgetSettings.ts` 必須使用 `httpRequest` 公版，不使用 `createAdminClient()` / `createApiClient()` / domain-local `$fetch`
+    - 載入時呼叫 `getWidgetSettings()`
+    - 儲存時呼叫 `updateWidgetSettings(payload)`
+    - API 對應：
+      - `GET /api/v1/admin/widget-settings`
+      - `PATCH /api/v1/admin/widget-settings`
+    - 表單必須遵守表單公版：
+      - `UForm`
+      - `useForm`
+      - `useAppForm`
+      - `FormField`
+    - API 初始設定載入後，以 `useAppForm(updateFields, setFieldValue).formUpdate(data)` 批次回填
+    - 不逐欄手動 `setFieldValue`
+    - 表單欄位：
+      - `welcomeMessage.zh-TW`
+      - `welcomeMessage.en`
+      - `quickReplies.zh-TW`
+      - `quickReplies.en`
+      - `disclaimer.zh-TW`
+      - `disclaimer.en`
+      - `fallbackMessage.zh-TW`
+      - `fallbackMessage.en`
+    - `welcomeMessage / disclaimer / fallbackMessage` 型別為 `Record<string, string>`
+    - `quickReplies` 型別為 `Record<string, string[]>`
+    - quickReplies UI 可採其中一種簡化方式：
+      - 多行文字輸入：每行一個 quick reply，儲存時 split 成 string[]
+      - tag input
+      - 可新增 / 刪除列的簡化輸入方式
+    - quickReplies 儲存時需轉成：
+      ```ts
+      {
+        'zh-TW': string[],
+        en: string[],
+      }
+      ```
+    - 不做 quickReplies 拖曳排序
+    - 不做單筆 quick reply CRUD
+    - 不呼叫 `reorderQuickReplies(ids)`
+    - 右側 preview 即時反映：
+      - welcomeMessage
+      - quickReplies chips
+      - disclaimer
+      - fallbackMessage
+    - preview 只做 local preview，不需要真的啟動聊天功能
+    - 「儲存設定」按鈕 → 呼叫 `updateWidgetSettings(payload)` → 成功 toast；失敗顯示 inline error 或 toast
+  - **完成條件**：
+    - `/admin/widget-settings` 可讀取 `welcomeMessage / quickReplies / disclaimer / fallbackMessage`
+    - 修改後可儲存並重新載入取得相同設定
+    - `quickReplies` 可作為前台 Widget welcomeMessage 下方的預設 / 全域 / 歡迎引導 chips
+    - 右側 preview 會即時反映 quickReplies 變更
+    - 沒有建立 `/admin/quick-replies` 頁面
+    - 沒有建立 `services/api/admin/quickReplies.ts`
+    - 沒有呼叫 `reorderQuickReplies(ids)`
+    - 沒有使用 `DtUtils` / `TableData` / `DtTable`
+    - typecheck / lint 通過
+
+---
+
 ### WS-F 測試（Phase 4）
 
 ---
@@ -1403,14 +1492,27 @@
 - [ ] **T-066** 撰寫後台 E2E 測試（Phase 4 內容管理旅程）
   - **所屬 Phase**：Phase 4
   - **所屬 Workstream**：WS-F
-  - **依賴**：T-060、T-061、T-062、T-063、T-064、T-065
+  - **依賴**：T-060、T-061、T-062、T-063、T-064、T-065R
   - **實作內容**：
     - 測試檔：`tests/e2e/admin/content-management.spec.ts`
     - E2E 旅程「知識庫新增 / 編輯」：進入列表 → 點擊新增 → 填寫標題與內容 → 儲存 → 列表出現新條目
     - E2E 旅程「知識庫版本還原」：編輯已有條目 → 修改儲存 → 進入版本歷史 → 選擇舊版本還原 → 內容恢復
-    - E2E 旅程「快捷提問拖曳排序」：進入快捷提問頁 → 拖曳調整順序 → 確認排序 API 呼叫
-    - E2E 旅程「Widget 設定即時預覽」：進入 Widget 設定頁 → 修改 CTA 文案 → 右側預覽即時更新 → 儲存 → toast 顯示
-  - **完成條件**：四個 E2E 旅程全數通過
+    - E2E 旅程「Intents 管理」：進入意圖列表 → 新增 / 編輯意圖 → 測試預覽 → 儲存 → 列表更新
+    - E2E 旅程「Widget Settings quickReplies 編輯」：
+      - 進入 `/admin/widget-settings`
+      - 載入 `welcomeMessage / quickReplies / disclaimer / fallbackMessage`
+      - 修改 `quickReplies.zh-TW` 或 `quickReplies.en`
+      - 右側 preview 即時更新 quick reply chips
+      - 儲存
+      - toast 顯示成功
+      - 重新整理後設定值仍正確
+    - E2E 旅程「Widget 設定即時預覽」：進入 Widget 設定頁 → 修改 welcomeMessage / quickReplies / disclaimer / fallbackMessage → 右側預覽即時更新 → 儲存 → toast 顯示
+  - **完成條件**：
+    - Knowledge 新增 / 編輯旅程通過
+    - Knowledge 版本還原旅程通過，若後端版本 API 尚未完成，需標註 backend blocker 或使用 mock
+    - Intents 管理旅程通過
+    - Widget Settings quickReplies 編輯與即時預覽旅程通過
+    - 不包含 `/admin/quick-replies` 拖曳排序旅程
 
 ---
 
@@ -1739,27 +1841,27 @@
 
 ## 里程碑檢查點
 
-| 里程碑              | 對應任務完成   | 可驗證產出                                                                                                                       |
-| ------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| **M0** Phase 0 完成 | T-001 ～ T-015、T-015A ～ T-015E | `npm run dev` 可啟動；主題設定完成；API client + types + stores 就緒；「進入後台」按鈕可用（導向 `/admin/dashboard`）；Nuxt Charts 折線圖與圓餅圖可正常渲染；vxe-table 公版基礎建設完成（`TableData`、`DtUtils`、`TableFilterBar`、`FilterBar`、adapter helpers） |
-| **M1** Phase 1 完成 | T-016 ～ T-034 | 前台 Widget 可互動 MVP；多輪對話（KB mock 回覆）；reset / rating / quick-reply 互動；session 恢復；降級模式；P0 單元測試 + E2E 通過 |
-| **M2** Phase 2 完成 | T-034B ～ T-048 | KB mock 切換為真實 `fetch + ReadableStream` SSE 串流；留資（name+email 必填，`company?` / `phone?` / `message?` 選填，`language?` 自動帶入語系）、轉人工（簡化靜態，`{ accepted, action, ... }` 回應）、Feedback API 正式串接（`POST .../messages/:messageId/feedback`，payload `{ value: 'up'|'down' }`，fire-and-forget）、語系切換、埋點；Phase 2 E2E 通過 |
-| **M3** Phase 3 完成 | T-049 ～ T-057、T-050R、T-053R、T-055R、T-056R | 後台基礎頁面可用（Dashboard + 對話紀錄 + Lead + Ticket）；`/admin/conversations` 為後台資料管理 reference implementation；後台資料管理列表頁使用 `TableData + DtUtils + DtTable`；後台 E2E 通過（Dashboard 載入 + 對話查詢 + Lead + Ticket） |
-| **M4** Phase 4 完成 | T-058 ～ T-066 | 後台內容管理完整（知識庫版本歷史 + 批次匯入；意圖側抽屜；快捷提問拖曳；Widget 即時預覽）；Phase 4 E2E 通過 |
-| **M5** Phase 5 完成 | T-067 ～ T-072 | 後台維運工具（稽核事件 + 回饋紀錄（`GET /api/v1/admin/feedback`）；**Reports 延後**）；Phase 5 E2E 通過（Reports 旅程延後） |
-| **M6** Phase 6 完成 | T-073 ～ T-085 | 全系統品質達標；所有測試通過；build 成功；plan.md DoD 全勾 |
+| 里程碑              | 對應任務完成                                   | 可驗證產出                                                                                                                                                                                                                                                                                     |
+| ------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| **M0** Phase 0 完成 | T-001 ～ T-015、T-015A ～ T-015E               | `npm run dev` 可啟動；主題設定完成；API client + types + stores 就緒；「進入後台」按鈕可用（導向 `/admin/dashboard`）；Nuxt Charts 折線圖與圓餅圖可正常渲染；vxe-table 公版基礎建設完成（`TableData`、`DtUtils`、`TableFilterBar`、`FilterBar`、adapter helpers）                              |
+| **M1** Phase 1 完成 | T-016 ～ T-034                                 | 前台 Widget 可互動 MVP；多輪對話（KB mock 回覆）；reset / rating / quick-reply 互動；session 恢復；降級模式；P0 單元測試 + E2E 通過                                                                                                                                                            |
+| **M2** Phase 2 完成 | T-034B ～ T-048                                | KB mock 切換為真實 `fetch + ReadableStream` SSE 串流；留資（name+email 必填，`company?` / `phone?` / `message?` 選填，`language?` 自動帶入語系）、轉人工（簡化靜態，`{ accepted, action, ... }` 回應）、Feedback API 正式串接（`POST .../messages/:messageId/feedback`，payload `{ value: 'up' | 'down' }`，fire-and-forget）、語系切換、埋點；Phase 2 E2E 通過 |
+| **M3** Phase 3 完成 | T-049 ～ T-057、T-050R、T-053R、T-055R、T-056R | 後台基礎頁面可用（Dashboard + 對話紀錄 + Lead + Ticket）；`/admin/conversations` 為後台資料管理 reference implementation；後台資料管理列表頁使用 `TableData + DtUtils + DtTable`；後台 E2E 通過（Dashboard 載入 + 對話查詢 + Lead + Ticket）                                                   |
+| **M4** Phase 4 完成 | T-058 ～ T-066、T-065R                         | 後台內容管理完整（知識庫版本歷史 + 批次匯入；意圖管理；Widget Settings quickReplies / 即時預覽）；Phase 4 E2E 通過                                                                                                                                                                             |
+| **M5** Phase 5 完成 | T-067 ～ T-072                                 | 後台維運工具（稽核事件 + 回饋紀錄（`GET /api/v1/admin/feedback`）；**Reports 延後**）；Phase 5 E2E 通過（Reports 旅程延後）                                                                                                                                                                    |
+| **M6** Phase 6 完成 | T-073 ～ T-085                                 | 全系統品質達標；所有測試通過；build 成功；plan.md DoD 全勾                                                                                                                                                                                                                                     |
 
 ---
 
 ## 任務統計
 
-| Phase    | 任務數                           | 涵蓋 Workstream |
-| -------- | -------------------------------- | --------------- |
-| Phase 0  | T-001 ～ T-015、T-015A ～ T-015E（20 個）  | WS-A            |
-| Phase 1  | T-016 ～ T-034（19 個）          | WS-B、WS-C      |
-| Phase 2  | T-034B、T-035 ～ T-048（15 個）  | WS-D            |
+| Phase    | 任務數                                                  | 涵蓋 Workstream |
+| -------- | ------------------------------------------------------- | --------------- |
+| Phase 0  | T-001 ～ T-015、T-015A ～ T-015E（20 個）               | WS-A            |
+| Phase 1  | T-016 ～ T-034（19 個）                                 | WS-B、WS-C      |
+| Phase 2  | T-034B、T-035 ～ T-048（15 個）                         | WS-D            |
 | Phase 3  | T-049 ～ T-057、T-050R、T-053R、T-055R、T-056R（13 個） | WS-E            |
-| Phase 4  | T-058 ～ T-066（9 個）           | WS-F            |
-| Phase 5  | T-067 ～ T-072（6 個）           | WS-G            |
-| Phase 6  | T-073 ～ T-085（13 個）          | WS-H            |
-| **合計** | **86 個任務**                    | WS-A ～ WS-H    |
+| Phase 4  | T-058 ～ T-066、T-065R                                  | WS-F            |
+| Phase 5  | T-067 ～ T-072（6 個）                                  | WS-G            |
+| Phase 6  | T-073 ～ T-085（13 個）                                 | WS-H            |
+| **合計** | **87 個任務**                                           | WS-A ～ WS-H    |
