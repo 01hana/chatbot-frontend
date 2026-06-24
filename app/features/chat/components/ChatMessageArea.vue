@@ -9,6 +9,7 @@
  */
 
 import type { ChatMessageVM } from '~/types/chat';
+import type { LocaleKey } from '~/types/chat';
 import UserMessageItem from './UserMessageItem.vue';
 import AiMessageItem from './AiMessageItem.vue';
 import AiStreamingItem from './AiStreamingItem.vue';
@@ -52,6 +53,8 @@ const emit = defineEmits<{
 // ── Auto-scroll ───────────────────────────────────────────────────────────
 
 const bottomRef = ref<HTMLElement | null>(null);
+const configStore = useWidgetConfigStore();
+const { t, locale } = useI18n();
 
 watch(
   [() => props.messages.length, () => props.messages.at(-1)?.content],
@@ -62,9 +65,30 @@ watch(
   { immediate: true },
 );
 
-const kbStore = useKnowledgeBaseStore();
-const welcome = computed(() => kbStore.query('hello'));
-const welcomeHtml = computed(() => renderMarkdown(welcome.value.content));
+function currentLocale() {
+  return (locale.value === 'en' ? 'en' : 'zh-TW') satisfies LocaleKey;
+}
+
+function localeText(value?: Partial<Record<LocaleKey, string>>) {
+  const lang = currentLocale();
+
+  return value?.[lang] ?? value?.['zh-TW'] ?? value?.en;
+}
+
+const welcomeText = computed(() =>
+  localeText(configStore.config?.welcomeMessage) ?? t('widget.welcome'),
+);
+const welcomeQuickReplies = computed(() => {
+  const lang = currentLocale();
+
+  return (
+    configStore.config?.quickReplies?.[lang]
+    ?? configStore.config?.quickReplies?.['zh-TW']
+    ?? configStore.config?.quickReplies?.en
+    ?? []
+  ).filter(Boolean);
+});
+const welcomeHtml = computed(() => renderMarkdown(welcomeText.value));
 </script>
 
 <template>
@@ -84,9 +108,9 @@ const welcomeHtml = computed(() => renderMarkdown(welcome.value.content));
             v-html="welcomeHtml"
           />
 
-          <div v-if="welcome.quickReplies?.length" class="flex flex-wrap gap-2 mt-3">
+          <div v-if="welcomeQuickReplies.length" class="flex flex-wrap gap-2 mt-3">
             <UButton
-              v-for="reply in welcome.quickReplies"
+              v-for="reply in welcomeQuickReplies"
               :key="reply"
               :label="reply"
               variant="outline"

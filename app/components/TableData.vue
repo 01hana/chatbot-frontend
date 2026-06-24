@@ -153,7 +153,7 @@ function onEdit(row: Record<string, any>) {
                 variant="ghost"
                 color="error"
                 class="text-red-400"
-                @click="setDeleteConfirm(row.id, row.name)"
+                @click="setDeleteConfirm(row.id, row.title)"
               />
             </div>
           </slot>

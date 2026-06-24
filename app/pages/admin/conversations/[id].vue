@@ -75,7 +75,7 @@ const feedbackSummary = computed(() =>
 
     <template v-else>
       <!-- Session metadata card -->
-      <UCard class="py-4">
+      <UCard>
         <template #header>
           <p class="text-sm font-medium text-gray-700">Session 資訊</p>
         </template>
@@ -125,13 +125,13 @@ const feedbackSummary = computed(() =>
         <template #header>
           <p class="text-sm font-medium text-gray-700">對話內容</p>
         </template>
-        <div class="max-h-[600px] overflow-y-auto px-2 py-4">
+        <div class="max-h-[600px] overflow-y-auto px-2">
           <ConversationViewer :messages="detail.messages" />
         </div>
       </UCard>
 
       <!-- Feedback summary -->
-      <UCard class="py-4">
+      <UCard>
         <template #header>
           <p class="text-sm font-medium text-gray-700">回饋摘要</p>
         </template>

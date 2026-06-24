@@ -11,6 +11,7 @@ import type {
   KnowledgeListParams,
   KnowledgeRevisionVM,
   KnowledgeUpdatePayload,
+  KnowledgeVisibilityUpdateValue,
 } from '~/types/admin';
 import type { ApiResponse, PaginatedResponse } from '~/types/api';
 
@@ -51,6 +52,18 @@ class KnowledgeService {
     const res = await httpRequest.patch<ApiResponse<KnowledgeEntryVM>>(
       `admin/knowledge/${id}`,
       data,
+    );
+
+    return res.data;
+  }
+
+  public async updateKnowledgeVisibility(
+    id: string | number,
+    visibility: KnowledgeVisibilityUpdateValue,
+  ): Promise<KnowledgeEntryVM> {
+    const res = await httpRequest.patch<ApiResponse<KnowledgeEntryVM>>(
+      `admin/knowledge/${id}/visibility`,
+      { visibility },
     );
 
     return res.data;

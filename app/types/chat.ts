@@ -112,6 +112,8 @@ export interface WidgetConfigVM {
   infoBarText?: Partial<Record<'zh-TW' | 'en', string>>;
   /** Disclaimer text at the bottom. */
   disclaimer?: Partial<Record<'zh-TW' | 'en', string>>;
+  /** Message shown when service is unavailable or degraded. */
+  fallbackMessage?: Partial<Record<'zh-TW' | 'en', string>>;
   /** Service hours string displayed in handoff unavailable state. */
   serviceHours?: Partial<Record<'zh-TW' | 'en', string>>;
   /** Quick-reply chips. */

@@ -64,7 +64,7 @@ const onSubmit = handleSubmit(values => {
 
       <FormField
         name="category"
-        label="分類"
+        label="知識分類"
         fieldType="select"
         :items="categoryItems"
         placeholder="選擇分類"

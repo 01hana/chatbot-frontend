@@ -4,14 +4,16 @@ const { isCollapsed, setCollapsed, isMobileOpen, setMobileOpen, toggleMobileOpen
 
 // Reset collapsed state when viewport drops below lg, so mobile drawer always shows icon + label
 const isLg = useMediaQuery('(min-width: 1024px)');
-watch(isLg, (lg) => {
+watch(isLg, lg => {
   if (!lg) setCollapsed(false);
 });
 
 // Close mobile drawer on navigation
 watch(
   () => route.path,
-  () => { setMobileOpen(false); },
+  () => {
+    setMobileOpen(false);
+  },
 );
 
 const navItems = [
@@ -20,8 +22,7 @@ const navItems = [
   { label: 'Lead', icon: 'i-heroicons-user-plus', to: '/admin/leads' },
   { label: 'Ticket', icon: 'i-heroicons-ticket', to: '/admin/tickets' },
   { label: '知識庫', icon: 'i-heroicons-book-open', to: '/admin/knowledge' },
-  { label: '意圖/模板', icon: 'i-heroicons-light-bulb', to: '/admin/intents' },
-  { label: '快捷提問', icon: 'i-heroicons-bolt', to: '/admin/quick-replies' },
+  { label: '意圖/模板', icon: 'i-heroicons-light-bulb', to: '/admin/intent' },
   {
     label: 'Widget 設定',
     icon: 'i-heroicons-adjustments-horizontal',

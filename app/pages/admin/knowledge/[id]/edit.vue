@@ -4,43 +4,123 @@ import AppErrorState from '~/features/admin/components/AppErrorState.vue';
 import AppStatusBadge from '~/features/admin/components/AppStatusBadge.vue';
 import KnowledgeEditorForm from '../components/KnowledgeEditorForm.vue';
 import KnowledgeVersionHistory from '../components/KnowledgeVersionHistory.vue';
-import type { KnowledgeEntryVM, KnowledgeUpdatePayload } from '~/types/admin';
+import type {
+  KnowledgeEntryVM,
+  KnowledgeUpdatePayload,
+  KnowledgeVisibilityUpdateValue,
+} from '~/types/admin';
+
+type VisibilityFormValues = {
+  isPublicVisible: boolean;
+};
 
 definePageMeta({ layout: 'admin', title: '編輯知識庫' });
 
 const route = useRoute();
 const router = useRouter();
 const toast = useAppToast();
-const { get, update, publish, archive } = useAdminKnowledge();
+const { get, update, publish, archive, updateVisibility } = useAdminKnowledge();
 
 const [loading, setLoading] = useAppState(true);
 const [saving, setSaving] = useAppState(false);
 const [statusSaving, setStatusSaving] = useAppState(false);
+const [isUpdatingVisibility, setUpdatingVisibility] = useAppState(false);
+const [suppressVisibilityWatch, setSuppressVisibilityWatch] = useAppState(false);
 
 const id = computed(() => String(route.params.id));
 const entry = ref<KnowledgeEntryVM | null>(null);
 const error = ref('');
 const [versionOpen, setVersionOpen] = useAppState(false);
+const retrievalBlockReasonLabels: Record<string, string> = {
+  status_not_published: '尚未發佈',
+  visibility_not_public: '未公開給前台 AI',
+  deleted: '資料已刪除',
+  intentLabel_missing: '缺少 AI 意圖分類',
+  tags_empty: '缺少檢索標籤',
+  content_empty: '缺少可檢索內容',
+};
+const visibilityUpdateFields = ['isPublicVisible'];
+const { resetForm: resetVisibilityForm, setFieldValue: setVisibilityFieldValue, values: visibilityValues } = useForm<VisibilityFormValues>({
+  initialValues: {
+    isPublicVisible: false,
+  },
+});
+const { formUpdate: updateVisibilityForm } = useAppForm(
+  visibilityUpdateFields,
+  setVisibilityFieldValue,
+);
 
 const versionOpenModel = computed({
   get: () => versionOpen.value,
   set: setVersionOpen,
 });
+const retrievalBlockReasonItems = computed(() =>
+  (entry.value?.retrievalBlockReasons ?? []).map(
+    reason => retrievalBlockReasonLabels[reason] ?? reason,
+  ),
+);
+const hasRetrievableState = computed(() =>
+  entry.value?.retrievable !== undefined || retrievalBlockReasonItems.value.length > 0,
+);
 
 onMounted(loadEntry);
+
+watch(
+  () => visibilityValues.isPublicVisible,
+  async (next, previous) => {
+    if (suppressVisibilityWatch.value || loading.value || !entry.value) return;
+
+    const nextValue = Boolean(next);
+    const previousValue = Boolean(previous);
+    const nextVisibility: KnowledgeVisibilityUpdateValue = nextValue ? 'public' : 'private';
+
+    setUpdatingVisibility(true);
+
+    try {
+      const updated = await updateVisibility(id.value, nextVisibility);
+      entry.value = {
+        ...entry.value,
+        ...updated,
+      };
+      await syncVisibilityState(entry.value);
+      toast.success('前台 AI 可見性已更新');
+    } catch {
+      await rollbackVisibilityState(previousValue);
+    } finally {
+      setUpdatingVisibility(false);
+    }
+  },
+);
 
 async function loadEntry() {
   setLoading(true);
   error.value = '';
 
   try {
-    entry.value = await get(id.value);
+    const data = await get(id.value);
+    entry.value = data;
+    await syncVisibilityState(data);
   } catch (e) {
     entry.value = null;
     error.value = e instanceof Error ? e.message : '載入知識庫失敗，請稍後再試';
   } finally {
     setLoading(false);
   }
+}
+
+async function syncVisibilityState(data: KnowledgeEntryVM) {
+  setSuppressVisibilityWatch(true);
+  resetVisibilityForm({ values: { isPublicVisible: false } });
+  updateVisibilityForm({ isPublicVisible: data.visibility === 'public' });
+  await nextTick();
+  setSuppressVisibilityWatch(false);
+}
+
+async function rollbackVisibilityState(previousValue: boolean) {
+  setSuppressVisibilityWatch(true);
+  setVisibilityFieldValue('isPublicVisible', previousValue);
+  await nextTick();
+  setSuppressVisibilityWatch(false);
 }
 
 async function onSubmit(payload: KnowledgeUpdatePayload) {
@@ -144,6 +224,50 @@ async function updateStatus(action: 'publish' | 'archive') {
             </div>
           </div>
         </template>
+      </UCard>
+
+      <UCard>
+        <template #header>
+          <div class="space-y-1">
+            <p class="text-sm font-medium text-gray-700">前台 AI 可見性</p>
+            <p class="text-sm text-gray-500">
+              開啟後，當狀態為已發佈且資料完整時，前台 AI 才能檢索這筆知識。
+            </p>
+          </div>
+        </template>
+
+        <UForm id="knowledge-visibility-form" :state="{}" class="space-y-4">
+          <FormField
+            name="isPublicVisible"
+            label="公開給前台 AI 使用"
+            fieldType="switch"
+            :disabled="isUpdatingVisibility"
+          />
+
+          <p class="text-xs leading-relaxed text-gray-500">
+            關閉時此知識僅供後台管理使用，不會被前台聊天機器人引用。
+          </p>
+
+          <div
+            v-if="hasRetrievableState"
+            class="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm"
+          >
+            <p :class="entry.retrievable ? 'text-green-700' : 'text-gray-600'">
+              {{ entry.retrievable ? '目前可被前台 AI 檢索' : '目前尚不可被前台 AI 檢索' }}
+            </p>
+
+            <div v-if="retrievalBlockReasonItems.length" class="mt-2 flex flex-wrap gap-2">
+              <UBadge
+                v-for="reason in retrievalBlockReasonItems"
+                :key="reason"
+                variant="soft"
+                color="neutral"
+              >
+                {{ reason }}
+              </UBadge>
+            </div>
+          </div>
+        </UForm>
       </UCard>
 
       <UCard>

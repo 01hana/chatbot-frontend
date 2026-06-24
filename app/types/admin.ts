@@ -137,6 +137,8 @@ export interface TicketListParams extends AdminListParams {
 // ── Knowledge Base ───────────────────────────────────────────
 
 export type KnowledgeStatus = 'draft' | 'published' | 'archived';
+export type KnowledgeVisibility = 'public' | 'private' | 'internal' | 'confidential';
+export type KnowledgeVisibilityUpdateValue = Extract<KnowledgeVisibility, 'public' | 'private'>;
 
 /** A single knowledge base entry (Q&A pair). */
 export interface KnowledgeEntryVM {
@@ -144,6 +146,9 @@ export interface KnowledgeEntryVM {
   title: string;
   category: string;
   status: KnowledgeStatus;
+  visibility?: KnowledgeVisibility;
+  retrievable?: boolean;
+  retrievalBlockReasons?: string[];
   content: string;
   updatedAt: string;
   currentRevision: number;
@@ -201,15 +206,22 @@ export interface IntentVM {
   id: string;
   name: string;
   /** Sample utterances that map to this intent. */
-  examples: string[];
+  examples?: string[];
   /** Tags/trigger keywords. */
   keywords: string[];
-  status: 'active' | 'inactive';
-  sortOrder: number;
+  status?: 'active' | 'inactive';
+  enabled?: boolean;
+  priority?: number;
+  sortOrder?: number;
+  responseTemplate?: string;
 }
+
+export type IntentSummaryVM = IntentVM;
 
 export interface IntentListParams extends AdminListParams {
   status?: IntentVM['status'];
+  enabled?: boolean;
+  priority?: number;
 }
 
 export interface IntentCreatePayload {
@@ -217,7 +229,10 @@ export interface IntentCreatePayload {
   examples?: string[];
   keywords?: string[];
   status?: IntentVM['status'];
+  enabled?: boolean;
+  priority?: number;
   sortOrder?: number;
+  responseTemplate?: string;
 }
 
 export type IntentUpdatePayload = Partial<IntentCreatePayload>;
@@ -225,6 +240,9 @@ export type IntentUpdatePayload = Partial<IntentCreatePayload>;
 export interface IntentPreviewResult {
   matched: boolean;
   intent?: IntentVM;
+  responseTemplate?: string;
+  template?: string;
+  answer?: string;
   confidence?: number;
 }
 

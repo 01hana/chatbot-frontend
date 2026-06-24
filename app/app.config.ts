@@ -26,7 +26,7 @@ export default defineAppConfig({
       slots: {
         root: 'rounded-xl shadow-lg !ring-0',
         header: 'border-none',
-        body: 'sm:py-0 w-full',
+        body: 'w-full ',
       },
     },
     dropdownMenu: {

@@ -7,6 +7,7 @@ import type {
   KnowledgeListParams,
   KnowledgeStatus,
   KnowledgeUpdatePayload,
+  KnowledgeVisibilityUpdateValue,
 } from '~/types/admin';
 
 type RemovePayload = string | number | { rows?: Array<string | number>; id?: string | number };
@@ -68,6 +69,13 @@ export const useAdminKnowledge = defineStore('admin-knowledge', () => {
     return await KnowledgeService.updateKnowledge(id, data);
   }
 
+  async function updateVisibility(
+    id: string | number,
+    visibility: KnowledgeVisibilityUpdateValue,
+  ) {
+    return await KnowledgeService.updateKnowledgeVisibility(id, visibility);
+  }
+
   async function publish(id: string | number) {
     return await KnowledgeService.publishKnowledge(id);
   }
@@ -93,6 +101,7 @@ export const useAdminKnowledge = defineStore('admin-knowledge', () => {
     get,
     create,
     update,
+    updateVisibility,
     publish,
     archive,
     remove,
